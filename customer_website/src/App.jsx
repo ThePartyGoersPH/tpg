@@ -371,6 +371,16 @@ function GlassNav({ onOpenNotif, unread, onToggleSidebar, sidebarOpen }) {
     setMobileOpen(false);
   };
 
+  // Scroll-lock while the fullscreen mobile menu is open.
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileOpen]);
+
   const handleLogout = () => {
     logout();
     navigate(VIEWS.LANDING);
@@ -419,8 +429,16 @@ function GlassNav({ onOpenNotif, unread, onToggleSidebar, sidebarOpen }) {
         ) : (
           <div className="nav-actions">
             <ThemeToggle />
-            <button className="btn btn-ghost btn-sm" onClick={() => go(VIEWS.LOGIN)}>Login</button>
-            <button className="btn btn-red btn-sm" onClick={() => go(VIEWS.REGISTER)}>Register</button>
+            <button className="btn btn-ghost btn-sm nav-auth-btn" onClick={() => go(VIEWS.LOGIN)}>Login</button>
+            <button className="btn btn-red btn-sm nav-auth-btn" onClick={() => go(VIEWS.REGISTER)}>Register</button>
+            <button
+              className="mobile-hamburger"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open menu"
+              type="button"
+            >
+              <Menu size={24} />
+            </button>
           </div>
         )}
       </header>
@@ -432,16 +450,25 @@ function GlassNav({ onOpenNotif, unread, onToggleSidebar, sidebarOpen }) {
           <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>Appearance</span>
           <ThemeToggle showLabel />
         </div>
-        {NAV_ITEMS.map((item) => (
-          <button
-            key={item.view}
-            className={`nav-link ${currentView === item.view ? 'active' : ''}`}
-            onClick={() => go(item.view)}
-          >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>{item.icon}{item.label}</span>
-          </button>
-        ))}
-        <button className="btn btn-ghost" onClick={handleLogout} style={{ marginTop: '1rem' }}>Logout</button>
+        {!isAuthenticated ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1.5rem 2rem', width: '100%', maxWidth: 320 }}>
+            <button className="btn btn-ghost btn-lg w-full" onClick={() => go(VIEWS.LOGIN)}>Login</button>
+            <button className="btn btn-red btn-lg w-full" onClick={() => go(VIEWS.REGISTER)}>Register</button>
+          </div>
+        ) : (
+          <>
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.view}
+                className={`nav-link ${currentView === item.view ? 'active' : ''}`}
+                onClick={() => go(item.view)}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>{item.icon}{item.label}</span>
+              </button>
+            ))}
+            <button className="btn btn-ghost" onClick={handleLogout} style={{ marginTop: '1rem' }}>Logout</button>
+          </>
+        )}
       </div>
 
       {/* Sidebar for authenticated users */}

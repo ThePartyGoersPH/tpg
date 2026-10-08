@@ -1135,6 +1135,11 @@ h6 {
   transform: translateY(-1px);
 }
 
+/* Never let flex crowding crush the toggle (icon collapses to 0x0). */
+.theme-toggle-btn {
+  flex-shrink: 0;
+}
+
 /* Logout — bold filled treatment (no inline override now) */
 .nav-logout.btn-ghost {
   background: var(--red-primary, #CC0000);
@@ -3230,6 +3235,52 @@ select.glass-input option {
   color: var(--text-primary);
   font-size: 1.5rem;
   cursor: pointer;
+}
+
+/* Hamburger opener (logged-out mobile header). Hidden on desktop. */
+.mobile-hamburger {
+  display: none;
+}
+
+/* ── COMPACT GLASS HEADER (phones) ── */
+@media (max-width: 640px) {
+  .glass-nav {
+    padding: 0 0.75rem;
+    height: 60px;
+  }
+
+  .glass-nav-left .brand span {
+    white-space: nowrap;
+    font-size: 0.68rem !important;
+    letter-spacing: 1px !important;
+  }
+
+  .nav-actions {
+    flex-shrink: 0;
+    gap: 0.4rem;
+  }
+
+  .nav-username {
+    display: none;
+  }
+
+  /* Higher specificity: must beat later .btn re-definitions in mobile.css. */
+  .glass-nav .nav-actions button.nav-auth-btn {
+    display: none;
+  }
+
+  .glass-nav .nav-actions button.mobile-hamburger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    padding: 0.5rem;
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 
 /* ── SEARCH BAR ── */
