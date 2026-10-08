@@ -1,15 +1,16 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useView } from '../hooks/useView';
 import { VIEWS } from '../contexts/ViewContext';
 import { barService } from '../services/barService';
 import { imageUrl } from '../utils/imageUrl';
-import { getPrimaryBarType } from '../utils/barTypeLabel';
+import { getBarTypes, getPrimaryBarType } from '../utils/barTypeLabel';
 const bgHome = '/bg-home.jpg';
 import { Wine, CalendarCheck, Sparkles, Heart, MapPin, Zap, CheckCircle, ArrowRight, Star, Users, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function LandingView() {
   const { navigate } = useView();
   const [trending, setTrending] = useState([]);
+  const [allVenues, setAllVenues] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const sliderRef = useRef(null);
 
@@ -23,20 +24,72 @@ function LandingView() {
   useEffect(() => {
     let cancelled = false;
 
-    barService.trending(6)
-      .then((trendingData) => {
+    Promise.all([barService.trending(6), barService.list()])
+      .then(([trendingData, venueData]) => {
         if (cancelled) return;
         setTrending(Array.isArray(trendingData) ? trendingData : []);
+        setAllVenues(Array.isArray(venueData) ? venueData : []);
       })
       .catch(() => {
         if (cancelled) return;
         setTrending([]);
+        setAllVenues([]);
       });
 
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const venueTypeStats = useMemo(() => {
+    const fallback = {
+      barsPubs: 18,
+      restoBars: 12,
+      ktvLounges: 9,
+      liveMusic: 7,
+    };
+
+    if (!Array.isArray(allVenues) || allVenues.length === 0) {
+      return fallback;
+    }
+
+    const counts = {
+      barsPubs: 0,
+      restoBars: 0,
+      ktvLounges: 0,
+      liveMusic: 0,
+    };
+
+    allVenues.forEach((venue) => {
+      const normalizedTypeText = [
+        ...getBarTypes(venue).map((item) => String(item || '').toLowerCase()),
+        String(venue?.category || '').toLowerCase(),
+      ].join(' ');
+
+      if (
+        normalizedTypeText.includes('bar') ||
+        normalizedTypeText.includes('pub') ||
+        normalizedTypeText.includes('club')
+      ) {
+        counts.barsPubs += 1;
+      }
+      if (normalizedTypeText.includes('resto')) {
+        counts.restoBars += 1;
+      }
+      if (normalizedTypeText.includes('ktv')) {
+        counts.ktvLounges += 1;
+      }
+      if (
+        normalizedTypeText.includes('live music') ||
+        normalizedTypeText.includes('music') ||
+        normalizedTypeText.includes('concert')
+      ) {
+        counts.liveMusic += 1;
+      }
+    });
+
+    return counts;
+  }, [allVenues]);
 
   // Auto-rotate slideshow
   useEffect(() => {
@@ -82,8 +135,32 @@ function LandingView() {
           ))}
         </div>
 
+        {/* Side Navigation - Left */}
+        <nav className="land-side-nav">
+          <a href="#platform" className="land-side-link">Work</a>
+          <a href="#features" className="land-side-link">About</a>
+          <a href="#trending" className="land-side-link">Bars</a>
+          <a href="#cta" className="land-side-link">Contact</a>
+        </nav>
+
+        {/* Top Right CTA */}
+        <div className="land-top-cta">
+          <button 
+            className="land-email-btn" 
+            onClick={() => navigate(VIEWS.LOGIN)}
+          >
+            HI@THEPARTYGOERS.PH
+          </button>
+        </div>
+
         {/* Main Hero Content */}
         <div className="land-hero-v2-content">
+          {/* Badge */}
+          <div className="land-hero-v2-badge">
+            <span className="land-hero-v2-dot" />
+            <span>Now Live — Nightlife Platform</span>
+          </div>
+
           {/* Main Title - Large Typography */}
           <h1 className="land-hero-v2-title">
             Every<br />
@@ -96,6 +173,14 @@ function LandingView() {
             Discover bars, resto bars, KTVs, and nightlife spots near you.
             Reserve a table, check events, and own your night — all in one place.
           </p>
+
+          <div className="land-hero-v2-tags">
+            <span className="land-hero-v2-tag">🍺 Bars</span>
+            <span className="land-hero-v2-tag">🍽️ Resto Bars</span>
+            <span className="land-hero-v2-tag">🎤 KTV</span>
+            <span className="land-hero-v2-tag">🎶 Live Music</span>
+            <span className="land-hero-v2-tag">🎉 Event Venues</span>
+          </div>
 
           <div className="land-hero-cta land-hero-v2-cta">
             <button
@@ -110,6 +195,61 @@ function LandingView() {
             >
               View Events
             </button>
+          </div>
+        </div>
+
+        <div className="land-hero-v2-panel">
+          {/* Dashboard Preview Card - Bottom Right */}
+          <div className="land-hero-v2-card">
+            <div className="land-dash-header">
+              <div className="flex items-center gap-sm">
+                <div className="land-dash-logo" />
+                <span className="land-dash-brand">THE PARTY GOERS</span>
+              </div>
+              <div className="land-dash-live"><span className="land-live-dot" /> Live</div>
+            </div>
+            <div className="land-dash-grid">
+              <div className="land-dash-stat">
+                <span className="land-dash-stat-label">Tonight's Venues</span>
+                <span className="land-dash-stat-value">{trending.length || 12}</span>
+                <span className="land-dash-stat-sub land-dash-stat-green">Active tonight</span>
+              </div>
+              <div className="land-dash-stat">
+                <span className="land-dash-stat-label">Featured Events</span>
+                <span className="land-dash-stat-value">8</span>
+                <span className="land-dash-stat-sub land-dash-stat-yellow">This week</span>
+              </div>
+              <div className="land-dash-stat">
+                <span className="land-dash-stat-label">Reservations</span>
+                <span className="land-dash-stat-value">150+</span>
+                <span className="land-dash-stat-sub">This month</span>
+              </div>
+              <div className="land-dash-stat">
+                <span className="land-dash-stat-label">Happy Customers</span>
+                <span className="land-dash-stat-value">2.5K</span>
+                <span className="land-dash-stat-sub land-dash-stat-green">And growing</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="land-hero-v2-breakdown">
+            <span className="land-vtype-title">Venue Types</span>
+            <div className="land-vtype-row">
+              <span>Bars &amp; Pubs</span>
+              <span>+{venueTypeStats.barsPubs} venues</span>
+            </div>
+            <div className="land-vtype-row">
+              <span>Resto Bars</span>
+              <span>+{venueTypeStats.restoBars} venues</span>
+            </div>
+            <div className="land-vtype-row">
+              <span>KTV Lounges</span>
+              <span>+{venueTypeStats.ktvLounges} venues</span>
+            </div>
+            <div className="land-vtype-row">
+              <span>Live Music</span>
+              <span>+{venueTypeStats.liveMusic} venues</span>
+            </div>
           </div>
         </div>
 

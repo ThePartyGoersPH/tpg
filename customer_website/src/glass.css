@@ -6254,6 +6254,7 @@ select.glass-input option {
 
 .land-platform-inner {
   max-width: 680px;
+  margin: 0 auto;
 }
 
 .land-platform-text {
@@ -6665,6 +6666,7 @@ select.glass-input option {
 /* ── HERO V2 — Full Bleed Layout ── */
 .land-hero-v2 {
   position: relative;
+  scroll-margin-top: 80px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -7055,8 +7057,22 @@ select.glass-input option {
   transform: scale(1.2);
 }
 
+/* Hero heading must stay inside the content column between desktop and
+   tablet widths (base clamp would overflow ~1024-1300px). */
+@media (max-width: 1300px) {
+  .land-hero-v2-title {
+    font-size: clamp(3rem, 7.5vw, 5rem);
+    letter-spacing: -2px;
+  }
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
+  .land-hero-v2-title {
+    font-size: clamp(2.75rem, 8vw, 5rem);
+    letter-spacing: -2px;
+  }
+
   .land-hero-v2-panel {
     position: relative;
     bottom: auto;
@@ -7082,13 +7098,14 @@ select.glass-input option {
 
 @media (max-width: 768px) {
   .land-hero-v2 {
-    padding: 4rem 1.5rem 2rem;
+    padding: 5rem 1.5rem 2rem;
     min-height: auto;
   }
 
   .land-hero-v2-title {
-    font-size: clamp(2.5rem, 12vw, 4rem);
-    letter-spacing: -2px;
+    font-size: clamp(2.25rem, 11vw, 3.5rem);
+    letter-spacing: -1px;
+    line-height: 1.02;
   }
 
   .land-top-cta {
