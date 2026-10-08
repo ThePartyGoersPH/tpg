@@ -23,8 +23,8 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center" style={{ background: '#0A0A0A' }}>
-          <div className="max-w-md w-full mx-4 p-8 rounded-2xl text-center" style={{ background: '#111', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--m-bg)' }}>
+          <div className="max-w-md w-full mx-4 p-8 rounded-2xl text-center" style={{ background: '#111', border: '1px solid var(--m-border)' }}>
             <div className="w-16 h-16 mx-auto mb-5 rounded-full flex items-center justify-center" style={{ background: 'rgba(239,68,68,0.1)' }}>
               <AlertTriangle className="w-8 h-8" style={{ color: '#ef4444' }} />
             </div>
@@ -33,7 +33,7 @@ class ErrorBoundary extends React.Component {
               An unexpected error occurred while rendering this page.
             </p>
             {this.state.error && (
-              <div className="mb-6 p-3 rounded-lg text-left text-xs font-mono overflow-auto max-h-40" style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', color: '#ef4444' }}>
+              <div className="mb-6 p-3 rounded-lg text-left text-xs font-mono overflow-auto max-h-40" style={{ background: 'var(--m-bg)', border: '1px solid var(--m-border)', color: '#ef4444' }}>
                 {this.state.error.message}
               </div>
             )}
@@ -51,9 +51,9 @@ class ErrorBoundary extends React.Component {
               <button
                 onClick={() => { window.location.href = '/dashboard'; }}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
-                style={{ background: 'rgba(255,255,255,0.06)', color: '#ccc', border: '1px solid rgba(255,255,255,0.08)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                style={{ background: 'var(--m-active-bg)', color: '#ccc', border: '1px solid var(--m-border)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; }}
               >
                 Go to Dashboard
               </button>

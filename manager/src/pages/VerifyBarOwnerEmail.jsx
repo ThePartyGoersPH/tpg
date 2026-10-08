@@ -32,7 +32,7 @@ const VerifyBarOwnerEmail = () => {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: '#0A0A0A', backgroundImage: 'radial-gradient(ellipse at 50% 30%, rgba(204,0,0,0.1) 0%, transparent 60%)' }}
+      style={{ background: 'var(--m-bg)', backgroundImage: 'radial-gradient(ellipse at 50% 30%, rgba(204,0,0,0.1) 0%, transparent 60%)' }}
     >
       <div className="w-full max-w-md text-center">
         <div className="flex justify-center mb-6">

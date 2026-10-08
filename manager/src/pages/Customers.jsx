@@ -56,15 +56,15 @@ const Customers = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-full sm:w-72" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-full sm:w-72" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
           <Search className="w-4 h-4" style={{ color: '#555' }} />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search customers..." className="bg-transparent text-sm outline-none flex-1 text-white placeholder-gray-600" />
         </div>
-        <div className="flex items-center rounded-lg p-1 gap-1" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center rounded-lg p-1 gap-1" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
           <button
             onClick={() => setView('list')}
             className={`p-2 rounded-md transition-colors ${view === 'list' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
-            style={view === 'list' ? { background: 'rgba(255,255,255,0.08)' } : {}}
+            style={view === 'list' ? { background: 'var(--m-active-bg)' } : {}}
             title="List view"
             aria-label="List view"
             aria-pressed={view === 'list'}
@@ -74,7 +74,7 @@ const Customers = () => {
           <button
             onClick={() => setView('grid')}
             className={`p-2 rounded-md transition-colors ${view === 'grid' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
-            style={view === 'grid' ? { background: 'rgba(255,255,255,0.08)' } : {}}
+            style={view === 'grid' ? { background: 'var(--m-active-bg)' } : {}}
             title="Grid view"
             aria-label="Grid view"
             aria-pressed={view === 'grid'}
@@ -88,7 +88,7 @@ const Customers = () => {
         <div className="card p-0 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}><tr>
+              <thead style={{ borderBottom: '1px solid var(--m-border)' }}><tr>
                 <th className="table-header">Customer</th>
                 <th className="table-header">Email</th>
                 <th className="table-header">Phone</th>
@@ -98,7 +98,7 @@ const Customers = () => {
               </tr></thead>
               <tbody>
                 {filtered.map((c) => (
-                  <tr key={c.id || c.user_id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                  <tr key={c.id || c.user_id} className="transition-colors" style={{ borderBottom: '1px solid var(--m-border)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.04)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   >
@@ -141,13 +141,13 @@ const Customers = () => {
       ) : (
         <>
           {filtered.length === 0 ? (
-            <div className="text-center py-12 rounded-xl" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)', color: '#555' }}>
+            <div className="text-center py-12 rounded-xl" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)', color: '#555' }}>
               {debouncedSearch ? `No customers found for "${debouncedSearch}"` : 'No customers found.'}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filtered.map((c) => (
-                <div key={c.id || c.user_id} className="rounded-xl p-4 flex flex-col gap-3 transition-colors" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div key={c.id || c.user_id} className="rounded-xl p-4 flex flex-col gap-3 transition-colors" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: 'rgba(204,0,0,0.2)' }}>

@@ -115,3 +115,163 @@
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
 }
+
+/* =============================================================
+   Responsive + light/dark theme layer.
+   Desktop dark appearance is unchanged; everything below is
+   scoped to [data-theme="light"] or small/coarse viewports.
+   ============================================================= */
+
+:root {
+  --sa-bg: #0f0a1a;
+  --sa-surface: rgba(255, 255, 255, 0.05);
+  --sa-surface-2: rgba(255, 255, 255, 0.06);
+  --sa-text: rgb(240 240 245);
+  --sa-text-dim: rgba(240, 240, 245, 0.6);
+  --sa-text-faint: rgba(240, 240, 245, 0.35);
+  --sa-border: rgba(255, 255, 255, 0.08);
+  --sa-input-text: #f0f0f5;
+}
+
+[data-theme="light"] {
+  --sa-bg: #f5f2ec;
+  --sa-surface: rgba(255, 255, 255, 0.85);
+  --sa-surface-2: rgba(0, 0, 0, 0.04);
+  --sa-text: #1c1917;
+  --sa-text-dim: rgba(28, 25, 23, 0.65);
+  --sa-text-faint: rgba(28, 25, 23, 0.4);
+  --sa-border: rgba(0, 0, 0, 0.1);
+  --sa-input-text: #1c1917;
+  color-scheme: light;
+}
+
+[data-theme="light"] body {
+  background: var(--sa-bg);
+  color: var(--sa-text);
+}
+
+[data-theme="light"] .glass,
+[data-theme="light"] .glass-card,
+[data-theme="light"] .glass-table {
+  background: var(--sa-surface);
+  border-color: var(--sa-border);
+  color: var(--sa-text);
+}
+
+[data-theme="light"] .glass-sidebar {
+  background: linear-gradient(180deg, #7f1d1d 0%, #881337 60%, #4c0519 100%);
+}
+
+[data-theme="light"] .glass-navbar {
+  background: rgba(255, 255, 255, 0.85);
+  border-bottom-color: var(--sa-border);
+}
+
+[data-theme="light"] .glass-modal {
+  background: rgba(255, 255, 255, 0.97);
+  border-color: var(--sa-border);
+  color: var(--sa-text);
+}
+
+[data-theme="light"] .glass-input {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: var(--sa-border);
+  color: var(--sa-input-text);
+}
+
+[data-theme="light"] .glass-input::placeholder {
+  color: var(--sa-text-faint);
+}
+
+[data-theme="light"] .stat-card {
+  background: var(--sa-surface);
+  border-color: var(--sa-border);
+  color: var(--sa-text);
+}
+
+/* Light-mode text utilities used across pages */
+[data-theme="light"] .text-white,
+[data-theme="light"] .text-white\/90,
+[data-theme="light"] .text-white\/85,
+[data-theme="light"] .text-white\/80,
+[data-theme="light"] .text-white\/70,
+[data-theme="light"] .text-white\/60,
+[data-theme="light"] .text-white\/55 {
+  color: #1c1917;
+}
+
+[data-theme="light"] .text-white\/50,
+[data-theme="light"] .text-white\/40 {
+  color: rgba(28, 25, 23, 0.6);
+}
+
+[data-theme="light"] .text-white\/30,
+[data-theme="light"] .text-white\/35,
+[data-theme="light"] .text-white\/20 {
+  color: rgba(28, 25, 23, 0.5);
+}
+
+/* Keep white text where it sits on saturated color fills */
+[data-theme="light"] .bg-red-600.text-white,
+[data-theme="light"] .bg-red-500.text-white,
+[data-theme="light"] .bg-red-700.text-white,
+[data-theme="light"] .bg-green-600.text-white,
+[data-theme="light"] .bg-green-700.text-white,
+[data-theme="light"] .bg-blue-600.text-white,
+[data-theme="light"] .bg-amber-600.text-white,
+[data-theme="light"] .bg-orange-600.text-white {
+  color: #fff;
+}
+
+/* Viewport safety */
+html, body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+img, video, svg, canvas {
+  max-width: 100%;
+}
+
+/* Touch + iOS input zoom (touch devices only) */
+@media (pointer: coarse) {
+  .glass-input, input, select, textarea {
+    font-size: 16px;
+  }
+
+  button {
+    min-height: 44px;
+  }
+}
+
+/* Horizontally scrollable tab pills */
+.tab-pills-scroll {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.tab-pills-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-pills-scroll > * {
+  flex-shrink: 0;
+}
+
+/* Notification panel becomes a bottom sheet on phones */
+@media (max-width: 640px) {
+  .notif-panel-mobile {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    top: auto;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    width: auto;
+    max-width: none;
+    max-height: 70dvh;
+  }
+}

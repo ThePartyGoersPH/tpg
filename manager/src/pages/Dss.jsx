@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import useAppTheme from '../hooks/useAppTheme';
 import {
   Database, Info, Brain, Lightbulb, TrendingUp, AlertTriangle,
   PackageX, CalendarClock, Coins, Sparkles, RefreshCw
@@ -33,6 +34,8 @@ const TierHeader = ({ icon: Icon, label, desc, color }) => (
 );
 
 const Dss = () => {
+  const { chart } = useAppTheme();
+  const tickFill = chart.tick;
   const [data, setData] = useState(null);
   const [information, setInformation] = useState(null);
   const [knowledge, setKnowledge] = useState(null);
@@ -131,7 +134,7 @@ const Dss = () => {
             { k: 'Purchase Orders', v: toArr(data?.purchase_orders, ['purchase_orders']).length, icon: CalendarClock },
             { k: 'Active Promos', v: toArr(data?.promotions, ['promotions']).length, icon: Sparkles },
           ].map((s) => (
-            <div key={s.k} className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
+            <div key={s.k} className="rounded-lg p-3" style={{ background: 'var(--m-active-bg)' }}>
               <s.icon className="w-4 h-4 mb-1" style={{ color: '#94a3b8' }} />
               <p className="text-xl font-extrabold text-white">{s.v}</p>
               <p className="text-xs" style={{ color: '#888' }}>{s.k}</p>
@@ -178,8 +181,8 @@ const Dss = () => {
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={trend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                  <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#666' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#666' }} />
+                  <XAxis dataKey="day" tick={{ fontSize: 11, fill: tickFill }} />
+                  <YAxis tick={{ fontSize: 11, fill: tickFill }} />
                   <Tooltip />
                   <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} />
                 </LineChart>
@@ -224,8 +227,8 @@ const Dss = () => {
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={topItems} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis type="number" tick={{ fontSize: 11, fill: '#666' }} />
-                <YAxis type="category" dataKey="item_name" width={110} tick={{ fontSize: 11, fill: '#666' }} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: tickFill }} />
+                <YAxis type="category" dataKey="item_name" width={110} tick={{ fontSize: 11, fill: tickFill }} />
                 <Tooltip />
                 <Bar dataKey="qty" fill="#10b981" name="Qty sold" />
               </BarChart>
@@ -281,8 +284,8 @@ const Dss = () => {
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={toArr(know.inventory_turnover, ['inventory_turnover'])}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#666' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#666' }} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: tickFill }} />
+                <YAxis tick={{ fontSize: 11, fill: tickFill }} />
                 <Tooltip />
                 <Bar dataKey="sold_30d" fill="#f59e0b" name="Sold (30d)" />
               </BarChart>
@@ -323,7 +326,7 @@ const Dss = () => {
                     <p className="text-xs" style={{ color: '#ccc' }}>{r.message}</p>
                   </div>
                   {r.action_label && (
-                    <span className="text-xs px-2 py-1 rounded" style={{ background: 'rgba(255,255,255,0.08)', color: '#ddd' }}>{r.action_label}</span>
+                    <span className="text-xs px-2 py-1 rounded" style={{ background: 'var(--m-active-bg)', color: '#ddd' }}>{r.action_label}</span>
                   )}
                 </div>
               );

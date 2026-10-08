@@ -107,6 +107,7 @@ const DashboardLayout = () => {
     }
   });
   const [showConfigAlert, setShowConfigAlert] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [barDetails, setBarDetails] = useState(null);
   // Live registration checklist (same evaluator as the Bar Registration page).
@@ -128,6 +129,7 @@ const DashboardLayout = () => {
   // without a re-login.
   useEffect(() => {
     refreshSession();
+    setMobileOpen(false);
   }, [location.pathname, refreshSession]);
 
   useEffect(() => {
@@ -245,18 +247,30 @@ const DashboardLayout = () => {
   }, [isOwner, complianceStatus, approvalAcknowledged, barId, complianceReviewedAt]);
 
   return (
-    <div className="min-h-screen" style={{ background: '#0A0A0A' }}>
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(prev => {
-        const next = !prev;
-        try { localStorage.setItem('sidebar.collapsed', String(next)); } catch (e) { /* storage unavailable */ }
-        return next;
-      })} />
+    <div className="min-h-dvh" style={{ background: 'var(--m-bg)' }}>
+      <Sidebar
+        collapsed={collapsed}
+        onToggle={() => setCollapsed(prev => {
+          const next = !prev;
+          try { localStorage.setItem('sidebar.collapsed', String(next)); } catch (e) { /* storage unavailable */ }
+          return next;
+        })}
+        mobileOpen={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+      />
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
       <div
         className={`transition-all duration-300 ${
-          collapsed ? 'ml-[68px]' : 'ml-[260px]'
+          collapsed ? 'ml-0 lg:ml-[68px]' : 'ml-0 lg:ml-[260px]'
         }`}
       >
-        <Header />
+        <Header onMenu={() => setMobileOpen(true)} />
 
         {/* Portal-wide registration completeness alert — lives in the app shell
             so it shows on every page (Dashboard, Bar Management, Menu, Packages,
@@ -360,9 +374,9 @@ const DashboardLayout = () => {
                 <button 
                   onClick={() => setShowConfigAlert(false)}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                  style={{ background: 'rgba(255,255,255,0.05)', color: '#888' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#888'; }}
+                  style={{ background: 'var(--m-active-bg)', color: '#888' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; e.currentTarget.style.color = '#888'; }}
                 >
                   Dismiss
                 </button>
@@ -380,7 +394,7 @@ const DashboardLayout = () => {
           </div>
         )}
         
-        <main className="p-6">
+        <main className="p-4 lg:p-6">
           <Outlet />
         </main>
       </div>

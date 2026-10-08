@@ -191,7 +191,7 @@ const Tables = () => {
       </div>
 
       <div className="card p-0 overflow-hidden">
-        <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3" style={{ borderBottom: '1px solid var(--m-border)' }}>
           <div>
             <h3 className="text-lg font-bold text-white">Table Management</h3>
             <p className="text-sm mt-0.5" style={{ color: '#888' }}>
@@ -226,10 +226,10 @@ const Tables = () => {
             </thead>
             <tbody>
               {(statusData.length > 0 ? statusData : tables).map((table) => (
-                <tr key={table.id} style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <tr key={table.id} style={{ borderTop: '1px solid var(--m-border)' }}>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center" style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                         {table.image_path ? (
                           <img src={getUploadUrl(table.image_path)} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -261,7 +261,7 @@ const Tables = () => {
                             value={table.manual_status || (table.is_active ? 'available' : 'unavailable')}
                             onChange={(e) => handleManualStatusChange(table, e.target.value)}
                             className="rounded-md px-2 py-1 text-xs text-white outline-none"
-                            style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)' }}
+                            style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}
                           >
                             <option value="available">Available</option>
                             <option value="reserved">Reserved</option>
@@ -285,7 +285,7 @@ const Tables = () => {
                         <button
                           onClick={() => openEdit(table)}
                           className="p-2 rounded-lg"
-                          style={{ background: '#111', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }}
+                          style={{ background: '#111', color: '#fff', border: '1px solid var(--m-border)' }}
                           title="Edit"
                         >
                           <Edit2 className="w-4 h-4" />
@@ -293,7 +293,7 @@ const Tables = () => {
                         <button
                           onClick={() => toggleActive(table)}
                           className="px-3 py-2 rounded-lg text-xs font-semibold"
-                          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: table.is_active ? '#ff6666' : '#4ade80' }}
+                          style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)', color: table.is_active ? '#ff6666' : '#4ade80' }}
                           title={table.is_active ? 'Deactivate' : 'Activate'}
                         >
                           {table.is_active ? 'Deactivate' : 'Activate'}
@@ -326,8 +326,8 @@ const Tables = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-sm" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-sm" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
               <h3 className="font-bold text-white">{editing ? 'Edit Table' : 'Add Table'}</h3>
               <button onClick={() => setShowModal(false)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}

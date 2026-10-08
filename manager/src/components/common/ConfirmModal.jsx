@@ -23,7 +23,7 @@ const ConfirmModal = ({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
-      <div className="rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+      <div className="rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
         <div className="p-6">
           <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: tc.iconBg }}>
             <AlertTriangle className="w-6 h-6" style={{ color: tc.iconColor }} />
@@ -38,7 +38,7 @@ const ConfirmModal = ({
               onClick={onClose}
               disabled={loading}
               className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)', color: '#aaa' }}
+              style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)', color: '#aaa' }}
             >
               {cancelText}
             </button>

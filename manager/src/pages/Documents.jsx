@@ -110,7 +110,7 @@ const Documents = () => {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex gap-2">
-          <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-full sm:w-64" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-full sm:w-64" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
             <Search className="w-4 h-4" style={{ color: '#555' }} />
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search documents..." className="bg-transparent text-sm outline-none flex-1 text-white placeholder-gray-600" />
           </div>
@@ -129,7 +129,7 @@ const Documents = () => {
       <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}><tr>
+            <thead style={{ borderBottom: '1px solid var(--m-border)' }}><tr>
               <th className="table-header">Document</th>
               <th className="table-header">Type</th>
               {canViewAll && <th className="table-header">Employee</th>}
@@ -138,7 +138,7 @@ const Documents = () => {
             </tr></thead>
             <tbody>
               {filtered.map((d) => (
-                <tr key={d.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                <tr key={d.id} className="transition-colors" style={{ borderBottom: '1px solid var(--m-border)' }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.04)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
@@ -173,8 +173,8 @@ const Documents = () => {
       {/* View Document Modal */}
       {viewModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setViewModal(null)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#0d0d0d' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
               <h3 className="font-bold text-white">{viewModal.doc.title || viewModal.doc.original_filename}</h3>
               <button onClick={() => setViewModal(null)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}><X className="w-5 h-5" /></button>
             </div>
@@ -200,22 +200,22 @@ const Documents = () => {
       {/* Send to Staff Modal */}
       {sendModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSendModal(null)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
               <h3 className="font-bold text-white">Send Document to Staff</h3>
               <button onClick={() => setSendModal(null)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6 space-y-4">
               <p className="text-sm" style={{ color: '#888' }}>Select staff members to send <strong className="text-white">{sendModal.title || sendModal.original_filename}</strong></p>
-              <div className="max-h-64 overflow-y-auto space-y-2 rounded-lg p-3" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-                <label className="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors" onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+              <div className="max-h-64 overflow-y-auto space-y-2 rounded-lg p-3" style={{ border: '1px solid var(--m-border)' }}>
+                <label className="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors" onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
                   <input type="checkbox" checked={selectedStaff.length === employees.length && employees.length > 0} onChange={(e) => setSelectedStaff(e.target.checked ? employees.map(emp => emp.id) : [])} className="w-4 h-4" style={{ accentColor: '#CC0000' }} />
                   <Users className="w-4 h-4" style={{ color: '#555' }} />
                   <span className="text-sm font-semibold text-white">All Staff</span>
                 </label>
-                <div className="my-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}></div>
+                <div className="my-2" style={{ borderTop: '1px solid var(--m-border)' }}></div>
                 {employees.map((emp) => (
-                  <label key={emp.id} className="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors" onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                  <label key={emp.id} className="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors" onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
                     <input type="checkbox" checked={selectedStaff.includes(emp.id)} onChange={(e) => setSelectedStaff(e.target.checked ? [...selectedStaff, emp.id] : selectedStaff.filter(id => id !== emp.id))} className="w-4 h-4" style={{ accentColor: '#CC0000' }} />
                     <span className="text-sm" style={{ color: '#ccc' }}>{emp.first_name} {emp.last_name}</span>
                   </label>
@@ -235,8 +235,8 @@ const Documents = () => {
       {/* Upload Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
               <h3 className="font-bold text-white">Upload Document</h3>
               <button onClick={() => setShowModal(false)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}><X className="w-5 h-5" /></button>
             </div>

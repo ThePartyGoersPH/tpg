@@ -42,6 +42,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import './glass.css';
 import './styles/enhancements.css';
 import './styles/feedSidebar.css';
+import './styles/mobile.css';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 

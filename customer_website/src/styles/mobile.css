@@ -1,0 +1,230 @@
+/* =============================================================
+   Customer app — mobile + touch + viewport safety layer.
+   Desktop styles are untouched; everything here is scoped to
+   small screens or coarse pointers.
+   ============================================================= */
+
+/* Never allow page-level horizontal scroll. */
+html, body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+img, video, svg {
+  max-width: 100%;
+}
+
+/* Fixed bars must clear notches and home indicators. */
+.navbar-wrap {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* ---- Bottom navigation (mobile only) ---- */
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1200;
+    background: var(--nav-bg, rgba(12, 12, 14, 0.92));
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .bottom-nav-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 56px;
+    padding: 6px 2px;
+    color: var(--text-muted, rgba(255, 255, 255, 0.55));
+    text-decoration: none;
+    font-size: 0.68rem;
+    font-weight: 600;
+  }
+
+  .bottom-nav-tab.active {
+    color: var(--accent, #e11d48);
+  }
+
+  .bottom-nav-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* Room for the bottom bar so content is never hidden behind it. */
+  .page {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+
+  .footer-wrap {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+}
+
+[data-theme='light'] .bottom-nav {
+  --nav-bg: rgba(255, 255, 255, 0.92);
+}
+
+/* ---- Touch targets + iOS input zoom ---- */
+@media (pointer: coarse) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+
+  button, .btn, a.btn, [role='button'] {
+    min-height: 44px;
+  }
+
+  .bottom-nav-tab {
+    min-height: 56px;
+  }
+}
+
+/* ---- Viewport-height safety (mobile URL bar) ---- */
+.map-full, .map-wrap {
+  height: 100dvh;
+}
+
+@supports not (height: 100dvh) {
+  .map-full, .map-wrap {
+    height: 100vh;
+  }
+}
+
+/* ---- Map bottom sheets (mobile only) ---- */
+@media (max-width: 768px) {
+  .route-card {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    z-index: 1100;
+    max-height: 32dvh;
+    overflow-y: auto;
+    border-radius: 16px;
+  }
+
+  .map-popup {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    z-index: 1100;
+    max-height: 44dvh;
+    overflow-y: auto;
+    border-radius: 16px;
+  }
+
+  .map-popup .popup-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .map-popup .popup-actions > * {
+    flex: 1;
+    min-height: 48px;
+    font-size: 1rem;
+  }
+}
+
+/* ---- Wide tables become horizontally scrollable with a hint ---- */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  background:
+    linear-gradient(to right, var(--card, transparent) 30%, transparent),
+    linear-gradient(to right, transparent, var(--card, transparent)) 100% 0,
+    radial-gradient(farthest-side at 0% 50%, rgba(0, 0, 0, 0.25), transparent),
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.25), transparent) 100% 0;
+  background-repeat: no-repeat;
+  background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+
+.table-scroll table {
+  min-width: 640px;
+  width: 100%;
+}
+
+/* ---- Modals become bottom sheets on phones ---- */
+@media (max-width: 640px) {
+  .modal-card, .viewport-modal-card, .receipt-modal {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    border-radius: 20px 20px 0 0;
+    max-height: 92dvh;
+    overflow-y: auto;
+  }
+
+  .modal-actions, .receipt-actions {
+    position: sticky;
+    bottom: 0;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ---- Single-column forms on phones ---- */
+@media (max-width: 640px) {
+  .form-grid-2, .form-row-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .btn-block-mobile, .form-actions .btn {
+    width: 100%;
+  }
+}
+
+/* ---- Long text never breaks layout ---- */
+.truncate-mobile {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* ---- Part 1 follow-ups: auth, hero, QR, payment comfort at 360px ---- */
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .auth-view {
+    padding: 1rem 0.75rem;
+  }
+
+  .land-hero-v2 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .land-hero-v2-badge {
+    font-size: 0.7rem;
+  }
+}
+
+/* QR stays large, high-contrast, and centered on small screens */
+@media (max-width: 640px) {
+  .receipt-modal img[alt="QR Code"] {
+    display: block;
+    margin: 0.5rem auto;
+  }
+}

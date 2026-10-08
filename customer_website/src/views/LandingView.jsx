@@ -4,7 +4,7 @@ import { VIEWS } from '../contexts/ViewContext';
 import { barService } from '../services/barService';
 import { imageUrl } from '../utils/imageUrl';
 import { getBarTypes, getPrimaryBarType } from '../utils/barTypeLabel';
-import bgHome from '../bg-home.jpg';
+const bgHome = '/bg-home.jpg';
 import { Wine, CalendarCheck, Sparkles, Heart, MapPin, Zap, CheckCircle, ArrowRight, Star, Users, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function LandingView() {

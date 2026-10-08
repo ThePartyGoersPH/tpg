@@ -7,7 +7,7 @@ const Footer = () => {
       className="relative pt-16 pb-8 overflow-hidden"
       style={{
         background: '#080808',
-        borderTop: '1px solid rgba(255,255,255,0.05)',
+        borderTop: '1px solid var(--m-border)',
       }}
     >
       {/* Top red line */}
@@ -36,7 +36,7 @@ const Footer = () => {
                 <div
                   key={s}
                   className="w-8 h-8 rounded-lg flex items-center justify-center font-body text-xs text-gray-400 cursor-pointer hover:text-white transition-colors duration-200"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}
+                  style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}
                 >
                   {s}
                 </div>
@@ -94,7 +94,7 @@ const Footer = () => {
         {/* Bottom bar */}
         <div
           className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-8"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+          style={{ borderTop: '1px solid var(--m-border)' }}
         >
           <p className="font-body text-gray-600 text-xs">
             © 2025 Platform Bar System. All rights reserved.

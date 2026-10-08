@@ -33,7 +33,7 @@ const PermitMonitoring = () => {
         api.get('/permit-monitoring/stats')
       ]);
       
-      setBars(barsRes.data.data.bars || []);
+      setBars(barsRes.data?.data?.bars || []);
       setStats(statsRes.data.data || null);
     } catch (err) {
       console.error('Failed to load permit monitoring data:', err);
@@ -47,7 +47,7 @@ const PermitMonitoring = () => {
     setRunningCheck(true);
     try {
       const { data } = await api.post('/permit-monitoring/run-check');
-      toast.success(`Check completed: ${data.data.expiringSoonCount} expiring, ${data.data.expiredCount} expired`);
+      toast.success(`Check completed: ${data.data?.expiringSoonCount ?? 0} expiring, ${data.data?.expiredCount ?? 0} expired`);
       await loadData();
     } catch {
       toast.error('Failed to run permit check');

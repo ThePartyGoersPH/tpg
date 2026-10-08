@@ -152,7 +152,7 @@ const Analytics = () => {
           </div>
           <div className="space-y-2">
             {(Array.isArray(customerInsights) ? customerInsights : []).slice(0, 10).map((c, i) => (
-              <div key={i} className="flex items-center justify-between py-2 last:border-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <div key={i} className="flex items-center justify-between py-2 last:border-0" style={{ borderBottom: '1px solid var(--m-border)' }}>
                 <div className="flex items-center gap-2">
                   <span className="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center" style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa' }}>{i + 1}</span>
                   <span className="text-sm" style={{ color: '#ccc' }}>{c.first_name} {c.last_name}</span>

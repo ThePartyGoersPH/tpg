@@ -149,10 +149,10 @@ const ReservationDetail = ({ detail, onClose }) => (
             <Package className="w-4 h-4" style={{ color: '#CC0000' }} />
             <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#888' }}>Items Ordered</span>
           </div>
-          <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--m-border)' }}>
             <table className="w-full">
               <thead>
-                <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <tr style={{ background: 'var(--m-active-bg)' }}>
                   <th className="text-left text-xs font-medium px-3 py-2" style={{ color: '#888' }}>Item</th>
                   <th className="text-center text-xs font-medium px-3 py-2" style={{ color: '#888' }}>Qty</th>
                   <th className="text-right text-xs font-medium px-3 py-2" style={{ color: '#888' }}>Price</th>
@@ -161,14 +161,14 @@ const ReservationDetail = ({ detail, onClose }) => (
               </thead>
               <tbody>
                 {detail.items.map((item, i) => (
-                  <tr key={i} style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                  <tr key={i} style={{ borderTop: '1px solid var(--m-border)' }}>
                     <td className="px-3 py-2 text-sm text-white">{item.menu_name}</td>
                     <td className="px-3 py-2 text-sm text-center" style={{ color: '#ccc' }}>x{item.quantity}</td>
                     <td className="px-3 py-2 text-sm text-right" style={{ color: '#888' }}>₱{Number(item.unit_price).toLocaleString()}</td>
                     <td className="px-3 py-2 text-sm text-right font-medium text-white">₱{Number(item.line_total).toLocaleString()}</td>
                   </tr>
                 ))}
-                <tr style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <tr style={{ borderTop: '1px solid var(--m-border)' }}>
                   <td colSpan="3" className="px-3 py-2 text-sm font-semibold text-right" style={{ color: '#888' }}>Total</td>
                   <td className="px-3 py-2 text-sm font-bold text-right" style={{ color: '#CC0000' }}>₱{Number(detail.total_amount || 0).toLocaleString()}</td>
                 </tr>
@@ -185,7 +185,7 @@ const ReservationDetail = ({ detail, onClose }) => (
             <FileText className="w-4 h-4" style={{ color: '#CC0000' }} />
             <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#888' }}>Tax Breakdown</span>
           </div>
-          <div className="rounded-lg p-3 space-y-1" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-lg p-3 space-y-1" style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
             <div className="flex items-center justify-between text-sm" style={{ color: '#ccc' }}>
               <span>Subtotal{detail.tax_mode === 'INCLUSIVE' ? ' (Net of VAT)' : ''}</span>
               <span>₱{Number(detail.net_subtotal ?? 0).toLocaleString()}</span>
@@ -204,7 +204,7 @@ const ReservationDetail = ({ detail, onClose }) => (
           <CreditCard className="w-4 h-4" style={{ color: '#CC0000' }} />
           <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#888' }}>Payment Summary</span>
         </div>
-        <div className="rounded-lg px-4 py-3 space-y-1.5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rounded-lg px-4 py-3 space-y-1.5" style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
           {detail.total_amount > 0 && (
             <div className="flex justify-between">
               <span className="text-xs" style={{ color: '#888' }}>Total Bill</span>
@@ -226,7 +226,7 @@ const ReservationDetail = ({ detail, onClose }) => (
 
             if (isFullyPaid) {
               return (
-                <div className="flex justify-between pt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="flex justify-between pt-1" style={{ borderTop: '1px solid var(--m-border)' }}>
                   <span className="text-xs font-semibold" style={{ color: '#4ade80' }}>Fully Paid ✓</span>
                   <span className="text-sm font-bold" style={{ color: '#4ade80' }}>₱0.00 remaining</span>
                 </div>
@@ -234,7 +234,7 @@ const ReservationDetail = ({ detail, onClose }) => (
             }
             if (isPartialPaid) {
               return (
-                <div className="flex justify-between pt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="flex justify-between pt-1" style={{ borderTop: '1px solid var(--m-border)' }}>
                   <span className="text-xs font-semibold" style={{ color: '#fbbf24' }}>Remaining Balance (collect in person)</span>
                   <span className="text-sm font-bold" style={{ color: '#fbbf24' }}>₱{remaining.toLocaleString()}</span>
                 </div>
@@ -263,7 +263,7 @@ const ReservationDetail = ({ detail, onClose }) => (
         </div>
       </div>
       {detail.payment && detail.payment.reference_id && (
-        <div className="rounded-lg px-3 py-2" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+        <div className="rounded-lg px-3 py-2" style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
           <span className="text-xs" style={{ color: '#555' }}>PayMongo ref: </span>
           <span className="text-xs font-mono" style={{ color: '#555' }}>{detail.payment.reference_id}</span>
         </div>
@@ -518,11 +518,11 @@ const Reservations = () => {
       <div className="card">
         <h3 className="text-sm font-semibold text-white mb-2">Reservation Time Limit</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="rounded-lg p-3" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-lg p-3" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
             <p className="text-xs" style={{ color: '#888' }}>Bar Type</p>
             <p className="text-sm font-medium text-white">{barTypesList.length ? barTypesList.join(', ') : '—'}</p>
           </div>
-          <div className="rounded-lg p-3" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-lg p-3" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
             <p className="text-xs" style={{ color: '#888' }}>Rule</p>
             <p className="text-sm font-medium text-white">
               {effectiveMode === 'club' ? 'Whole day (manual release)' :
@@ -531,7 +531,7 @@ const Reservations = () => {
                'Default (1 hour)'}
             </p>
           </div>
-          <div className="rounded-lg p-3" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-lg p-3" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
             <p className="text-xs" style={{ color: '#888' }}>Time Limit</p>
             {barDetailsDenied ? (
               <p className="text-sm mt-1" style={{ color: '#888' }}>
@@ -592,7 +592,7 @@ const Reservations = () => {
           <h3 className="text-sm font-semibold text-white">Transaction Lookup</h3>
         </div>
         <div className="flex gap-2">
-          <div className="flex items-center gap-2 rounded-lg px-3 py-2 flex-1 sm:max-w-md" style={{ background: '#0A0A0A', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="flex items-center gap-2 rounded-lg px-3 py-2 flex-1 sm:max-w-md" style={{ background: 'var(--m-bg)', border: '1px solid var(--m-border)' }}>
             <Search className="w-4 h-4" style={{ color: '#555' }} />
             <input
               value={txnSearch}
@@ -616,7 +616,7 @@ const Reservations = () => {
 
         {/* Transaction Detail */}
         {txnDetail && (
-          <div className="mt-4 rounded-xl overflow-hidden p-5 space-y-4" style={{ border: '1px solid rgba(255,255,255,0.08)', background: '#111' }}>
+          <div className="mt-4 rounded-xl overflow-hidden p-5 space-y-4" style={{ border: '1px solid var(--m-border)', background: '#111' }}>
             <ReservationDetail detail={txnDetail} onClose={() => setTxnDetail(null)} />
           </div>
         )}
@@ -624,11 +624,11 @@ const Reservations = () => {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex items-center gap-2 rounded-lg px-3 py-2 flex-1 sm:max-w-xs" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center gap-2 rounded-lg px-3 py-2 flex-1 sm:max-w-xs" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
           <Search className="w-4 h-4" style={{ color: '#555' }} />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search guest or txn..." className="bg-transparent text-sm outline-none flex-1 text-white placeholder-gray-600" />
         </div>
-        <div className="flex gap-1 rounded-lg p-1" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex gap-1 rounded-lg p-1" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
           <button
             onClick={() => setSortOrder('latest')}
             className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
@@ -644,7 +644,7 @@ const Reservations = () => {
             Oldest to Latest
           </button>
         </div>
-        <div className="flex gap-1 rounded-lg p-1" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex gap-1 rounded-lg p-1" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
           {['all', 'pending', 'approved', 'confirmed', 'checked_in', 'completed', 'no_show', 'rejected', 'cancelled'].map((f) => (
             <button key={f} onClick={() => setFilter(f)} className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
               style={filter === f ? { background: '#CC0000', color: '#fff' } : { color: '#888' }}>
@@ -658,7 +658,7 @@ const Reservations = () => {
       <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <thead style={{ borderBottom: '1px solid var(--m-border)' }}>
               <tr>
                 <th className="table-header">Guest</th>
                 <th className="table-header">Date & Time</th>
@@ -671,7 +671,7 @@ const Reservations = () => {
             </thead>
             <tbody>
               {filteredSorted.map((r) => (
-                <tr key={r.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer' }}
+                <tr key={r.id} className="transition-colors" style={{ borderBottom: '1px solid var(--m-border)', cursor: 'pointer' }}
                   onClick={() => handleRowClick(r)}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.06)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
@@ -780,7 +780,7 @@ const Reservations = () => {
                       )}
                       {r.status === 'approved' && (
                         <button onClick={(e) => { e.stopPropagation(); handleAction(r.id, 'cancelled'); }} className="p-1.5 rounded-lg transition-colors" style={{ color: '#666' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#fff'; }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; e.currentTarget.style.color = '#fff'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#666'; }}
                           title="Cancel">
                           <Ban className="w-4 h-4" />
@@ -841,7 +841,7 @@ const Reservations = () => {
         >
           <div
             className="w-full max-w-xl rounded-2xl overflow-hidden overflow-y-auto"
-            style={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', maxHeight: '90vh' }}
+            style={{ background: '#111', border: '1px solid var(--m-border)', maxHeight: '90vh' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-5">

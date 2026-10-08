@@ -439,7 +439,7 @@ function ReservationModal({ reservation, onClose, onCancel, onDownloadReceipt })
             {reservation.transaction_number && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '1rem 0', padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
                 {qrDataUrl && (
-                  <img src={qrDataUrl} alt="QR Code" style={{ width: '80px', height: '80px', borderRadius: '6px', flexShrink: 0, background: '#fff', padding: '4px' }} />
+                  <img src={qrDataUrl} alt="QR Code" style={{ width: '120px', height: '120px', borderRadius: '8px', flexShrink: 0, background: '#fff', padding: '6px' }} />
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: '0.2rem' }}>

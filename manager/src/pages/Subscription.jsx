@@ -221,7 +221,7 @@ const Subscription = () => {
               <button
                 onClick={() => setShowCancel(true)}
                 className="self-start px-4 py-2 text-sm rounded-lg transition-colors"
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+                style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}
               >
                 {hasPending && !mySub.subscription ? 'Cancel Request' : 'Cancel Plan'}
               </button>
@@ -289,7 +289,7 @@ const Subscription = () => {
                 className="relative rounded-2xl p-6 transition-all"
                 style={isCurrent
                   ? { border: '2px solid #CC0000', background: 'rgba(204,0,0,0.05)', boxShadow: '0 0 20px rgba(204,0,0,0.1)' }
-                  : { border: '1px solid rgba(255,255,255,0.08)', background: '#111111' }
+                  : { border: '1px solid var(--m-border)', background: 'var(--m-surface)' }
                 }
               >
                 {isCurrent && (
@@ -341,7 +341,7 @@ const Subscription = () => {
                 </ul>
 
                 {isCurrent ? (
-                  <button disabled className="w-full py-2.5 rounded-xl text-sm font-semibold cursor-not-allowed" style={{ background: 'rgba(255,255,255,0.06)', color: '#555' }}>
+                  <button disabled className="w-full py-2.5 rounded-xl text-sm font-semibold cursor-not-allowed" style={{ background: 'var(--m-active-bg)', color: '#555' }}>
                     Current Plan
                   </button>
                 ) : isPendingPlan ? (
@@ -349,11 +349,11 @@ const Subscription = () => {
                     <Clock className="w-4 h-4" /> Upgrade pending...
                   </button>
                 ) : isFree || isDowngrade ? (
-                  <button disabled className="w-full py-2.5 rounded-xl text-sm font-semibold cursor-not-allowed" style={{ background: 'rgba(255,255,255,0.06)', color: '#555' }}>
+                  <button disabled className="w-full py-2.5 rounded-xl text-sm font-semibold cursor-not-allowed" style={{ background: 'var(--m-active-bg)', color: '#555' }}>
                     {isDowngrade ? 'Downgrade' : 'Free Tier'}
                   </button>
                 ) : hasPending ? (
-                  <button disabled className="w-full py-2.5 rounded-xl text-sm font-semibold cursor-not-allowed" style={{ background: 'rgba(255,255,255,0.06)', color: '#555' }}>
+                  <button disabled className="w-full py-2.5 rounded-xl text-sm font-semibold cursor-not-allowed" style={{ background: 'var(--m-active-bg)', color: '#555' }}>
                     Upgrade pending...
                   </button>
                 ) : (
@@ -399,7 +399,7 @@ const Subscription = () => {
       {/* Payment Modal */}
       {showPayment && selectedPlan && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => !processing && setShowPayment(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-5" style={{ background: 'linear-gradient(135deg, #1a0000, #0a0a1a)' }}>
               <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>Upgrading to</p>
               <h3 className="text-xl font-bold text-white">{selectedPlan.display_name} Plan</h3>
@@ -410,7 +410,7 @@ const Subscription = () => {
             </div>
 
             <div className="p-6 space-y-5">
-              <div className="rounded-xl p-4" style={{ background: '#161616' }}>
+              <div className="rounded-xl p-4" style={{ background: 'var(--m-surface-2)' }}>
                 <p className="text-xs font-semibold uppercase mb-2" style={{ color: '#666' }}>What you'll get</p>
                 <ul className="space-y-1.5">
                   <li className="flex items-center gap-2 text-sm" style={{ color: '#ccc' }}>
@@ -438,7 +438,7 @@ const Subscription = () => {
                       className="flex items-center gap-2 px-3 py-3 rounded-xl text-left transition-all"
                       style={paymentMethod === pm.id
                         ? { border: '2px solid #CC0000', background: 'rgba(204,0,0,0.08)' }
-                        : { border: '1px solid rgba(255,255,255,0.08)', background: 'transparent' }
+                        : { border: '1px solid var(--m-border)', background: 'transparent' }
                       }
                     >
                       <span className="text-lg">{pm.icon}</span>
@@ -500,7 +500,7 @@ const Subscription = () => {
       {/* Cancel Subscription Modal */}
       {showCancel && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => !cancelling && setShowCancel(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
             <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(204,0,0,0.12)' }}>
               <AlertTriangle className="w-6 h-6" style={{ color: '#ff6666' }} />
             </div>

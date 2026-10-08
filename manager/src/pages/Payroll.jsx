@@ -345,13 +345,13 @@ const Payroll = () => {
     return (
       <div className="space-y-6">
         <div className="card p-0 overflow-hidden">
-          <div className="px-6 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161616' }}>
+          <div className="px-6 py-3" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface-2)' }}>
             <h4 className="font-semibold text-white">My Payroll History</h4>
             <p className="text-xs mt-0.5" style={{ color: '#666' }}>Click any row to view full payslip details</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}><tr>
+              <thead style={{ borderBottom: '1px solid var(--m-border)' }}><tr>
                 <th className="table-header">Period</th>
                 <th className="table-header">Days Present</th>
                 <th className="table-header">Worked</th>
@@ -363,7 +363,7 @@ const Payroll = () => {
               </tr></thead>
               <tbody>
                 {myPayroll.map((p) => (
-                  <tr key={p.id} className="transition-colors cursor-pointer" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                  <tr key={p.id} className="transition-colors cursor-pointer" style={{ borderBottom: '1px solid var(--m-border)' }}
                     data-testid={`my-payroll-${p.id}`}
                     onClick={() => { setSelectedSlip(p); setShowSlipModal(true); }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.06)'; }}
@@ -392,8 +392,8 @@ const Payroll = () => {
         {/* Payslip Detail Modal */}
         {showSlipModal && selectedSlip && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowSlipModal(false)}>
-            <div className="rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161616' }}>
+            <div className="rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface-2)' }}>
                 <div>
                   <h3 className="font-bold text-white">Payslip Details</h3>
                   <p className="text-xs mt-0.5" style={{ color: '#888' }}>
@@ -405,7 +405,7 @@ const Payroll = () => {
                     <Download className="w-3.5 h-3.5" /> Download PDF
                   </button>
                   <button onClick={() => setShowSlipModal(false)} className="p-1.5 rounded-lg" style={{ color: '#666' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'var(--m-active-bg)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; e.currentTarget.style.background = 'transparent'; }}
                   ><X className="w-4 h-4" /></button>
                 </div>
@@ -415,34 +415,34 @@ const Payroll = () => {
                   <span className="text-sm font-semibold text-white">{user?.first_name} {user?.last_name}</span>
                   <span className={selectedSlip.run_status === 'finalized' ? 'badge-success' : 'badge-warning'}>{selectedSlip.run_status || 'draft'}</span>
                 </div>
-                <div className="rounded-xl p-4" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="rounded-xl p-4" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                   <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#666' }}>Earnings</div>
-                  <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                     <span className="text-sm" style={{ color: '#ccc' }}>Days Present</span>
                     <span className="text-sm font-medium text-white">{selectedSlip.days_present || 0} day(s)</span>
                   </div>
-                  <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                     <span className="text-sm" style={{ color: '#ccc' }}>Daily Rate</span>
                     <span className="text-sm font-medium text-white">{fmtDailyRate(selectedSlip.daily_rate || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                     <span className="text-sm" style={{ color: '#ccc' }}>Worked Time</span>
                     <span className="text-sm font-medium text-white">{fmtWorked(selectedSlip.total_work_minutes)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                     <span className="text-sm" style={{ color: '#ccc' }}>Base Pay</span>
                     <span className="text-sm font-medium text-white">{fmtMoney(selectedSlip.base_pay || selectedSlip.gross_pay || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                     <span className="text-sm" style={{ color: '#ccc' }}>Overtime Pay</span>
                     <span className="text-sm font-medium" style={{ color: '#4ade80' }}>+{fmtMoney(selectedSlip.overtime_pay || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                     <span className="text-sm" style={{ color: '#ccc' }}>Undertime Deduction</span>
                     <span className="text-sm font-medium" style={{ color: '#ff6666' }}>-{fmtMoney(selectedSlip.undertime_deduction || 0)}</span>
                   </div>
                   {(selectedSlip.addition_items || []).map((addition, aidx) => (
-                    <div key={`addition-${aidx}`} className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }} data-testid="payslip-addition">
+                    <div key={`addition-${aidx}`} className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }} data-testid="payslip-addition">
                       <span className="text-sm" style={{ color: '#ccc' }}>{addition.label}</span>
                       <span className="text-sm font-medium" style={{ color: '#4ade80' }}>+{fmtMoney(addition.amount)}</span>
                     </div>
@@ -453,28 +453,28 @@ const Payroll = () => {
                   </div>
                 </div>
                 {(selectedSlip.bir_deduction > 0 || selectedSlip.sss_deduction > 0 || selectedSlip.philhealth_deduction > 0 || selectedSlip.late_deduction > 0) && (
-                  <div className="rounded-xl p-4" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="rounded-xl p-4" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                     <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#666' }}>Deductions</div>
                     {selectedSlip.bir_deduction > 0 && (
-                      <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                         <span className="text-sm" style={{ color: '#ccc' }}>BIR Withholding Tax</span>
                         <span className="text-sm font-medium" style={{ color: '#ff6666' }}>-{fmtMoney(selectedSlip.bir_deduction)}</span>
                       </div>
                     )}
                     {selectedSlip.sss_deduction > 0 && (
-                      <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                         <span className="text-sm" style={{ color: '#ccc' }}>SSS Contribution</span>
                         <span className="text-sm font-medium" style={{ color: '#ff6666' }}>-{fmtMoney(selectedSlip.sss_deduction)}</span>
                       </div>
                     )}
                     {selectedSlip.philhealth_deduction > 0 && (
-                      <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                         <span className="text-sm" style={{ color: '#ccc' }}>PhilHealth</span>
                         <span className="text-sm font-medium" style={{ color: '#ff6666' }}>-{fmtMoney(selectedSlip.philhealth_deduction)}</span>
                       </div>
                     )}
                     {selectedSlip.late_deduction > 0 && (
-                      <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                         <span className="text-sm" style={{ color: '#ccc' }}>Late Deduction</span>
                         <span className="text-sm font-medium" style={{ color: '#ff6666' }}>-{fmtMoney(selectedSlip.late_deduction)}</span>
                       </div>
@@ -530,10 +530,10 @@ const Payroll = () => {
       {/* Preview */}
       {preview.length > 0 && (
         <div className="card p-0 overflow-hidden">
-          <div className="px-6 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161616' }}><h4 className="font-semibold text-white">Payroll Preview</h4></div>
+          <div className="px-6 py-3" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface-2)' }}><h4 className="font-semibold text-white">Payroll Preview</h4></div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}><tr>
+              <thead style={{ borderBottom: '1px solid var(--m-border)' }}><tr>
                 <th className="table-header">Employee</th>
                 <th className="table-header">Daily Rate</th>
                 <th className="table-header">Days Present</th>
@@ -544,14 +544,14 @@ const Payroll = () => {
               </tr></thead>
               <tbody>
                 {preview.map((p, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <tr key={i} style={{ borderBottom: '1px solid var(--m-border)' }}>
                     <td className="table-cell font-medium text-white">{p.first_name} {p.last_name}</td>
                     <td className="table-cell">{fmtDailyRate(p.daily_rate)}</td>
                     <td className="table-cell">{p.days_present || 0}</td>
                     <td className="table-cell">{fmtWorked(p.total_work_minutes)}</td>
                     <td className="table-cell" style={{ color: '#4ade80' }}>{fmtMoney(p.overtime_pay || 0)}</td>
                     <td className="table-cell" style={{ color: '#ff6666' }}>{fmtMoney(p.undertime_deduction || 0)}</td>
-                    <td className="table-cell font-bold" style={{ color: '#CC0000' }}>{fmtMoney(p.gross_pay || p.adjusted_gross_pay || 0)}</td>
+                    <td className="table-cell font-bold" style={{ color: '#CC0000' }}>{fmtMoney(p.adjusted_gross_pay || p.gross_pay || 0)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -562,10 +562,10 @@ const Payroll = () => {
 
       {/* Past Runs */}
       <div className="card p-0 overflow-hidden">
-        <div className="px-6 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161616' }}><h4 className="font-semibold text-white">Payroll History</h4></div>
+        <div className="px-6 py-3" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface-2)' }}><h4 className="font-semibold text-white">Payroll History</h4></div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}><tr>
+            <thead style={{ borderBottom: '1px solid var(--m-border)' }}><tr>
               <th className="table-header">ID</th>
               <th className="table-header">Period</th>
               <th className="table-header">Status</th>
@@ -574,7 +574,7 @@ const Payroll = () => {
             </tr></thead>
             <tbody>
               {runs.map((r) => (
-                <tr key={r.id} className="cursor-pointer transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                <tr key={r.id} className="cursor-pointer transition-colors" style={{ borderBottom: '1px solid var(--m-border)' }}
                   data-testid={`payroll-run-${r.id}`}
                   onClick={() => handleViewDetails(r)}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.04)'; }}
@@ -604,13 +604,13 @@ const Payroll = () => {
       {/* Leave-to-cash conversion approvals */}
       {can('leave_approve') && (
         <div className="card p-0 overflow-hidden" data-testid="payroll-conversions">
-          <div className="px-6 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161616' }}>
+          <div className="px-6 py-3" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface-2)' }}>
             <h4 className="font-semibold text-white">Leave-to-Cash Approvals</h4>
             <p className="text-xs mt-0.5" style={{ color: '#666' }}>Approved conversions deduct days from the leave balance and are paid out as a "Sick Leave Conversion" addition on payroll</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}><tr>
+              <thead style={{ borderBottom: '1px solid var(--m-border)' }}><tr>
                 <th className="table-header">Employee</th>
                 <th className="table-header">Leave Type</th>
                 <th className="table-header">Days</th>
@@ -621,7 +621,7 @@ const Payroll = () => {
               </tr></thead>
               <tbody>
                 {conversions.map((c) => (
-                  <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }} data-testid={`payroll-conversion-row-${c.id}`}>
+                  <tr key={c.id} style={{ borderBottom: '1px solid var(--m-border)' }} data-testid={`payroll-conversion-row-${c.id}`}>
                     <td className="table-cell font-medium text-white">{c.first_name} {c.last_name}</td>
                     <td className="table-cell">{c.name}</td>
                     <td className="table-cell">{Number(c.days)}</td>
@@ -668,8 +668,8 @@ const Payroll = () => {
       {/* Payroll Details Modal */}
       {showDetailsModal && selectedRun && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDetailsModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 sticky top-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#111111' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 sticky top-0" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
               <div>
                 <h3 className="font-bold text-white">Payroll Run #{selectedRun.id}</h3>
                 <p className="text-sm" style={{ color: '#888' }}>
@@ -682,15 +682,15 @@ const Payroll = () => {
             {runDetails ? (
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                  <div className="rounded-lg p-4" style={{ background: '#161616' }}>
+                  <div className="rounded-lg p-4" style={{ background: 'var(--m-surface-2)' }}>
                     <p className="text-xs uppercase" style={{ color: '#666' }}>Status</p>
                     <p className="text-lg font-bold text-white capitalize">{runDetails.run?.status}</p>
                   </div>
-                  <div className="rounded-lg p-4" style={{ background: '#161616' }}>
+                  <div className="rounded-lg p-4" style={{ background: 'var(--m-surface-2)' }}>
                     <p className="text-xs uppercase" style={{ color: '#666' }}>Employees</p>
                     <p className="text-lg font-bold text-white">{runDetails.items?.length || 0}</p>
                   </div>
-                  <div className="rounded-lg p-4" style={{ background: '#161616' }}>
+                  <div className="rounded-lg p-4" style={{ background: 'var(--m-surface-2)' }}>
                     <p className="text-xs uppercase" style={{ color: '#666' }}>Total Worked</p>
                     <p className="text-lg font-bold text-white">{fmtWorked((runDetails.items || []).reduce((sum, item) => sum + Number(item.total_work_minutes || 0), 0))}</p>
                   </div>
@@ -702,9 +702,9 @@ const Payroll = () => {
                   </div>
                 </div>
 
-                <div className="rounded-lg overflow-x-auto" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="rounded-lg overflow-x-auto" style={{ border: '1px solid var(--m-border)' }}>
                   <table className="w-full min-w-max">
-                    <thead style={{ background: '#161616' }}>
+                    <thead style={{ background: 'var(--m-surface-2)' }}>
                       <tr>
                         <th className="table-header text-left whitespace-nowrap">Employee</th>
                         <th className="table-header whitespace-nowrap">Daily Rate</th>
@@ -725,8 +725,8 @@ const Payroll = () => {
                     </thead>
                     <tbody>
                       {(runDetails.items || []).map((item) => (
-                        <tr key={item.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                        <tr key={item.id} className="transition-colors" style={{ borderBottom: '1px solid var(--m-border)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                         >
                           <td className="table-cell">
@@ -766,7 +766,7 @@ const Payroll = () => {
                 </div>
 
                 {runDetails.run?.status === 'draft' && can('payroll_create') && (
-                  <div className="flex justify-between gap-3 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="flex justify-between gap-3 pt-4" style={{ borderTop: '1px solid var(--m-border)' }}>
                     <button onClick={() => setShowCancelModal(true)} disabled={cancelling} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors" style={{ background: 'rgba(239,68,68,0.1)', color: '#ff6666', border: '1px solid rgba(239,68,68,0.2)' }}>
                       {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                       Cancel Run
@@ -782,7 +782,7 @@ const Payroll = () => {
                 )}
 
                 {runDetails.run?.status === 'finalized' && (
-                  <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid var(--m-border)' }}>
                     <div className="flex items-center gap-2" style={{ color: '#4ade80' }}>
                       <CheckCircle className="w-5 h-5" />
                       <span className="font-medium">Payroll Finalized on {fmtUTC(runDetails.run.finalized_at, 'MMM d, yyyy')}</span>
@@ -804,13 +804,13 @@ const Payroll = () => {
       {/* My Payroll section for staff who also have manager permissions */}
       {canViewOwn && myPayroll.length > 0 && (
         <div className="card p-0 overflow-hidden">
-          <div className="px-6 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161616' }}>
+          <div className="px-6 py-3" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface-2)' }}>
             <h4 className="font-semibold text-white">My Payroll</h4>
             <p className="text-xs mt-0.5" style={{ color: '#666' }}>Click any row to view full payslip details</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}><tr>
+              <thead style={{ borderBottom: '1px solid var(--m-border)' }}><tr>
                 <th className="table-header">Period</th>
                 <th className="table-header">Days Present</th>
                 <th className="table-header">Worked</th>
@@ -822,7 +822,7 @@ const Payroll = () => {
               </tr></thead>
               <tbody>
                 {myPayroll.map((p) => (
-                  <tr key={p.id} className="transition-colors cursor-pointer" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                  <tr key={p.id} className="transition-colors cursor-pointer" style={{ borderBottom: '1px solid var(--m-border)' }}
                     onClick={() => { setSelectedSlip(p); setShowSlipModal(true); }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.06)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
@@ -850,8 +850,8 @@ const Payroll = () => {
       {/* Payslip Detail Modal (shared for manager My Payroll section) */}
       {showSlipModal && selectedSlip && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowSlipModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161616' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface-2)' }}>
               <div>
                 <h3 className="font-bold text-white">Payslip Details</h3>
                 <p className="text-xs mt-0.5" style={{ color: '#888' }}>
@@ -863,7 +863,7 @@ const Payroll = () => {
                   <Download className="w-3.5 h-3.5" /> Download PDF
                 </button>
                 <button onClick={() => setShowSlipModal(false)} className="p-1.5 rounded-lg" style={{ color: '#666' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'var(--m-active-bg)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; e.currentTarget.style.background = 'transparent'; }}
                 ><X className="w-4 h-4" /></button>
               </div>
@@ -873,34 +873,34 @@ const Payroll = () => {
                 <span className="text-sm font-semibold text-white">{user?.first_name} {user?.last_name}</span>
                 <span className={selectedSlip.run_status === 'finalized' ? 'badge-success' : 'badge-warning'}>{selectedSlip.run_status || 'draft'}</span>
               </div>
-              <div className="rounded-xl p-4" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="rounded-xl p-4" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                 <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#666' }}>Earnings</div>
-                <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                   <span className="text-sm" style={{ color: '#ccc' }}>Days Present</span>
                   <span className="text-sm font-medium text-white">{selectedSlip.days_present || 0} day(s)</span>
                 </div>
-                <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                   <span className="text-sm" style={{ color: '#ccc' }}>Daily Rate</span>
                   <span className="text-sm font-medium text-white">{fmtDailyRate(selectedSlip.daily_rate || 0)}</span>
                 </div>
-                <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                   <span className="text-sm" style={{ color: '#ccc' }}>Worked Time</span>
                   <span className="text-sm font-medium text-white">{fmtWorked(selectedSlip.total_work_minutes)}</span>
                 </div>
-                <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                   <span className="text-sm" style={{ color: '#ccc' }}>Base Pay</span>
                   <span className="text-sm font-medium text-white">{fmtMoney(selectedSlip.base_pay || selectedSlip.gross_pay || 0)}</span>
                 </div>
-                <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                   <span className="text-sm" style={{ color: '#ccc' }}>Overtime Pay</span>
                   <span className="text-sm font-medium" style={{ color: '#4ade80' }}>+{fmtMoney(selectedSlip.overtime_pay || 0)}</span>
                 </div>
-                <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                   <span className="text-sm" style={{ color: '#ccc' }}>Undertime Deduction</span>
                   <span className="text-sm font-medium" style={{ color: '#ff6666' }}>-{fmtMoney(selectedSlip.undertime_deduction || 0)}</span>
                 </div>
                 {(selectedSlip.addition_items || []).map((addition, aidx) => (
-                  <div key={`addition-${aidx}`} className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }} data-testid="payslip-addition">
+                  <div key={`addition-${aidx}`} className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }} data-testid="payslip-addition">
                     <span className="text-sm" style={{ color: '#ccc' }}>{addition.label}</span>
                     <span className="text-sm font-medium" style={{ color: '#4ade80' }}>+{fmtMoney(addition.amount)}</span>
                   </div>
@@ -911,28 +911,28 @@ const Payroll = () => {
                 </div>
               </div>
               {(selectedSlip.bir_deduction > 0 || selectedSlip.sss_deduction > 0 || selectedSlip.philhealth_deduction > 0 || selectedSlip.late_deduction > 0) && (
-                <div className="rounded-xl p-4" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="rounded-xl p-4" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                   <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#666' }}>Deductions</div>
                   {selectedSlip.bir_deduction > 0 && (
-                    <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                       <span className="text-sm" style={{ color: '#ccc' }}>BIR Withholding Tax</span>
                       <span className="text-sm font-medium" style={{ color: '#ff6666' }}>-₱{Number(selectedSlip.bir_deduction).toLocaleString()}</span>
                     </div>
                   )}
                   {selectedSlip.sss_deduction > 0 && (
-                    <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                       <span className="text-sm" style={{ color: '#ccc' }}>SSS Contribution</span>
                       <span className="text-sm font-medium" style={{ color: '#ff6666' }}>-₱{Number(selectedSlip.sss_deduction).toLocaleString()}</span>
                     </div>
                   )}
                   {selectedSlip.philhealth_deduction > 0 && (
-                    <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                       <span className="text-sm" style={{ color: '#ccc' }}>PhilHealth</span>
                       <span className="text-sm font-medium" style={{ color: '#ff6666' }}>-₱{Number(selectedSlip.philhealth_deduction).toLocaleString()}</span>
                     </div>
                   )}
                   {selectedSlip.late_deduction > 0 && (
-                    <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
                       <span className="text-sm" style={{ color: '#ccc' }}>Late Deduction</span>
                       <span className="text-sm font-medium" style={{ color: '#ff6666' }}>-₱{Number(selectedSlip.late_deduction).toLocaleString()}</span>
                     </div>

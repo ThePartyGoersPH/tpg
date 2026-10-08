@@ -399,7 +399,7 @@ const Leaves = () => {
           )}
 
           {/* Leave type rows — separators + zebra shading so they scan cleanly */}
-          <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--m-border)' }}>
             {cardBalances.map((b, i) => (
               <div
                 key={b.leave_type_id}
@@ -407,8 +407,8 @@ const Leaves = () => {
                 style={{
                   paddingTop: 12,
                   paddingBottom: 12,
-                  background: i % 2 === 1 ? 'rgba(255,255,255,0.025)' : 'transparent',
-                  borderBottom: i < cardBalances.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                  background: i % 2 === 1 ? 'var(--m-active-bg)' : 'transparent',
+                  borderBottom: i < cardBalances.length - 1 ? '1px solid var(--m-border)' : 'none',
                 }}
                 data-testid={`balance-row-${b.leave_type}`}
               >
@@ -483,7 +483,7 @@ const Leaves = () => {
         </div>
 
         <div className="card p-0 overflow-hidden" data-testid="conversions-card">
-          <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161616' }}>
+          <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface-2)' }}>
             <h4 className="font-semibold text-white text-sm">Leave-to-Cash Requests</h4>
             <p className="text-[11px] mt-0.5" style={{ color: '#666' }}>
               {can('leave_approve') ? 'Approve or reject pending requests' : 'Your conversion requests'}
@@ -496,7 +496,7 @@ const Leaves = () => {
               </p>
             )}
             {conversions.map((c) => (
-              <div key={c.id} className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }} data-testid={`conversion-row-${c.id}`}>
+              <div key={c.id} className="px-4 py-3" style={{ borderBottom: '1px solid var(--m-border)' }} data-testid={`conversion-row-${c.id}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm text-white font-medium truncate">{c.first_name} {c.last_name} · {c.name}</p>
@@ -539,7 +539,7 @@ const Leaves = () => {
       {/* Right column — filters + leave requests */}
       <div className="flex-1 min-w-0 w-full space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex gap-1 rounded-lg p-1" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex gap-1 rounded-lg p-1" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
           {['all', 'pending', 'approved', 'rejected'].map((f) => (
             <button key={f} onClick={() => { setFilter(f); }} className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
               style={filter === f ? { background: '#CC0000', color: '#fff' } : { color: '#888' }}>
@@ -557,7 +557,7 @@ const Leaves = () => {
       <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full leave-table">
-            <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}><tr>
+            <thead style={{ borderBottom: '1px solid var(--m-border)' }}><tr>
               {can('leave_approve') && <th className="table-header">Employee</th>}
               <th className="table-header">Type</th>
               <th className="table-header">Start</th>
@@ -570,7 +570,7 @@ const Leaves = () => {
             </tr></thead>
             <tbody>
               {filteredLeaves.map((l) => (
-                <tr key={l.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                <tr key={l.id} className="transition-colors" style={{ borderBottom: '1px solid var(--m-border)' }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.04)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
@@ -639,8 +639,8 @@ const Leaves = () => {
 
       {showModal && canFileLeave && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
               <h3 className="font-bold text-white">Apply for Leave</h3>
               <button onClick={() => setShowModal(false)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
@@ -702,8 +702,8 @@ const Leaves = () => {
       {/* Detail Modal */}
       {detailModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDetailModal(null)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-lg" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-lg" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
               <h3 className="font-bold text-white">Leave Request Details</h3>
               <button onClick={() => setDetailModal(null)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
@@ -746,7 +746,7 @@ const Leaves = () => {
                 <p style={{ color: '#888' }}>{detailModal.reason || 'No reason provided'}</p>
               </div>
               {can('leave_approve') && detailModal.status === 'pending' && (
-                <div className="flex gap-3 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="flex gap-3 pt-4" style={{ borderTop: '1px solid var(--m-border)' }}>
                   <button
                     onClick={async () => { const ok = await handleDecide(detailModal.id, 'approve'); if (ok) setDetailModal(null); }}
                     disabled={!!deciding}
@@ -773,8 +773,8 @@ const Leaves = () => {
       {/* Convert Unused Sick Leave to Cash — sick leave only */}
       {showConvert && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowConvert(false)} data-testid="convert-modal">
-          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between gap-3 px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3 px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
               <div>
                 <h3 className="font-bold text-white">Convert Unused Sick Leave to Cash</h3>
                 <p className="text-[11px] mt-0.5" style={{ color: '#666' }}>Sick leave only · year-end window</p>

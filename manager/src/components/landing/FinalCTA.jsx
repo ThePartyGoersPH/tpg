@@ -75,9 +75,9 @@ const FinalCTA = () => {
 
         {/* Decorative lines */}
         <div className="mt-16 flex items-center gap-4">
-          <div className="flex-1 h-[1px]" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06))' }} />
+          <div className="flex-1 h-[1px]" style={{ background: 'linear-gradient(90deg, transparent, var(--m-active-bg))' }} />
           <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#CC0000', boxShadow: '0 0 8px rgba(204,0,0,0.8)' }} />
-          <div className="flex-1 h-[1px]" style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.06), transparent)' }} />
+          <div className="flex-1 h-[1px]" style={{ background: 'linear-gradient(90deg, var(--m-active-bg), transparent)' }} />
         </div>
       </div>
     </section>

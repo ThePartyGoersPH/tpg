@@ -65,7 +65,7 @@ const POS = () => {
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex gap-1 rounded-lg p-1 w-fit" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="flex gap-1 rounded-lg p-1 w-fit" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
         <button onClick={() => setTab('dashboard')} className="px-4 py-2 rounded-md text-sm font-medium transition-colors" style={tab === 'dashboard' ? { background: '#CC0000', color: '#fff' } : { color: '#888' }}>Dashboard</button>
         {can('reservation_view') && <button onClick={() => setTab('orders')} className="px-4 py-2 rounded-md text-sm font-medium transition-colors" style={tab === 'orders' ? { background: '#CC0000', color: '#fff' } : { color: '#888' }}>Orders</button>}
       </div>
@@ -116,7 +116,7 @@ const POS = () => {
               <h3 className="font-bold text-white mb-4">Top Selling Items</h3>
               <div className="space-y-2">
                 {(dashboard.top_items || []).slice(0, 8).map((item, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 last:border-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div key={i} className="flex items-center justify-between py-2 last:border-0" style={{ borderBottom: '1px solid var(--m-border)' }}>
                     <div className="flex items-center gap-2">
                       <span className="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center" style={{ background: 'rgba(204,0,0,0.15)', color: '#CC0000' }}>{i + 1}</span>
                       <span className="text-sm" style={{ color: '#ccc' }}>{item.item_name || item.name}</span>
@@ -132,7 +132,7 @@ const POS = () => {
               <h3 className="font-bold text-white mb-4">Low Stock Alerts</h3>
               <div className="space-y-2">
                 {(dashboard.low_stock || []).slice(0, 8).map((item, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 last:border-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div key={i} className="flex items-center justify-between py-2 last:border-0" style={{ borderBottom: '1px solid var(--m-border)' }}>
                     <span className="text-sm" style={{ color: '#ccc' }}>{item.name}</span>
                       <span className={item.stock_status === 'critical' ? 'badge-danger' : 'badge-warning'}>
                         {formatAtomicStock(item)}
@@ -148,7 +148,7 @@ const POS = () => {
 
       {tab === 'orders' && (
         <>
-          <div className="flex gap-1 rounded-lg p-1 w-fit" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex gap-1 rounded-lg p-1 w-fit" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
             {['', 'pending', 'completed', 'cancelled'].map((f) => (
               <button key={f} onClick={() => setOrderFilter(f)} className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
                 style={orderFilter === f ? { background: '#CC0000', color: '#fff' } : { color: '#888' }}
@@ -159,7 +159,7 @@ const POS = () => {
           <div className="card p-0 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}><tr>
+                <thead style={{ borderBottom: '1px solid var(--m-border)' }}><tr>
                   <th className="table-header">Order #</th>
                   <th className="table-header">Table</th>
                   <th className="table-header">Total</th>
@@ -170,7 +170,7 @@ const POS = () => {
                 </tr></thead>
                 <tbody>
                   {filteredOrders.map((o) => (
-                    <tr key={o.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                    <tr key={o.id} className="transition-colors" style={{ borderBottom: '1px solid var(--m-border)' }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.04)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                     >
@@ -198,15 +198,15 @@ const POS = () => {
       {/* Order Detail Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedOrder(null)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
               <h3 className="font-bold text-white">Order {selectedOrder.order_number || `#${selectedOrder.id}`}</h3>
               <button onClick={() => setSelectedOrder(null)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6">
               <div className="space-y-2 mb-4">
                 {(selectedOrder.items || []).map((item, i) => (
-                  <div key={i} className="flex items-center justify-between py-1.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div key={i} className="flex items-center justify-between py-1.5" style={{ borderBottom: '1px solid var(--m-border)' }}>
                     <div>
                       <p className="text-sm font-medium text-white">{item.item_name}</p>
                       <p className="text-xs" style={{ color: '#666' }}>{item.quantity} x ₱{Number(item.unit_price || 0).toLocaleString()}</p>
@@ -215,7 +215,7 @@ const POS = () => {
                   </div>
                 ))}
               </div>
-              <div className="pt-3 space-y-1" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="pt-3 space-y-1" style={{ borderTop: '1px solid var(--m-border)' }}>
                 <div className="flex justify-between text-sm"><span style={{ color: '#888' }}>Subtotal</span><span className="text-white">₱{Number(selectedOrder.subtotal || 0).toLocaleString()}</span></div>
                 {selectedOrder.discount_amount > 0 && <div className="flex justify-between text-sm"><span style={{ color: '#888' }}>Discount</span><span style={{ color: '#ff6666' }}>-₱{Number(selectedOrder.discount_amount).toLocaleString()}</span></div>}
                 <div className="flex justify-between font-bold text-base mt-2"><span className="text-white">Total</span><span style={{ color: '#CC0000' }}>₱{Number(selectedOrder.total_amount || 0).toLocaleString()}</span></div>

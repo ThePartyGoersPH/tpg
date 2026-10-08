@@ -3939,7 +3939,7 @@ select.glass-input option {
   padding: 5rem 2rem 4rem;
   overflow: hidden;
   background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.7)),
-    url('bg-home.jpg') center/cover no-repeat;
+    url('/bg-home.jpg') center/cover no-repeat;
 }
 
 [data-theme="light"] .home-hero {
@@ -6658,7 +6658,7 @@ select.glass-input option {
   overflow: hidden;
   background:
     linear-gradient(to bottom, rgba(10, 10, 10, 0.3) 0%, rgba(10, 10, 10, 0.8) 60%, rgba(10, 10, 10, 0.95) 100%),
-    url("./bg-home.jpg");
+    url('/bg-home.jpg');
   background-size: cover;
   background-position: center;
 }

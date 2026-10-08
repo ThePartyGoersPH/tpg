@@ -387,7 +387,7 @@ const Inventory = () => {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-full sm:w-72" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-full sm:w-72" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
           <Search className="w-4 h-4" style={{ color: '#555' }} />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search inventory..." className="bg-transparent text-sm outline-none flex-1 text-white placeholder-gray-600" />
         </div>
@@ -444,7 +444,7 @@ const Inventory = () => {
       <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <thead style={{ borderBottom: '1px solid var(--m-border)' }}>
               <tr>
                 <th className="table-header">Item</th>
                 <th className="table-header">Unit</th>
@@ -458,7 +458,7 @@ const Inventory = () => {
             </thead>
             <tbody>
               {filtered.map((item) => (
-                <tr key={item.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                <tr key={item.id} className="transition-colors" style={{ borderBottom: '1px solid var(--m-border)' }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.04)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
@@ -487,7 +487,7 @@ const Inventory = () => {
                             </span>
                             {tooltipId === item.id && (
                               <div className="absolute left-0 top-6 z-50 w-56 rounded-lg p-2.5 text-xs shadow-xl pointer-events-none"
-                                style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', color: '#ccc' }}>
+                                style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)', color: '#ccc' }}>
                                 {badge.message}
                               </div>
                             )}
@@ -529,7 +529,7 @@ const Inventory = () => {
                       <div className="flex items-center justify-end gap-1">
                         {(isOwner ? can('menu_update') : (can('menu_update') && hasApprovedRequest(item.name))) && (
                           <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg transition-colors" style={{ color: '#666' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff'; }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; e.currentTarget.style.color = '#fff'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#666'; }}
                             title={!isOwner ? 'Approved request required to edit' : ''}
                           ><Edit2 className="w-4 h-4" /></button>
@@ -600,22 +600,22 @@ const Inventory = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              <div className="rounded-lg px-3 py-3" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-lg px-3 py-3" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                 <p className="text-xs" style={{ color: '#888' }}>Weekly Wasted Quantity</p>
                 <p className="text-lg font-semibold text-white">{Math.round(Number(wastageSummary?.weekly?.total_wasted_quantity || 0))}</p>
               </div>
-              <div className="rounded-lg px-3 py-3" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-lg px-3 py-3" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                 <p className="text-xs" style={{ color: '#888' }}>Weekly Estimated Loss</p>
                 <p className="text-lg font-semibold" style={{ color: '#ffb783' }}>{formatMoney(wastageSummary?.weekly?.estimated_loss || 0)}</p>
               </div>
-              <div className="rounded-lg px-3 py-3" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-lg px-3 py-3" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                 <p className="text-xs" style={{ color: '#888' }}>Monthly Estimated Loss</p>
                 <p className="text-lg font-semibold" style={{ color: '#ff9c66' }}>{formatMoney(wastageSummary?.monthly?.estimated_loss || 0)}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
-              <div className="rounded-lg p-3" style={{ background: '#151515', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-lg p-3" style={{ background: '#151515', border: '1px solid var(--m-border)' }}>
                 <p className="text-sm font-semibold mb-2 text-white flex items-center gap-2">
                   <Clock3 className="w-4 h-4" style={{ color: '#fbbf24' }} /> Near Expiry
                 </p>
@@ -633,7 +633,7 @@ const Inventory = () => {
                 </div>
               </div>
 
-              <div className="rounded-lg p-3" style={{ background: '#151515', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-lg p-3" style={{ background: '#151515', border: '1px solid var(--m-border)' }}>
                 <p className="text-sm font-semibold mb-2 text-white flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" style={{ color: '#f87171' }} /> Spoiled
                 </p>
@@ -652,7 +652,7 @@ const Inventory = () => {
                           <button
                             type="button"
                             className="text-[11px] px-2 py-1 rounded-md"
-                            style={{ background: 'rgba(255,255,255,0.08)', color: '#fff' }}
+                            style={{ background: 'var(--m-active-bg)', color: '#fff' }}
                             onClick={() => openWasteModal(item)}
                           >
                             Mark Wasted
@@ -664,14 +664,14 @@ const Inventory = () => {
                 </div>
               </div>
 
-              <div className="rounded-lg p-3" style={{ background: '#151515', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-lg p-3" style={{ background: '#151515', border: '1px solid var(--m-border)' }}>
                 <p className="text-sm font-semibold mb-2 text-white">Top Wasted Items (30 days)</p>
                 <div className="space-y-2 max-h-64 overflow-auto pr-1">
                   {(wastageSummary?.top_wasted_items || []).length === 0 && (
                     <p className="text-xs" style={{ color: '#777' }}>No wastage records yet.</p>
                   )}
                   {(wastageSummary?.top_wasted_items || []).map((item) => (
-                    <div key={`wasted-${item.item_id}`} className="rounded-md px-2 py-2" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div key={`wasted-${item.item_id}`} className="rounded-md px-2 py-2" style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
                       <p className="text-sm font-medium text-white">{item.name}</p>
                       <p className="text-xs" style={{ color: '#aaa' }}>
                         {Math.round(Number(item.total_wasted_quantity || 0))} {item.unit || ''} wasted • {formatMoney(item.estimated_loss || 0)} estimated loss
@@ -688,11 +688,11 @@ const Inventory = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-lg" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-lg" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
               <h3 className="font-bold text-white">{editing ? 'Edit Item' : 'Add Item'}</h3>
               <button onClick={() => setShowModal(false)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; e.currentTarget.style.color = '#fff'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#666'; }}
               ><X className="w-5 h-5" /></button>
             </div>
@@ -715,7 +715,7 @@ const Inventory = () => {
                   <label className="label">Stock Qty *</label>
                   {editing ? (
                     <>
-                      <div className="input-field" style={{ display: 'flex', alignItems: 'center', color: '#888', background: 'rgba(255,255,255,0.03)' }}>
+                      <div className="input-field" style={{ display: 'flex', alignItems: 'center', color: '#888', background: 'var(--m-active-bg)' }}>
                         {formatAtomicStock({ ...editing, stock_qty: form.stock_qty })}
                       </div>
                       <p className="text-xs mt-1" style={{ color: '#666' }}>Locked — stock moves only through receiving, sales, or waste logs.</p>
@@ -725,10 +725,10 @@ const Inventory = () => {
                   )}
                 </div>
               </div>
-              <div className="rounded-lg p-3 space-y-3" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-lg p-3 space-y-3" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                 <p className="text-sm font-medium text-white">Bulk → Unit Conversion</p>
                 <p className="text-xs" style={{ color: '#666' }}>For items bought in bulk (e.g. cases) but sold per unit (e.g. bottles). Stock is tracked in base units.</p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div>
                     <label className="label">Pack Unit</label>
                     <input value={form.pack_unit} onChange={(e) => setForm({ ...form, pack_unit: e.target.value })} className="input-field" placeholder="Case" maxLength={30} />
@@ -754,7 +754,7 @@ const Inventory = () => {
                 <div><label className="label">Cost Price</label><input type="number" step="0.01" value={form.cost_price} onChange={(e) => setForm({ ...form, cost_price: e.target.value })} className="input-field" /></div>
               </div>
 
-              <div className="rounded-lg p-3 space-y-3" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-lg p-3 space-y-3" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                 <label className="flex items-center gap-2 text-sm text-white cursor-pointer">
                   <input
                     type="checkbox"
@@ -828,17 +828,17 @@ const Inventory = () => {
 
       {wasteModal.isOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={closeWasteModal}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
               <h3 className="font-bold text-white">Record Wastage</h3>
               <button onClick={closeWasteModal} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; e.currentTarget.style.color = '#fff'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#666'; }}
               ><X className="w-5 h-5" /></button>
             </div>
 
             <form onSubmit={submitWaste} className="p-6 space-y-4">
-              <div className="rounded-lg px-3 py-2" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-lg px-3 py-2" style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
                 <p className="text-sm text-white font-medium">{wasteModal.item?.name}</p>
                 <p className="text-xs" style={{ color: '#888' }}>
                   Current stock: {formatAtomicStock(wasteModal.item || {})}

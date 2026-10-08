@@ -98,7 +98,7 @@ function SuppliersTab({ canCreate }) {
                     </td>
                     <td className="py-2 pr-4">{s.phone || '—'}</td>
                     <td className="py-2 pr-4 text-right whitespace-nowrap">
-                      {canCreate && <><button onClick={() => edit(s)} className="text-blue-400 text-xs mr-3">Edit</button><button onClick={() => remove(s)} className="text-red-400 text-xs">Deactivate</button></>}
+                      {canCreate && <><button onClick={() => edit(s)} className="text-blue-400 text-xs mr-3">Edit</button><button onClick={() => remove(s.id)} className="text-red-400 text-xs">Deactivate</button></>}
                     </td>
                   </tr>
                 ))}

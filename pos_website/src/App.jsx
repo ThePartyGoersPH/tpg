@@ -9,12 +9,16 @@ import {
   LogOut,
   ShoppingBag,
   Store,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import LoginPage from './pages/LoginPage';
 import DashboardTab from './pages/DashboardTab';
 import NewOrderTab from './pages/NewOrderTab';
 import ActivityPage from './pages/ActivityPage';
+import { ConfirmDialogHost } from './components/ConfirmDialog';
 import { useAuth } from './contexts/useAuth';
+import { usePosTheme } from './hooks/usePosTheme';
 
 function LoadingScreen() {
   return (
@@ -29,7 +33,13 @@ function LoadingScreen() {
 export default function App() {
   const { initialized, isAuthenticated, user, logout, can } = useAuth();
   const [activeView, setActiveView] = useState('pos');
-  const [now] = useState(new Date());
+  const [now, setNow] = useState(() => new Date());
+  const { theme, toggleTheme } = usePosTheme();
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const shellRef = useRef(null);
 
@@ -151,6 +161,16 @@ export default function App() {
               {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
               <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
             </button>
+            <button
+              type="button"
+              className="top-chip top-chip-action"
+              onClick={toggleTheme}
+              aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            >
+              {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+              <span>{theme === 'light' ? 'Dark' : 'Light'}</span>
+            </button>
           </header>
 
           <main>
@@ -169,6 +189,7 @@ export default function App() {
           </p>
         </div>
       ) : null}
+      <ConfirmDialogHost />
     </div>
   );
 }

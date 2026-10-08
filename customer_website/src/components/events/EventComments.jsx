@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import EmptyState from '../ui/EmptyState';
 
-function EventComments({ comments, onSubmit }) {
+function EventComments({ comments = [], onSubmit }) {
   const [comment, setComment] = useState('');
 
   const handleSubmit = async (event) => {

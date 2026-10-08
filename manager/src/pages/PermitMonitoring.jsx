@@ -215,7 +215,7 @@ const PermitMonitoring = () => {
       )}
 
       {/* Filter Tabs */}
-      <div className="flex gap-2 rounded-xl p-1 w-fit" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="flex gap-2 rounded-xl p-1 w-fit" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
         <button
           onClick={() => setFilter('all')}
           className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"

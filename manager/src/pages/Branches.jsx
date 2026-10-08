@@ -198,7 +198,7 @@ const Branches = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-32 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
+              <div className="w-32 h-2 rounded-full overflow-hidden" style={{ background: 'var(--m-active-bg)' }}>
                 <div
                   className="h-full rounded-full transition-all"
                   style={{ width: `${Math.min(100, (subInfo.current_bars / subInfo.max_bars) * 100)}%`, background: '#CC0000' }}
@@ -227,7 +227,7 @@ const Branches = () => {
                 <Lock className="w-4 h-4" style={{ color: '#fbbf24' }} />
               </div>
             )}
-            <div className="h-32 -mx-4 -mt-4 mb-4 relative overflow-hidden" style={{ background: '#1a1a1a' }}>
+            <div className="h-32 -mx-4 -mt-4 mb-4 relative overflow-hidden" style={{ background: 'var(--m-surface-2)' }}>
               {b.image_path ? (
                 <img src={getUploadUrl(b.image_path)} alt="" className="w-full h-full object-cover" />
               ) : (
@@ -286,8 +286,8 @@ const Branches = () => {
       {/* Create/Edit Modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowCreate(false); setShowMap(false); }}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-10" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#111111' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-10" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
               <h3 className="font-bold text-white">{editBranch ? 'Edit Branch' : 'Add New Branch'}</h3>
               <button onClick={() => { setShowCreate(false); setShowMap(false); }} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}><X className="w-5 h-5" /></button>
             </div>
@@ -304,7 +304,7 @@ const Branches = () => {
                 <div><label className="label">Address *</label><input value={form.address} onChange={(e) => handleChange('address', e.target.value)} className="input-field" required /></div>
                 <div><label className="label">City *</label><input value={form.city} onChange={(e) => handleChange('city', e.target.value)} className="input-field" required /></div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div><label className="label">State</label><input value={form.state} onChange={(e) => handleChange('state', e.target.value)} className="input-field" /></div>
                 <div><label className="label">Zip Code</label><input value={form.zip_code} onChange={(e) => handleChange('zip_code', e.target.value)} className="input-field" /></div>
                 <div><label className="label">Category</label><input value={form.category} onChange={(e) => handleChange('category', e.target.value)} className="input-field" placeholder="pub, lounge..." /></div>
@@ -315,7 +315,7 @@ const Branches = () => {
               </div>
 
               {/* Map Picker */}
-              <div className="rounded-xl p-4" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-xl p-4" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-white text-sm">Location</p>
@@ -346,10 +346,10 @@ const Branches = () => {
         <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-3" onClick={() => setShowMap(false)}>
           <div
             className={`rounded-2xl shadow-2xl w-full ${mapFullscreen ? 'max-w-[98vw] h-[95vh]' : 'max-w-4xl h-[80vh]'} overflow-hidden flex flex-col`}
-            style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }}
+            style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--m-border)' }}>
               <div>
                 <h4 className="font-bold text-white">Pick Branch Location</h4>
                 <p className="text-xs" style={{ color: '#888' }}>Click the map or drag the pin.</p>
@@ -361,7 +361,7 @@ const Branches = () => {
                 <button type="button" onClick={() => setShowMap(false)} className="btn-primary text-xs px-3 py-1.5">Done</button>
               </div>
             </div>
-            <div className="p-3 grid grid-cols-2 gap-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#0d0d0d' }}>
+            <div className="p-3 grid grid-cols-2 gap-3" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
               <div>
                 <label className="label text-xs">Latitude</label>
                 <input value={form.latitude || ''} onChange={(e) => handleChange('latitude', e.target.value)} className="input-field text-sm" />
@@ -373,7 +373,7 @@ const Branches = () => {
             </div>
             <div className="relative flex-1">
               {!mapReady && (
-                <div className="absolute inset-0 flex items-center justify-center z-10" style={{ background: '#0d0d0d' }}>
+                <div className="absolute inset-0 flex items-center justify-center z-10" style={{ background: 'var(--m-surface)' }}>
                   <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#CC0000' }} />
                 </div>
               )}

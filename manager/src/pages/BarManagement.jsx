@@ -735,11 +735,11 @@ const BarManagement = () => {
       <div className="card">
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-shrink-0">
-            <div className="w-32 h-32 rounded-xl overflow-hidden relative group" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div className="w-32 h-32 rounded-xl overflow-hidden relative group" style={{ border: '1px solid var(--m-border)' }}>
               {bar.image_path ? (
                 <img src={getUploadUrl(bar.image_path)} alt="Bar" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-xs" style={{ background: '#1a1a1a', color: '#555' }}>No Image</div>
+                <div className="w-full h-full flex items-center justify-center text-xs" style={{ background: 'var(--m-surface-2)', color: '#555' }}>No Image</div>
               )}
               <button onClick={() => handleImageUpload('image')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <Upload className="w-5 h-5 text-white" />
@@ -814,7 +814,7 @@ const BarManagement = () => {
 
           <div className="md:col-span-2">
             <label className="label">Location Picker</label>
-            <div className="rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
               <div className="text-sm">
                 <p className="font-medium text-white">Use map pin instead of manual coordinates</p>
                 <p className="text-xs mt-1" style={{ color: '#888' }}>Pin must be within <span style={{ color: '#CC0000' }}>Cavite province</span>. Click or drag to set Latitude/Longitude automatically.</p>
@@ -869,7 +869,7 @@ const BarManagement = () => {
             Pickup & Delivery
           </h4>
           <p className="text-xs mb-3" style={{ color: '#888' }}>Takeout / Food Order appears for customers only while takeout is enabled and at least one fulfillment mode is on.</p>
-          <label className="flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors mb-3" style={{ background: form.is_takeout_enabled ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <label className="flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors mb-3" style={{ background: form.is_takeout_enabled ? 'rgba(34,197,94,0.12)' : 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
             <input
               type="checkbox"
               checked={!!Number(form.is_takeout_enabled ?? 0)}
@@ -880,7 +880,7 @@ const BarManagement = () => {
             <span className="text-sm font-medium text-white">Enable Takeout Orders</span>
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors" style={{ background: form.allow_pickup ?? true ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <label className="flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors" style={{ background: form.allow_pickup ?? true ? 'rgba(34,197,94,0.12)' : 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
               <input
                 type="checkbox"
                 checked={form.allow_pickup ?? true}
@@ -890,7 +890,7 @@ const BarManagement = () => {
               />
               <span className="text-sm font-medium text-white">Allow Store Pickup</span>
             </label>
-            <label className="flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors" style={{ background: form.allow_delivery ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <label className="flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors" style={{ background: form.allow_delivery ? 'rgba(34,197,94,0.12)' : 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
               <input
                 type="checkbox"
                 checked={!!form.allow_delivery}
@@ -930,7 +930,7 @@ const BarManagement = () => {
           <p className="text-xs mb-3" style={{ color: '#888' }}>Select the type(s) that best describe your establishment. This determines what sections customers see.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {BAR_TYPE_OPTIONS.map((type) => (
-              <label key={type} className="flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors" style={{ background: barTypes.includes(type) ? 'rgba(204,0,0,0.15)' : 'rgba(255,255,255,0.03)', border: barTypes.includes(type) ? '1px solid rgba(204,0,0,0.3)' : '1px solid rgba(255,255,255,0.06)' }}>
+              <label key={type} className="flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors" style={{ background: barTypes.includes(type) ? 'rgba(204,0,0,0.15)' : 'var(--m-active-bg)', border: barTypes.includes(type) ? '1px solid rgba(204,0,0,0.3)' : '1px solid var(--m-border)' }}>
                 <input
                   type="checkbox"
                   checked={barTypes.includes(type)}
@@ -955,7 +955,7 @@ const BarManagement = () => {
             {[...DEFAULT_STAFF_TYPES, ...staffTypes.filter(t => !DEFAULT_STAFF_TYPES.some(d => d.toLowerCase() === String(t).toLowerCase()))].map((type) => {
               const isCustom = !DEFAULT_STAFF_TYPES.some(d => d.toLowerCase() === String(type).toLowerCase());
               return (
-              <label key={type} className="flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors" style={{ background: staffTypes.includes(type) ? 'rgba(204,0,0,0.15)' : 'rgba(255,255,255,0.03)', border: staffTypes.includes(type) ? '1px solid rgba(204,0,0,0.3)' : '1px solid rgba(255,255,255,0.06)' }}>
+              <label key={type} className="flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors" style={{ background: staffTypes.includes(type) ? 'rgba(204,0,0,0.15)' : 'var(--m-active-bg)', border: staffTypes.includes(type) ? '1px solid rgba(204,0,0,0.3)' : '1px solid var(--m-border)' }}>
                 <input 
                   type="checkbox" 
                   checked={staffTypes.includes(type)} 
@@ -1044,9 +1044,9 @@ const BarManagement = () => {
             <label className="label text-xs text-gray-500">Main Image</label>
             <div className="relative group">
               {bar.image_path ? (
-                <img src={getUploadUrl(bar.image_path)} alt="Bar" className="w-full h-32 object-cover rounded" style={{ border: '1px solid rgba(255,255,255,0.08)' }} />
+                <img src={getUploadUrl(bar.image_path)} alt="Bar" className="w-full h-32 object-cover rounded" style={{ border: '1px solid var(--m-border)' }} />
               ) : (
-                <div className="w-full h-32 rounded flex items-center justify-center text-xs" style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', color: '#555' }}>No Image</div>
+                <div className="w-full h-32 rounded flex items-center justify-center text-xs" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)', color: '#555' }}>No Image</div>
               )}
               <button onClick={() => handleImageUpload('image')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
                 <Upload className="w-5 h-5 text-white" />
@@ -1057,9 +1057,9 @@ const BarManagement = () => {
             <label className="label text-xs text-gray-500">Logo</label>
             <div className="relative group">
               {bar.logo_path ? (
-                <img src={getUploadUrl(bar.logo_path)} alt="Logo" className="w-full h-32 object-contain rounded" style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)' }} />
+                <img src={getUploadUrl(bar.logo_path)} alt="Logo" className="w-full h-32 object-contain rounded" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }} />
               ) : (
-                <div className="w-full h-32 rounded flex items-center justify-center text-xs" style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', color: '#555' }}>No Logo</div>
+                <div className="w-full h-32 rounded flex items-center justify-center text-xs" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)', color: '#555' }}>No Logo</div>
               )}
               <button onClick={() => handleImageUpload('icon')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
                 <Upload className="w-5 h-5 text-white" />
@@ -1071,12 +1071,12 @@ const BarManagement = () => {
             <div className="relative group">
               {bar.video_path ? (
                 bar.video_path.endsWith('.gif') ? (
-                  <img src={getUploadUrl(bar.video_path)} alt="GIF" className="w-full h-32 object-cover rounded" style={{ border: '1px solid rgba(255,255,255,0.08)' }} />
+                  <img src={getUploadUrl(bar.video_path)} alt="GIF" className="w-full h-32 object-cover rounded" style={{ border: '1px solid var(--m-border)' }} />
                 ) : (
-                  <video src={getUploadUrl(bar.video_path)} className="w-full h-32 object-cover rounded" style={{ border: '1px solid rgba(255,255,255,0.08)' }} controls muted />
+                  <video src={getUploadUrl(bar.video_path)} className="w-full h-32 object-cover rounded" style={{ border: '1px solid var(--m-border)' }} controls muted />
                 )
               ) : (
-                <div className="w-full h-32 rounded flex items-center justify-center text-xs" style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', color: '#555' }}>No GIF/Video</div>
+                <div className="w-full h-32 rounded flex items-center justify-center text-xs" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)', color: '#555' }}>No GIF/Video</div>
               )}
               <button onClick={() => handleImageUpload('gif')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
                 <Upload className="w-5 h-5 text-white" />
@@ -1106,7 +1106,7 @@ const BarManagement = () => {
 
         {videoUploading && (
           <div className="mb-4">
-            <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: '#1a1a1a' }}>
+            <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'var(--m-surface-2)' }}>
               <div
                 className="h-full rounded-full transition-all duration-300"
                 style={{ width: `${videoUploadProgress}%`, background: '#CC0000' }}
@@ -1123,7 +1123,7 @@ const BarManagement = () => {
             <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#CC0000' }} />
           </div>
         ) : videos.length === 0 ? (
-          <div className="text-center py-8 rounded-xl" style={{ background: '#0d0d0d', border: '1px dashed rgba(255,255,255,0.1)' }}>
+          <div className="text-center py-8 rounded-xl" style={{ background: 'var(--m-surface)', border: '1px dashed var(--m-border)' }}>
             <Video className="w-10 h-10 mx-auto mb-3" style={{ color: '#444' }} />
             <p className="text-sm font-medium" style={{ color: '#888' }}>No videos yet</p>
             <p className="text-xs mt-1" style={{ color: '#555' }}>Upload a trailer or clips to showcase your bar on the public profile.</p>
@@ -1141,8 +1141,8 @@ const BarManagement = () => {
                 key={v.id}
                 className="flex items-center gap-4 p-3 rounded-xl transition-colors"
                 style={{
-                  background: v.is_featured ? 'rgba(204,0,0,0.06)' : '#111111',
-                  border: v.is_featured ? '1px solid rgba(204,0,0,0.25)' : '1px solid rgba(255,255,255,0.06)',
+                  background: v.is_featured ? 'rgba(204,0,0,0.06)' : 'var(--m-surface)',
+                  border: v.is_featured ? '1px solid rgba(204,0,0,0.25)' : '1px solid var(--m-border)',
                 }}
               >
                 {/* Thumbnail */}
@@ -1270,7 +1270,7 @@ const BarManagement = () => {
             {photoUploading ? `Uploading... ${photoUploadProgress}%` : '+ Upload Photo'}
           </button>
           {photoUploading && (
-            <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
+            <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--m-active-bg)' }}>
               <div className="h-full rounded-full transition-all" style={{ width: `${photoUploadProgress}%`, background: '#CC0000' }} />
             </div>
           )}
@@ -1289,7 +1289,7 @@ const BarManagement = () => {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {photos.map((p, idx) => (
-              <div key={p.id} className="relative group rounded-xl overflow-hidden" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div key={p.id} className="relative group rounded-xl overflow-hidden" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                 <img
                   src={p.video_url.startsWith('http') ? p.video_url : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/${p.video_url}`}
                   alt={p.caption || ''}
@@ -1304,7 +1304,7 @@ const BarManagement = () => {
                           value={editingPhotoCaption}
                           onChange={(e) => setEditingPhotoCaption(e.target.value)}
                           className="flex-1 text-xs px-2 py-1 rounded"
-                          style={{ background: '#1a1a1a', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }}
+                          style={{ background: 'var(--m-surface-2)', color: '#fff', border: '1px solid var(--m-border)' }}
                           placeholder="Caption..."
                           onKeyDown={(e) => e.key === 'Enter' && handleSavePhotoCaption(p.id)}
                         />
@@ -1370,7 +1370,7 @@ const BarManagement = () => {
           Configure which payment methods your bar accepts from customers for online reservations.
         </p>
         <div className="space-y-3">
-          <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
             <div>
               <p className="font-medium text-white text-sm">Accept Online Payments</p>
               <p className="text-xs mt-0.5" style={{ color: '#888' }}>Allow customers to pay online via GCash or Card/PayMaya</p>
@@ -1388,7 +1388,7 @@ const BarManagement = () => {
             </button>
           </div>
           
-          <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
             <div>
               <p className="font-medium text-white text-sm">Accept GCash</p>
               <p className="text-xs mt-0.5" style={{ color: '#888' }}>Enable GCash as a payment option for customers</p>
@@ -1413,10 +1413,10 @@ const BarManagement = () => {
         <h3 className="text-lg font-bold text-white mb-4">Reservation Settings</h3>
         <div className="flex gap-3">
           <button onClick={() => handleSettingsUpdate('manual_approval')} className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            style={bar.reservation_mode === 'manual_approval' ? { background: '#CC0000', color: '#fff' } : { background: '#1a1a1a', color: '#888', border: '1px solid rgba(255,255,255,0.08)' }}
+            style={bar.reservation_mode === 'manual_approval' ? { background: '#CC0000', color: '#fff' } : { background: 'var(--m-surface-2)', color: '#888', border: '1px solid var(--m-border)' }}
           >Manual Approval</button>
           <button onClick={() => handleSettingsUpdate('auto_accept')} className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            style={bar.reservation_mode === 'auto_accept' ? { background: '#CC0000', color: '#fff' } : { background: '#1a1a1a', color: '#888', border: '1px solid rgba(255,255,255,0.08)' }}
+            style={bar.reservation_mode === 'auto_accept' ? { background: '#CC0000', color: '#fff' } : { background: 'var(--m-surface-2)', color: '#888', border: '1px solid var(--m-border)' }}
           >Auto Accept</button>
         </div>
       </div>
@@ -1440,7 +1440,7 @@ const BarManagement = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* BIR Registration Toggle */}
               <div className="md:col-span-2">
-                <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                   <div>
                     <p className="font-medium text-white text-sm">BIR Registered</p>
                     <p className="text-xs mt-0.5" style={{ color: '#888' }}>Enable if your bar is registered with the Bureau of Internal Revenue</p>
@@ -1485,7 +1485,7 @@ const BarManagement = () => {
                     className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                     style={taxConfig.tax_type === 'NON_VAT'
                       ? { background: '#CC0000', color: '#fff' }
-                      : { background: '#1a1a1a', color: '#888', border: '1px solid rgba(255,255,255,0.08)' }}
+                      : { background: 'var(--m-surface-2)', color: '#888', border: '1px solid var(--m-border)' }}
                   >
                     NON-VAT
                   </button>
@@ -1498,7 +1498,7 @@ const BarManagement = () => {
                     className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                     style={taxConfig.tax_type === 'VAT'
                       ? { background: '#CC0000', color: '#fff' }
-                      : { background: '#1a1a1a', color: '#888', border: '1px solid rgba(255,255,255,0.08)' }}
+                      : { background: 'var(--m-surface-2)', color: '#888', border: '1px solid var(--m-border)' }}
                   >
                     VAT (12%)
                   </button>
@@ -1531,7 +1531,7 @@ const BarManagement = () => {
                     className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                     style={taxConfig.tax_mode === 'EXCLUSIVE'
                       ? { background: '#CC0000', color: '#fff' }
-                      : { background: '#1a1a1a', color: '#888', border: '1px solid rgba(255,255,255,0.08)' }}
+                      : { background: 'var(--m-surface-2)', color: '#888', border: '1px solid var(--m-border)' }}
                   >
                     Exclusive
                   </button>
@@ -1541,7 +1541,7 @@ const BarManagement = () => {
                     className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                     style={taxConfig.tax_mode === 'INCLUSIVE'
                       ? { background: '#CC0000', color: '#fff' }
-                      : { background: '#1a1a1a', color: '#888', border: '1px solid rgba(255,255,255,0.08)' }}
+                      : { background: 'var(--m-surface-2)', color: '#888', border: '1px solid var(--m-border)' }}
                   >
                     Inclusive
                   </button>
@@ -1556,7 +1556,7 @@ const BarManagement = () => {
 
             {/* Tax Preview */}
             {taxConfig.tax_type === 'VAT' && Number(taxConfig.tax_rate) > 0 && (
-              <div className="mt-4 rounded-xl p-4" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="mt-4 rounded-xl p-4" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
                 <div className="flex items-center gap-2 mb-3">
                   <FileText className="w-4 h-4" style={{ color: '#CC0000' }} />
                   <p className="text-sm font-medium text-white">Tax Preview (₱100 sample order)</p>
@@ -1564,16 +1564,16 @@ const BarManagement = () => {
                 {(() => {
                   const preview = computeTaxPreview(100);
                   return (
-                    <div className="grid grid-cols-3 gap-3 text-center">
-                      <div className="rounded-lg p-3" style={{ background: '#0d0d0d' }}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-center">
+                      <div className="rounded-lg p-3" style={{ background: 'var(--m-surface)' }}>
                         <p className="text-xs" style={{ color: '#888' }}>Net Subtotal</p>
                         <p className="text-lg font-bold text-white">₱{preview.net.toFixed(2)}</p>
                       </div>
-                      <div className="rounded-lg p-3" style={{ background: '#0d0d0d' }}>
+                      <div className="rounded-lg p-3" style={{ background: 'var(--m-surface)' }}>
                         <p className="text-xs" style={{ color: '#888' }}>Tax ({taxConfig.tax_rate}%)</p>
                         <p className="text-lg font-bold" style={{ color: '#CC0000' }}>₱{preview.tax.toFixed(2)}</p>
                       </div>
-                      <div className="rounded-lg p-3" style={{ background: '#0d0d0d' }}>
+                      <div className="rounded-lg p-3" style={{ background: 'var(--m-surface)' }}>
                         <p className="text-xs" style={{ color: '#888' }}>Total</p>
                         <p className="text-lg font-bold text-white">₱{preview.total.toFixed(2)}</p>
                       </div>
@@ -1595,10 +1595,10 @@ const BarManagement = () => {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-3" onClick={() => setShowMapPicker(false)}>
           <div
             className={`rounded-2xl shadow-2xl w-full ${mapFullscreen ? 'max-w-[98vw] h-[95vh]' : 'max-w-4xl h-[80vh]'} overflow-hidden flex flex-col`}
-            style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }}
+            style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--m-border)' }}>
               <div>
                 <h4 className="font-bold text-white">Pick Bar Location</h4>
                 <p className="text-xs" style={{ color: '#888' }}>Click the map or drag the pin. Coordinates update automatically.</p>
@@ -1611,7 +1611,7 @@ const BarManagement = () => {
               </div>
             </div>
 
-            <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#0d0d0d' }}>
+            <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
               <div>
                 <label className="label">Latitude</label>
                 <input value={form.latitude || ''} onChange={(e) => handleChange('latitude', e.target.value)} className="input-field" />
@@ -1624,7 +1624,7 @@ const BarManagement = () => {
 
             <div className="relative flex-1">
               {!mapReady && (
-                <div className="absolute inset-0 flex items-center justify-center z-10" style={{ background: '#0d0d0d' }}>
+                <div className="absolute inset-0 flex items-center justify-center z-10" style={{ background: 'var(--m-surface)' }}>
                   <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#CC0000' }} />
                 </div>
               )}

@@ -48,7 +48,7 @@ const TestimonialCard = ({ quote, name, bar, location, emoji, index }) => {
       className="lp-reveal rounded-2xl p-7 flex flex-col"
       style={{
         background: 'rgba(17,17,17,0.8)',
-        border: '1px solid rgba(255,255,255,0.05)',
+        border: '1px solid var(--m-border)',
         backdropFilter: 'blur(10px)',
       }}
     >
@@ -59,7 +59,7 @@ const TestimonialCard = ({ quote, name, bar, location, emoji, index }) => {
         {quote}
       </p>
 
-      <div className="flex items-center gap-3 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="flex items-center gap-3 pt-4" style={{ borderTop: '1px solid var(--m-border)' }}>
         <div
           className="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
           style={{ background: 'rgba(204,0,0,0.12)', border: '1px solid rgba(204,0,0,0.25)' }}

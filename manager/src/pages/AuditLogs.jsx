@@ -103,7 +103,7 @@ const AuditLogs = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-full sm:w-72" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-full sm:w-72" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
         <Search className="w-4 h-4" style={{ color: '#555' }} />
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search activity..." className="bg-transparent text-sm outline-none flex-1 text-white placeholder-gray-600" />
       </div>
@@ -111,7 +111,7 @@ const AuditLogs = () => {
       <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}><tr>
+            <thead style={{ borderBottom: '1px solid var(--m-border)' }}><tr>
               <th className="table-header">Date</th>
               <th className="table-header">User</th>
               <th className="table-header">Action</th>
@@ -120,8 +120,8 @@ const AuditLogs = () => {
             </tr></thead>
             <tbody>
               {filtered.map((l, i) => (
-                <tr key={l.id || i} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                <tr key={l.id || i} className="transition-colors" style={{ borderBottom: '1px solid var(--m-border)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <td className="table-cell text-xs">{l.created_at ? format(parseUTC(l.created_at), 'MMM d, yyyy h:mm a') : '—'}</td>

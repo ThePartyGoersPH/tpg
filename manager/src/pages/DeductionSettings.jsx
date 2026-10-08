@@ -141,12 +141,12 @@ const DeductionSettings = () => {
 
       {/* Employee List */}
       <div className="card p-0 overflow-hidden">
-        <div className="px-6 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161616' }}>
+        <div className="px-6 py-3" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface-2)' }}>
           <h4 className="font-semibold text-white">Employee Deduction Configuration</h4>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <thead style={{ borderBottom: '1px solid var(--m-border)' }}>
               <tr>
                 <th className="table-header text-left">Employee</th>
                 <th className="table-header">Daily Rate</th>
@@ -159,8 +159,8 @@ const DeductionSettings = () => {
             </thead>
             <tbody>
               {employees.map((emp) => (
-                <tr key={emp.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+                <tr key={emp.id} className="transition-colors" style={{ borderBottom: '1px solid var(--m-border)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <td className="table-cell">
@@ -177,7 +177,7 @@ const DeductionSettings = () => {
                       onClick={() => canManage && handleToggleDeduction(emp.id, 'bir', emp.bir_enabled)}
                       disabled={!canManage}
                       className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${!canManage ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    style={emp.bir_enabled ? { background: 'rgba(59,130,246,0.15)', color: '#60a5fa' } : { background: 'rgba(255,255,255,0.06)', color: '#666' }}
+                    style={emp.bir_enabled ? { background: 'rgba(59,130,246,0.15)', color: '#60a5fa' } : { background: 'var(--m-active-bg)', color: '#666' }}
                     >
                       {emp.bir_enabled ? 'Enabled' : 'Disabled'}
                     </button>
@@ -187,7 +187,7 @@ const DeductionSettings = () => {
                       onClick={() => canManage && handleToggleDeduction(emp.id, 'sss', emp.sss_enabled)}
                       disabled={!canManage}
                       className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${!canManage ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    style={emp.sss_enabled ? { background: 'rgba(34,197,94,0.15)', color: '#4ade80' } : { background: 'rgba(255,255,255,0.06)', color: '#666' }}
+                    style={emp.sss_enabled ? { background: 'rgba(34,197,94,0.15)', color: '#4ade80' } : { background: 'var(--m-active-bg)', color: '#666' }}
                     >
                       {emp.sss_enabled ? 'Enabled' : 'Disabled'}
                     </button>
@@ -197,7 +197,7 @@ const DeductionSettings = () => {
                       onClick={() => canManage && handleToggleDeduction(emp.id, 'philhealth', emp.philhealth_enabled)}
                       disabled={!canManage}
                       className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${!canManage ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    style={emp.philhealth_enabled ? { background: 'rgba(168,85,247,0.15)', color: '#c084fc' } : { background: 'rgba(255,255,255,0.06)', color: '#666' }}
+                    style={emp.philhealth_enabled ? { background: 'rgba(168,85,247,0.15)', color: '#c084fc' } : { background: 'var(--m-active-bg)', color: '#666' }}
                     >
                       {emp.philhealth_enabled ? 'Enabled' : 'Disabled'}
                     </button>
@@ -207,7 +207,7 @@ const DeductionSettings = () => {
                       onClick={() => canManage && handleToggleDeduction(emp.id, 'late', emp.late_deduction_enabled)}
                       disabled={!canManage}
                       className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${!canManage ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    style={emp.late_deduction_enabled ? { background: 'rgba(251,191,36,0.15)', color: '#facc15' } : { background: 'rgba(255,255,255,0.06)', color: '#666' }}
+                    style={emp.late_deduction_enabled ? { background: 'rgba(251,191,36,0.15)', color: '#facc15' } : { background: 'var(--m-active-bg)', color: '#666' }}
                     >
                       {emp.late_deduction_enabled ? 'Enabled' : 'Disabled'}
                     </button>
@@ -246,8 +246,8 @@ const DeductionSettings = () => {
       {/* Settings Modal */}
       {showModal && selectedEmployee && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-2xl" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-2xl" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
               <div>
                 <h3 className="font-bold text-white">Deduction Settings</h3>
                 <p className="text-sm" style={{ color: '#888' }}>{selectedEmployee.first_name} {selectedEmployee.last_name}</p>
@@ -259,7 +259,7 @@ const DeductionSettings = () => {
 
             <div className="p-6 space-y-6">
               {/* BIR Settings */}
-              <div className="rounded-lg p-4" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-lg p-4" style={{ border: '1px solid var(--m-border)' }}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <FileText className="w-5 h-5" style={{ color: '#60a5fa' }} />
@@ -267,7 +267,7 @@ const DeductionSettings = () => {
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" checked={settings.bir_enabled} onChange={(e) => setSettings({ ...settings, bir_enabled: e.target.checked })} className="sr-only peer" />
-                    <div className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ background: settings.bir_enabled ? '#CC0000' : '#333', border: '1px solid rgba(255,255,255,0.1)' }}></div>
+                    <div className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ background: settings.bir_enabled ? '#CC0000' : '#333', border: '1px solid var(--m-border)' }}></div>
                   </label>
                 </div>
                 {settings.bir_enabled && (
@@ -294,7 +294,7 @@ const DeductionSettings = () => {
               </div>
 
               {/* SSS Settings */}
-              <div className="rounded-lg p-4" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-lg p-4" style={{ border: '1px solid var(--m-border)' }}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Shield className="w-5 h-5" style={{ color: '#4ade80' }} />
@@ -302,7 +302,7 @@ const DeductionSettings = () => {
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" checked={settings.sss_enabled} onChange={(e) => setSettings({ ...settings, sss_enabled: e.target.checked })} className="sr-only peer" />
-                    <div className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ background: settings.sss_enabled ? '#CC0000' : '#333', border: '1px solid rgba(255,255,255,0.1)' }}></div>
+                    <div className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ background: settings.sss_enabled ? '#CC0000' : '#333', border: '1px solid var(--m-border)' }}></div>
                   </label>
                 </div>
                 {settings.sss_enabled && (
@@ -320,7 +320,7 @@ const DeductionSettings = () => {
               </div>
 
               {/* PhilHealth Settings */}
-              <div className="rounded-lg p-4" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-lg p-4" style={{ border: '1px solid var(--m-border)' }}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <DollarSign className="w-5 h-5" style={{ color: '#c084fc' }} />
@@ -328,7 +328,7 @@ const DeductionSettings = () => {
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" checked={settings.philhealth_enabled} onChange={(e) => setSettings({ ...settings, philhealth_enabled: e.target.checked })} className="sr-only peer" />
-                    <div className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ background: settings.philhealth_enabled ? '#CC0000' : '#333', border: '1px solid rgba(255,255,255,0.1)' }}></div>
+                    <div className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ background: settings.philhealth_enabled ? '#CC0000' : '#333', border: '1px solid var(--m-border)' }}></div>
                   </label>
                 </div>
                 {settings.philhealth_enabled && (
@@ -346,7 +346,7 @@ const DeductionSettings = () => {
               </div>
 
               {/* Late Deduction Settings */}
-              <div className="rounded-lg p-4" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-lg p-4" style={{ border: '1px solid var(--m-border)' }}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Clock3 className="w-5 h-5" style={{ color: '#facc15' }} />
@@ -354,7 +354,7 @@ const DeductionSettings = () => {
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" checked={settings.late_deduction_enabled} onChange={(e) => setSettings({ ...settings, late_deduction_enabled: e.target.checked })} className="sr-only peer" />
-                    <div className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ background: settings.late_deduction_enabled ? '#CC0000' : '#333', border: '1px solid rgba(255,255,255,0.1)' }}></div>
+                    <div className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ background: settings.late_deduction_enabled ? '#CC0000' : '#333', border: '1px solid var(--m-border)' }}></div>
                   </label>
                 </div>
                 <p className="text-xs" style={{ color: '#888' }}>
@@ -364,7 +364,7 @@ const DeductionSettings = () => {
 
             </div>
 
-            <div className="flex justify-end gap-3 px-6 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: '#0d0d0d' }}>
+            <div className="flex justify-end gap-3 px-6 py-4" style={{ borderTop: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
               <button onClick={() => setShowModal(false)} className="btn-secondary">
                 Cancel
               </button>
