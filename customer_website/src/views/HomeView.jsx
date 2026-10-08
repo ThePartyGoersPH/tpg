@@ -86,7 +86,7 @@ function HeroSlideshow({ onSearch }) {
   const cur = HERO_SLIDES[slide];
 
   return (
-    <section style={{ position: 'relative', height: 'clamp(440px, 78vh, 820px)', width: '100%', margin: 0, overflow: 'hidden', borderRadius: 0 }}>
+    <section style={{ position: 'relative', height: 'clamp(440px, 600px, 820px)', width: '100%', margin: 0, overflow: 'hidden', borderRadius: 0 }}>
       {HERO_SLIDES.map((s, i) => (
         <div
           key={i}
@@ -113,8 +113,8 @@ function HeroSlideshow({ onSearch }) {
           {cur.sub}
         </p>
 
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', maxWidth: 680, width: '100%', flexWrap: 'wrap', alignItems: 'center', background: 'rgba(15,15,15,0.25)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderRadius: 16, padding: '0.5rem', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 14px 40px rgba(0,0,0,0.5)' }}>
-          <div style={{ flex: 1, minWidth: 220, position: 'relative', display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.96)', borderRadius: 12 }}>
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', width: '100%', flexWrap: 'wrap', alignItems: 'center', background: 'rgba(15,15,15,0.25)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderRadius: 16, padding: '0.5rem', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 14px 40px rgba(0,0,0,0.5)' }}>
+          <div style={{ flex: '1 1 auto', minWidth: 0, position: 'relative', display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.96)', borderRadius: 12 }}>
             <Search size={18} color="#8A8079" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
             <input
               type="text"
@@ -232,7 +232,7 @@ function HomeView() {
             { label: 'Bookings Made', value: `${platformStats.reservations_this_month || 120}+ Reserved`, sub: 'Happy partygoers this month', icon: <CalendarDays size={18} color="#C9762F" /> },
             { label: 'Community', value: `${platformStats.total_customers || 1500}+ Goers`, sub: 'Discovering local nightlife', icon: <Heart size={18} color="#C9762F" /> },
           ].map((item, idx) => (
-            <div key={idx} style={{ flex: '0 0 220px', background: 'var(--color-bg-elevated, #F3EFEA)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <div key={idx} style={{ flex: '1 1 auto', minWidth: 0, background: 'var(--color-bg-elevated, #F3EFEA)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>{item.label}</span>
                 {item.icon}
@@ -295,7 +295,7 @@ function HomeView() {
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat;
             return (
-              <button key={cat} type="button" onClick={() => setSelectedCategory(cat)} style={{ background: isSelected ? '#C9762F' : 'var(--color-bg-elevated, #F3EFEA)', border: isSelected ? '1px solid #C9762F' : '1px solid var(--color-border)', color: isSelected ? '#ffffff' : 'var(--color-ink-soft)', fontWeight: isSelected ? 700 : 500, fontSize: '0.82rem', fontFamily: "'Inter', sans-serif", padding: '0.45rem 1rem', borderRadius: 50, cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: isSelected ? '0 4px 12px rgba(201,118,47,0.25)' : 'none' }}>
+              <button key={cat} type="button" onClick={() => setSelectedCategory(cat)} style={{ minWidth: 0, flexShrink: 0, whiteSpace: 'nowrap', background: isSelected ? '#C9762F' : 'var(--color-bg-elevated, #F3EFEA)', border: isSelected ? '1px solid #C9762F' : '1px solid var(--color-border)', color: isSelected ? '#ffffff' : 'var(--color-ink-soft)', fontWeight: isSelected ? 700 : 500, fontSize: '0.82rem', fontFamily: "'Inter', sans-serif", padding: '0.45rem 1rem', borderRadius: 50, cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: isSelected ? '0 4px 12px rgba(201,118,47,0.25)' : 'none' }}>
                 {cat}
               </button>
             );

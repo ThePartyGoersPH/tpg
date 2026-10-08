@@ -209,8 +209,8 @@ function BarsView() {
           <span style={{ display: 'inline-block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-text-muted)', marginBottom: '0.35rem' }}>
             EXPLORE CAVITE NIGHTLIFE
           </span>
-          <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(1.6rem, 4vw, 2rem)', fontWeight: 800, margin: '0 0 0.3rem', color: 'var(--color-text-primary)' }}>
-            Find Bars &amp; Restobars
+<h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(1.6rem, 4vw, 2rem)', fontWeight: 800, margin: '0 0 0.3rem', color: 'var(--color-text-primary)' }}>
+            Find Bars & Restobars
           </h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', margin: 0 }}>
             Browse top-rated nightlife spots, cocktail lounges, and restobars in Cavite.
@@ -219,7 +219,7 @@ function BarsView() {
 
         {/* Search Form */}
         <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', alignItems: 'stretch' }}>
-          <div className="grab-search-box" style={{ flex: '1 0 260px', margin: 0 }}>
+          <div className="grab-search-box" style={{ flex: '1 1 100%', margin: 0, minWidth: 0 }}>
             <Search size={18} color="#CC0000" />
             <input
               type="text"
@@ -227,12 +227,13 @@ function BarsView() {
               placeholder="Search by bar name, city, or address..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              style={{ flex: '1 1 auto', minWidth: 0, fontSize: '0.85rem', padding: '0.6rem 0.8rem' }}
             />
           </div>
           <button
             type="submit"
             className="btn btn-red"
-            style={{ padding: '0.75rem 1.5rem', borderRadius: 10, fontWeight: 700 }}
+            style={{ padding: '0.75rem 1.5rem', borderRadius: 10, fontWeight: 700, minWidth: 0, flex: '0 0 140px' }}
             disabled={searching}
           >
             {searching ? 'Searching…' : 'Search'}
@@ -263,6 +264,7 @@ function BarsView() {
                 onClick={handleClick}
                 className={`bars-pill ${isSelected ? 'active' : ''}`}
                 aria-pressed={isSelected}
+                style={{ minWidth: 0, flexShrink: 0, whiteSpace: 'nowrap' }}
               >
                 <Icon size={14} />
                 {type}

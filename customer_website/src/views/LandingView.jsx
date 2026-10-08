@@ -135,7 +135,16 @@ function LandingView() {
           ))}
         </div>
 
-        {/* Side Navigation - Left */}
+        {/* Mobile-only: compact header area with logo + theme toggle */}
+        <div className="land-hero-mobile-header">
+          <div className="land-hero-mobile-brand">
+            <div className="land-hero-mobile-logo" />
+            <span className="land-hero-mobile-wordmark">Party Goers</span>
+          </div>
+          <ThemeToggle />
+        </div>
+
+        {/* Side Navigation - Left (desktop only, hidden on mobile via CSS) */}
         <nav className="land-side-nav">
           <a href="#platform" className="land-side-link">Work</a>
           <a href="#features" className="land-side-link">About</a>
@@ -143,7 +152,7 @@ function LandingView() {
           <a href="#cta" className="land-side-link">Contact</a>
         </nav>
 
-        {/* Top Right CTA */}
+        {/* Top Right CTA — desktop only */}
         <div className="land-top-cta">
           <button 
             className="land-email-btn" 
@@ -162,11 +171,11 @@ function LandingView() {
           </div>
 
           {/* Main Title - Large Typography */}
-          <h1 className="land-hero-v2-title">
-            Every<br />
-            <span className="land-hero-v2-accent">Night Out</span><br />
-            <span className="land-hero-v2-outline">Starts Here.</span>
-          </h1>
+<h1 className="land-hero-v2-title" style={{ fontSize: 'clamp(2rem, 5vw, 3.2rem)', letterSpacing: '-0.3px', marginBottom: '0.3rem' }}>
+  Every<br />
+  <span className="land-hero-v2-accent">Night Out</span><br />
+  <span style={{ position: 'relative', background: 'linear-gradient(135deg, #fff 0%, #f5f5f5 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', display: 'inline-block' }}>Starts Here.</span>
+</h1>
 
           {/* Subtitle */}
           <p className="land-hero-v2-sub">
@@ -174,23 +183,35 @@ function LandingView() {
             Reserve a table, check events, and own your night — all in one place.
           </p>
 
-          <div className="land-hero-v2-tags">
-            <span className="land-hero-v2-tag">🍺 Bars</span>
-            <span className="land-hero-v2-tag">🍽️ Resto Bars</span>
-            <span className="land-hero-v2-tag">🎤 KTV</span>
-            <span className="land-hero-v2-tag">🎶 Live Music</span>
-            <span className="land-hero-v2-tag">🎉 Event Venues</span>
+          <div className="land-hero-v2-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <span className="land-hero-v2-tag" style={{ flex: '1 1 120px', fontSize: '0.72rem', padding: '0.4rem 0.6rem', borderRadius: 9999, background: 'rgba(255,255,255,0.1)', color: '#fff', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
+              🍺 Bars
+            </span>
+            <span className="land-hero-v2-tag" style={{ flex: '1 1 120px', fontSize: '0.72rem', padding: '0.4rem 0.6rem', borderRadius: 9999, background: 'rgba(255,255,255,0.1)', color: '#fff', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
+              🍽️ Resto Bars
+            </span>
+            <span className="land-hero-v2-tag" style={{ flex: '1 1 120px', fontSize: '0.72rem', padding: '0.4rem 0.6rem', borderRadius: 9999, background: 'rgba(255,255,255,0.1)', color: '#fff', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
+              🎤 KTV
+            </span>
+            <span className="land-hero-v2-tag" style={{ flex: '1 1 120px', fontSize: '0.72rem', padding: '0.4rem 0.6rem', borderRadius: 9999, background: 'rgba(255,255,255,0.1)', color: '#fff', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
+              🎶 Live Music
+            </span>
+            <span className="land-hero-v2-tag" style={{ flex: '1 1 120px', fontSize: '0.72rem', padding: '0.4rem 0.6rem', borderRadius: 9999, background: 'rgba(255,255,255,0.1)', color: '#fff', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
+              🎉 Event Venues
+            </span>
           </div>
 
-          <div className="land-hero-cta land-hero-v2-cta">
+          <div className="land-hero-v2-cta" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1.5rem' }}>
             <button
               className="btn btn-red btn-lg btn-pill btn-red-pulse"
+              style={{ width: '100%', minHeight: '44px' }}
               onClick={() => navigate(VIEWS.BARS)}
             >
               Explore Venues
             </button>
             <button
               className="btn btn-ghost btn-lg btn-pill"
+              style={{ width: '100%', minHeight: '44px' }}
               onClick={() => navigate(VIEWS.EVENTS)}
             >
               View Events

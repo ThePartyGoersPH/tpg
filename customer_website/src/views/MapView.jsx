@@ -782,7 +782,7 @@ function MapView() {
   }, [userLocation]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh', display: 'flex', flexDirection: 'column', background: '#0a0a0a' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column', background: '#0a0a0a' }}>
       {/* Dark mode: invert the (light) tile pane via CSS. Scoped to
           html[data-theme="dark"] which ThemeContext already toggles, and to
           .leaflet-tile-pane only — markers, popups, route lines and controls
@@ -825,7 +825,7 @@ function MapView() {
 
         {/* Radius Filter Slider */}
         {userLocation && (
-          <div className="glass-card" style={{ maxWidth: '360px', pointerEvents: 'auto', padding: '0.75rem 1rem' }}>
+          <div className="glass-card" style={{ maxWidth: '360px', minWidth: 0, pointerEvents: 'auto', padding: '0.75rem 1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Ruler size={14} /> Distance Filter
@@ -881,7 +881,7 @@ function MapView() {
 
         {/* Recommended venues panel */}
         {userLocation && !navigatingTo && (
-          <div className="glass-card" style={{ maxWidth: '360px', pointerEvents: 'auto', overflow: 'hidden' }}>
+          <div className="glass-card" style={{ maxWidth: '360px', minWidth: 0, pointerEvents: 'auto', overflow: 'hidden' }}>
             <button
               onClick={() => setRecommendationsOpen(o => !o)}
               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.9rem', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-primary)' }}

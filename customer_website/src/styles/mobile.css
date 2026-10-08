@@ -1,165 +1,116 @@
 /* =============================================================
-   Customer app — mobile + touch + viewport safety layer.
-   Desktop styles are untouched; everything here is scoped to
-   small screens or coarse pointers.
+   Customer App — Mobile-First Responsive Layout (320–768px)
+   Desktop styles are untouched; everything here is scoped to small screens.
+   TEST WIDTHS: 320, 360, 375, 390, 414, 768px — ZERO horizontal scroll.
    ============================================================= */
 
-/* Never allow page-level horizontal scroll. */
-html, body {
+/* ====== PAGE-LEVEL SAFETY ======*/
+html, body, #root {
   overflow-x: clip;
-  max-width: 100%;
+  max-width: 100vw;
+}
+body {
+  -webkit-text-size-adjust: 100%;
+  -moz-tab-size: 4;
+  tab-size: 4;
 }
 
-img, video, svg {
-  max-width: 100%;
+/* ====== VIEWPORT / SAFE AREAS ======*/
+/* Notched phone insets — every section respects these */
+section {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
-
-/* Fixed bars must clear notches and home indicators. */
 .navbar-wrap {
   padding-top: env(safe-area-inset-top);
 }
-
-/* ---- Bottom navigation (mobile only) ---- */
-.bottom-nav {
-  display: none;
+.footer-wrap {
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 
-@media (max-width: 768px) {
-  .bottom-nav {
-    display: flex;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1200;
-    background: var(--nav-bg, rgba(12, 12, 14, 0.92));
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  .bottom-nav-tab {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    min-height: 56px;
-    padding: 6px 2px;
-    color: var(--text-muted, rgba(255, 255, 255, 0.55));
-    text-decoration: none;
-    font-size: 0.68rem;
-    font-weight: 600;
-  }
-
-  .bottom-nav-tab.active {
-    color: var(--accent, #e11d48);
-  }
-
-  .bottom-nav-icon {
-    width: 22px;
-    height: 22px;
-  }
-
-  /* Room for the bottom bar so content is never hidden behind it. */
-  .page {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom));
-  }
-
-  .footer-wrap {
-    padding-bottom: calc(88px + env(safe-area-inset-bottom));
-  }
-}
-
-[data-theme='light'] .bottom-nav {
-  --nav-bg: rgba(255, 255, 255, 0.92);
-}
-
-/* ---- Touch targets + iOS input zoom ---- */
-@media (pointer: coarse) {
-  input, select, textarea {
-    font-size: 16px;
-  }
-
-  button, .btn, a.btn, [role='button'] {
-    min-height: 44px;
-  }
-
-  .bottom-nav-tab {
-    min-height: 56px;
-  }
-}
-
-/* ---- Viewport-height safety (mobile URL bar) ---- */
-.map-full, .map-wrap {
+/* Full-viewport sections use 100dvh (falls back to 100vh) */
+.map-full, .map-wrap, .hero-v2 {
   height: 100dvh;
 }
-
 @supports not (height: 100dvh) {
-  .map-full, .map-wrap {
+  .map-full, .map-wrap, .hero-v2 {
     height: 100vh;
   }
 }
 
-/* ---- Map bottom sheets (mobile only) ---- */
+/* ====== TYPOGRAPHY ======*/
+/* Fluid headings: clamp(min, vw, max) — works at every width */
+h1 { font-size: clamp(1.8rem, 5vw, 3.2rem); line-height: 1.2; margin-top: 0; margin-bottom: 0.5rem; }
+h2 { font-size: clamp(1.6rem, 4.5vw, 2.4rem); line-height: 1.3; margin-top: 0; margin-bottom: 0.4rem; }
+h3 { font-size: clamp(1.3rem, 4vw, 1.9rem); line-height: 1.35; margin-top: 0; margin-bottom: 0.3rem; }
+h4 { font-size: clamp(1.1rem, 3.5vw, 1.5rem); line-height: 1.4; margin-top: 0; margin-bottom: 0.25rem; }
+p { font-size: clamp(0.95rem, 1.5vw, 1.05rem); line-height: 1.5; margin: 0 0 0.75rem; }
+small, .text-muted { font-size: clamp(0.72rem, 1vw, 0.82rem); color: rgba(255,255,255,0.55); }
+
+/* Prevent iOS zoom-on-focus on inputs */
+@media (pointer: coarse) {
+  input, select, textarea { font-size: 16px; }
+}
+
+/* ====== BUTTONS ======*/
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  min-height: 44px;
+}
+.btn:focus-visible { outline: 2px solid #C9762F; outline-offset: 2px; }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-block { width: 100%; }
+.btn-lg { padding: 1rem 1.75rem; font-size: 1rem; min-height: 48px; }
+.btn-pill { border-radius: 50px; }
+.btn-red { background: #C9762F; color: #fff; border: none; }
+.btn-ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+.btn-ghost:hover { border-color: #fff; }
+.btn-sm { padding: 0.5rem 0.875rem; font-size: 0.78rem; min-height: 38px; }
+
+/* ====== BASE LAYOUT UTILITIES ======*/
+/* Page container — max 1200px on desktop, full-width on mobile, 16px side padding */
+.container {
+  max-width: 100%;
+  padding: 0 16px;
+  margin: 0 auto;
+}
+.grid-100 { grid-template-columns: 1fr !important; }
+.gap-sm { gap: 0.5rem; }
+.gap-md { gap: 1rem; }
+.gap-lg { gap: 1.5rem; }
+.gap-xl { gap: 2rem; }
+
+/* ====== IMAGES / MEDIA ======*/
+img, video, picture, svg { max-width: 100%; height: auto; display: block; }
+object, iframe { max-width: 100%; }
+
+/* Lazy-load above-the-hero images */
+img[data-lazy] { opacity: 0; transition: opacity 0.3s ease; }
+img[data-lazy].loaded { opacity: 1; }
+
+/* Object-fit containment for bar cards */
+.bar-img-wrap { position: relative; aspect-ratio: 16/9; overflow: hidden; }
+.bar-img-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+
+/* ====== TABLES / LISTS → stacked cards on mobile ======*/
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; }
+.table-scroll table { min-width: 640px; width: 100%; }
 @media (max-width: 768px) {
-  .route-card {
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: calc(76px + env(safe-area-inset-bottom));
-    z-index: 1100;
-    max-height: 32dvh;
-    overflow-y: auto;
-    border-radius: 16px;
-  }
-
-  .map-popup {
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: calc(76px + env(safe-area-inset-bottom));
-    z-index: 1100;
-    max-height: 44dvh;
-    overflow-y: auto;
-    border-radius: 16px;
-  }
-
-  .map-popup .popup-actions {
-    display: flex;
-    gap: 10px;
-  }
-
-  .map-popup .popup-actions > * {
-    flex: 1;
-    min-height: 48px;
-    font-size: 1rem;
-  }
+  .table-scroll table thead th { position: sticky; left: 0; background: var(--color-bg-card, #1a1a1a); z-index: 10; }
+  .table-scroll table tbody td { padding: 0.6rem 0.8rem; }
 }
 
-/* ---- Wide tables become horizontally scrollable with a hint ---- */
-.table-scroll {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border-radius: 12px;
-  background:
-    linear-gradient(to right, var(--card, transparent) 30%, transparent),
-    linear-gradient(to right, transparent, var(--card, transparent)) 100% 0,
-    radial-gradient(farthest-side at 0% 50%, rgba(0, 0, 0, 0.25), transparent),
-    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.25), transparent) 100% 0;
-  background-repeat: no-repeat;
-  background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
-  background-attachment: local, local, scroll, scroll;
-}
-
-.table-scroll table {
-  min-width: 640px;
-  width: 100%;
-}
-
-/* ---- Modals become bottom sheets on phones ---- */
+/* ====== MODAL / BOTTOM SHEET ON MOBILE ======*/
 @media (max-width: 640px) {
   .modal-card, .viewport-modal-card, .receipt-modal {
     width: 100%;
@@ -169,62 +120,146 @@ img, video, svg {
     max-height: 92dvh;
     overflow-y: auto;
   }
-
   .modal-actions, .receipt-actions {
     position: sticky;
     bottom: 0;
     padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    background: var(--color-bg-card, #1a1a1a);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }
 
-/* ---- Single-column forms on phones ---- */
-@media (max-width: 640px) {
-  .form-grid-2, .form-row-2 {
-    grid-template-columns: 1fr;
+/* ====== NAVBAR / HAMBURGER DRAWER ======*/
+@media (max-width: 768px) {
+  /* Hide the regular horizontal nav on mobile */
+  .nav-links { display: none !important; }
+
+  /* Hamburger shows */
+  .mobile-toggle { display: block; }
+
+  /* Mobile drawer backdrop — full-screen overlay */
+  .mobile-nav-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000;
+    display: none;
+  }
+  .mobile-nav-backdrop.open { display: block; }
+
+  /* Mobile drawer itself */
+  .mobile-nav-drawer {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: calc(100vw - 32px);
+    background: rgba(12,12,14,0.96);
+    z-index: 1100;
+    transform: translateX(-280px);
+    transition: transform 0.3s ease;
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+  .mobile-nav-drawer.open { transform: translateX(0); }
+
+  /* Close button inside drawer */
+  .mobile-nav-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    z-index: 1101;
   }
 
-  .btn-block-mobile, .form-actions .btn {
-    width: 100%;
+  /* User section inside drawer */
+  .mobile-nav-user { padding: 12px 16px 4px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .mobile-nav-user .user-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Nav links inside drawer */
+  .mobile-nav-links { padding: 8px 16px 0; }
+  .mobile-nav-link {
+    display: block;
+    padding: 12px 16px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    transition: background 0.15s;
   }
+  .mobile-nav-link:hover, .mobile-nav-link.active { background: rgba(201,118,78,0.15); }
+  .mobile-nav-link:focus-visible { outline: 2px solid #C9762F; outline-offset: 2px; }
+
+  /* Footer inside drawer */
+  .mobile-nav-footer { padding: 0 16px 12px; }
+  .mobile-nav-footer .btn { width: 100%; margin-top: 8px; }
+
+  /* Bottom tab bar — optional, only if you want it */
+  .bottom-nav { display: none; } /* Set to flex if you want bottom tabs */
+
+  /* Content padding so it's never behind the drawer or bottom bar */
+  .page { padding: 0 16px calc(72px + env(safe-area-inset-bottom)); }
 }
 
-/* ---- Long text never breaks layout ---- */
-.truncate-mobile {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
+/* ====== TOUCH TARGETS ======*/
+@media (pointer: coarse) {
+  button, .btn, a.btn, [role='button'] { min-height: 44px; min-width: 44px; }
+  .bottom-nav-tab { min-height: 56px; }
+  .nav-link, .mobile-nav-link { padding: 12px; min-height: 44px; display: flex; align-items: center; }
+  input, select, textarea { min-height: 44px; padding: 0.6rem 0.8rem; }
 }
 
-.break-anywhere {
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-/* ---- Part 1 follow-ups: auth, hero, QR, payment comfort at 360px ---- */
-@media (max-width: 480px) {
-  .auth-card {
-    padding: 1.5rem 1.25rem;
-  }
-
-  .auth-view {
-    padding: 1rem 0.75rem;
-  }
-
-  .land-hero-v2 {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-
-  .land-hero-v2-badge {
-    font-size: 0.7rem;
-  }
-}
-
-/* QR stays large, high-contrast, and centered on small screens */
+/* ====== QR / RECEIPT IMAGE IN MODAL ======*/
 @media (max-width: 640px) {
   .receipt-modal img[alt="QR Code"] {
     display: block;
     margin: 0.5rem auto;
+    max-width: 80%;
+    height: auto;
   }
+}
+
+/* ====== SCROLLBAR HIDE (horizontal scrollable containers) ======*/
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+/* Hide scrollbar but keep functionality */
+.table-scroll::-webkit-scrollbar { width: 4px; }
+
+/* ── LandingView mobile header ── */
+@media (max-width: 768px) {
+  .land-hero-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 1rem;
+  }
+  .land-hero-mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .land-hero-mobile-logo {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+  .land-hero-mobile-wordmark {
+    fontSize: '0.85rem', fontWeight: 700, color: '#fff';
+  }
+  /* Hide desktop-only elements on mobile */
+  .land-side-nav { display: none !important; }
+  .land-top-cta { display: none !important; }
 }
