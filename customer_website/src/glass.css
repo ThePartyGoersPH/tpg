@@ -246,6 +246,21 @@ h1, h2, h3, h4, h5, h6,
 
 [data-theme="light"] .land-hero-v2-title {
   color: #ffffff;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
+}
+
+/* Ghost CTA on the dark photo hero must stay white-on-transparent in light
+   mode too (the global light .btn-ghost goes dark, which vanishes here). */
+[data-theme="light"] .land-hero-v2 .btn-ghost {
+  background: transparent;
+  border: 1.5px solid #ffffff;
+  color: #ffffff;
+}
+
+[data-theme="light"] .land-hero-v2 .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #ffffff;
+  color: #ffffff;
 }
 
 [data-theme="light"] .land-hero-v2-outline {

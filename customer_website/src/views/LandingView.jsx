@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useView } from '../hooks/useView';
 import { VIEWS } from '../contexts/ViewContext';
 import { barService } from '../services/barService';
 import { imageUrl } from '../utils/imageUrl';
-import { getBarTypes, getPrimaryBarType } from '../utils/barTypeLabel';
+import { getPrimaryBarType } from '../utils/barTypeLabel';
 const bgHome = '/bg-home.jpg';
 import { Wine, CalendarCheck, Sparkles, Heart, MapPin, Zap, CheckCircle, ArrowRight, Star, Users, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function LandingView() {
   const { navigate } = useView();
   const [trending, setTrending] = useState([]);
-  const [allVenues, setAllVenues] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const sliderRef = useRef(null);
 
@@ -24,72 +23,20 @@ function LandingView() {
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([barService.trending(6), barService.list()])
-      .then(([trendingData, venueData]) => {
+    barService.trending(6)
+      .then((trendingData) => {
         if (cancelled) return;
         setTrending(Array.isArray(trendingData) ? trendingData : []);
-        setAllVenues(Array.isArray(venueData) ? venueData : []);
       })
       .catch(() => {
         if (cancelled) return;
         setTrending([]);
-        setAllVenues([]);
       });
 
     return () => {
       cancelled = true;
     };
   }, []);
-
-  const venueTypeStats = useMemo(() => {
-    const fallback = {
-      barsPubs: 18,
-      restoBars: 12,
-      ktvLounges: 9,
-      liveMusic: 7,
-    };
-
-    if (!Array.isArray(allVenues) || allVenues.length === 0) {
-      return fallback;
-    }
-
-    const counts = {
-      barsPubs: 0,
-      restoBars: 0,
-      ktvLounges: 0,
-      liveMusic: 0,
-    };
-
-    allVenues.forEach((venue) => {
-      const normalizedTypeText = [
-        ...getBarTypes(venue).map((item) => String(item || '').toLowerCase()),
-        String(venue?.category || '').toLowerCase(),
-      ].join(' ');
-
-      if (
-        normalizedTypeText.includes('bar') ||
-        normalizedTypeText.includes('pub') ||
-        normalizedTypeText.includes('club')
-      ) {
-        counts.barsPubs += 1;
-      }
-      if (normalizedTypeText.includes('resto')) {
-        counts.restoBars += 1;
-      }
-      if (normalizedTypeText.includes('ktv')) {
-        counts.ktvLounges += 1;
-      }
-      if (
-        normalizedTypeText.includes('live music') ||
-        normalizedTypeText.includes('music') ||
-        normalizedTypeText.includes('concert')
-      ) {
-        counts.liveMusic += 1;
-      }
-    });
-
-    return counts;
-  }, [allVenues]);
 
   // Auto-rotate slideshow
   useEffect(() => {
@@ -135,38 +82,14 @@ function LandingView() {
           ))}
         </div>
 
-        {/* Side Navigation - Left (desktop only, hidden on mobile via CSS) */}
-        <nav className="land-side-nav">
-          <a href="#platform" className="land-side-link">Work</a>
-          <a href="#features" className="land-side-link">About</a>
-          <a href="#trending" className="land-side-link">Bars</a>
-          <a href="#cta" className="land-side-link">Contact</a>
-        </nav>
-
-        {/* Top Right CTA — desktop only */}
-        <div className="land-top-cta">
-          <button 
-            className="land-email-btn" 
-            onClick={() => navigate(VIEWS.LOGIN)}
-          >
-            HI@THEPARTYGOERS.PH
-          </button>
-        </div>
-
         {/* Main Hero Content */}
         <div className="land-hero-v2-content">
-          {/* Badge */}
-          <div className="land-hero-v2-badge">
-            <span className="land-hero-v2-dot" />
-            <span>Now Live — Nightlife Platform</span>
-          </div>
-
           {/* Main Title - Large Typography */}
-<h1 className="land-hero-v2-title" style={{ fontSize: 'clamp(2rem, 5vw, 3.2rem)', letterSpacing: '-0.3px', marginBottom: '0.3rem' }}>
-  Every<br />
-  <span className="land-hero-v2-accent">Night Out</span><br />
-  <span style={{ position: 'relative', background: 'linear-gradient(135deg, #fff 0%, #f5f5f5 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', display: 'inline-block' }}>Starts Here.</span>
-</h1>
+          <h1 className="land-hero-v2-title">
+            Every<br />
+            <span className="land-hero-v2-accent">Night Out</span><br />
+            <span className="land-hero-v2-outline">Starts Here.</span>
+          </h1>
 
           {/* Subtitle */}
           <p className="land-hero-v2-sub">
@@ -174,94 +97,19 @@ function LandingView() {
             Reserve a table, check events, and own your night — all in one place.
           </p>
 
-          <div className="land-hero-v2-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-            <span className="land-hero-v2-tag" style={{ flex: '1 1 120px', fontSize: '0.72rem', padding: '0.4rem 0.6rem', borderRadius: 9999, background: 'rgba(255,255,255,0.1)', color: '#fff', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
-              🍺 Bars
-            </span>
-            <span className="land-hero-v2-tag" style={{ flex: '1 1 120px', fontSize: '0.72rem', padding: '0.4rem 0.6rem', borderRadius: 9999, background: 'rgba(255,255,255,0.1)', color: '#fff', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
-              🍽️ Resto Bars
-            </span>
-            <span className="land-hero-v2-tag" style={{ flex: '1 1 120px', fontSize: '0.72rem', padding: '0.4rem 0.6rem', borderRadius: 9999, background: 'rgba(255,255,255,0.1)', color: '#fff', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
-              🎤 KTV
-            </span>
-            <span className="land-hero-v2-tag" style={{ flex: '1 1 120px', fontSize: '0.72rem', padding: '0.4rem 0.6rem', borderRadius: 9999, background: 'rgba(255,255,255,0.1)', color: '#fff', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
-              🎶 Live Music
-            </span>
-            <span className="land-hero-v2-tag" style={{ flex: '1 1 120px', fontSize: '0.72rem', padding: '0.4rem 0.6rem', borderRadius: 9999, background: 'rgba(255,255,255,0.1)', color: '#fff', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
-              🎉 Event Venues
-            </span>
-          </div>
-
-          <div className="land-hero-v2-cta" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1.5rem' }}>
+          <div className="land-hero-cta land-hero-v2-cta">
             <button
               className="btn btn-red btn-lg btn-pill btn-red-pulse"
-              style={{ width: '100%', minHeight: '44px' }}
               onClick={() => navigate(VIEWS.BARS)}
             >
               Explore Venues
             </button>
             <button
               className="btn btn-ghost btn-lg btn-pill"
-              style={{ width: '100%', minHeight: '44px' }}
               onClick={() => navigate(VIEWS.EVENTS)}
             >
               View Events
             </button>
-          </div>
-        </div>
-
-        <div className="land-hero-v2-panel">
-          {/* Dashboard Preview Card - Bottom Right */}
-          <div className="land-hero-v2-card">
-            <div className="land-dash-header">
-              <div className="flex items-center gap-sm">
-                <div className="land-dash-logo" />
-                <span className="land-dash-brand">THE PARTY GOERS</span>
-              </div>
-              <div className="land-dash-live"><span className="land-live-dot" /> Live</div>
-            </div>
-            <div className="land-dash-grid">
-              <div className="land-dash-stat">
-                <span className="land-dash-stat-label">Tonight's Venues</span>
-                <span className="land-dash-stat-value">{trending.length || 12}</span>
-                <span className="land-dash-stat-sub land-dash-stat-green">Active tonight</span>
-              </div>
-              <div className="land-dash-stat">
-                <span className="land-dash-stat-label">Featured Events</span>
-                <span className="land-dash-stat-value">8</span>
-                <span className="land-dash-stat-sub land-dash-stat-yellow">This week</span>
-              </div>
-              <div className="land-dash-stat">
-                <span className="land-dash-stat-label">Reservations</span>
-                <span className="land-dash-stat-value">150+</span>
-                <span className="land-dash-stat-sub">This month</span>
-              </div>
-              <div className="land-dash-stat">
-                <span className="land-dash-stat-label">Happy Customers</span>
-                <span className="land-dash-stat-value">2.5K</span>
-                <span className="land-dash-stat-sub land-dash-stat-green">And growing</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="land-hero-v2-breakdown">
-            <span className="land-vtype-title">Venue Types</span>
-            <div className="land-vtype-row">
-              <span>Bars &amp; Pubs</span>
-              <span>+{venueTypeStats.barsPubs} venues</span>
-            </div>
-            <div className="land-vtype-row">
-              <span>Resto Bars</span>
-              <span>+{venueTypeStats.restoBars} venues</span>
-            </div>
-            <div className="land-vtype-row">
-              <span>KTV Lounges</span>
-              <span>+{venueTypeStats.ktvLounges} venues</span>
-            </div>
-            <div className="land-vtype-row">
-              <span>Live Music</span>
-              <span>+{venueTypeStats.liveMusic} venues</span>
-            </div>
           </div>
         </div>
 
