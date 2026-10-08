@@ -43,10 +43,10 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--m-bg)', backgroundImage: 'radial-gradient(ellipse at 60% 20%, rgba(204,0,0,0.1) 0%, transparent 60%)' }}>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#0A0A0A', backgroundImage: 'radial-gradient(ellipse at 60% 20%, rgba(204,0,0,0.1) 0%, transparent 60%)' }}>
       <div className="relative w-full max-w-md">
         <div className="flex justify-center mb-8"><img src={logoImg} alt="The Party Goers PH" className="w-20 h-20 object-contain" /></div>
-        <div className="rounded-2xl p-8" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)', boxShadow: '0 0 60px rgba(204,0,0,0.08), 0 30px 60px rgba(0,0,0,0.5)' }}>
+        <div className="rounded-2xl p-8" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.07)', boxShadow: '0 0 60px rgba(204,0,0,0.08), 0 30px 60px rgba(0,0,0,0.5)' }}>
           {status === 'success' ? (
             <div className="text-center">
               <CheckCircle className="w-12 h-12 mx-auto mb-4" style={{ color: '#22c55e' }} />
@@ -65,11 +65,11 @@ const ResetPassword = () => {
               <form onSubmit={handleSubmit} className="space-y-5">
                 <label className="block text-xs font-semibold uppercase tracking-widest" style={{ color: '#666' }}>
                   New Password
-                  <div className="relative mt-2"><input type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} className="w-full px-4 py-3 pr-11 rounded-xl text-sm text-white outline-none" style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }} minLength={6} required /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#777' }}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button></div>
+                  <div className="relative mt-2"><input type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} className="w-full px-4 py-3 pr-11 rounded-xl text-sm text-white outline-none" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} minLength={6} required /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#777' }}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button></div>
                 </label>
                 <label className="block text-xs font-semibold uppercase tracking-widest" style={{ color: '#666' }}>
                   Confirm Password
-                  <div className="relative mt-2"><input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="w-full px-4 py-3 pr-11 rounded-xl text-sm text-white outline-none" style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }} minLength={6} required /><button type="button" onClick={() => setShowConfirm((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#777' }}>{showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button></div>
+                  <div className="relative mt-2"><input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="w-full px-4 py-3 pr-11 rounded-xl text-sm text-white outline-none" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} minLength={6} required /><button type="button" onClick={() => setShowConfirm((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#777' }}>{showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button></div>
                 </label>
                 <button type="submit" disabled={loading} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-white text-sm disabled:opacity-60" style={{ background: '#CC0000', boxShadow: '0 0 25px rgba(204,0,0,0.35)' }}>{loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Updating...</> : 'Update Password'}</button>
               </form>

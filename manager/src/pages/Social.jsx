@@ -354,7 +354,7 @@ const Social = () => {
         </div>
       )}
 
-      <div className="flex gap-1 rounded-lg p-1 w-fit" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+      <div className="flex gap-1 rounded-lg p-1 w-fit" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
         <button onClick={() => setTab('followers')} className="px-4 py-2 rounded-md text-sm font-medium transition-colors" style={tab === 'followers' ? { background: '#CC0000', color: '#fff' } : { color: '#888' }}>
           Followers ({followerCount})
         </button>
@@ -373,14 +373,14 @@ const Social = () => {
         <div className="card p-0 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ borderBottom: '1px solid var(--m-border)' }}><tr>
+              <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}><tr>
                 <th className="table-header">User</th>
                 <th className="table-header">Email</th>
                 <th className="table-header">Followed Since</th>
               </tr></thead>
               <tbody>
                 {followers.map((f, i) => (
-                  <tr key={f.id || i} className="transition-colors" style={{ borderBottom: '1px solid var(--m-border)' }}
+                  <tr key={f.id || i} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.04)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   >
@@ -427,7 +427,7 @@ const Social = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <button onClick={() => openEditPost(p)} className="p-2 rounded-lg transition-colors" style={{ color: '#888' }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--m-active-bg)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title="Edit">
+                  <button onClick={() => openEditPost(p)} className="p-2 rounded-lg transition-colors" style={{ color: '#888' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title="Edit">
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button onClick={() => handleDeletePost(p.id)} className="p-2 rounded-lg transition-colors" style={{ color: '#ff6666' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,100,100,0.08)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title="Delete">
@@ -467,7 +467,7 @@ const Social = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <button onClick={() => openEditEvent(ev)} className="p-2 rounded-lg transition-colors" style={{ color: '#888' }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--m-active-bg)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title="Edit">
+                  <button onClick={() => openEditEvent(ev)} className="p-2 rounded-lg transition-colors" style={{ color: '#888' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title="Edit">
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button onClick={() => handleDeleteEvent(ev.id)} className="p-2 rounded-lg transition-colors" style={{ color: '#ff6666' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,100,100,0.08)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title="Archive">
@@ -489,21 +489,21 @@ const Social = () => {
             </div>
           )}
           <div className="card">
-            <h4 className="font-semibold text-white mb-3 flex items-center gap-2">Post Comments <span className="text-xs font-normal px-2 py-0.5 rounded-full" style={{ background: 'var(--m-active-bg)', color: '#888' }}>{comments.post_comments.length}</span></h4>
+            <h4 className="font-semibold text-white mb-3 flex items-center gap-2">Post Comments <span className="text-xs font-normal px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)', color: '#888' }}>{comments.post_comments.length}</span></h4>
             <div className="space-y-2 max-h-[520px] overflow-auto pr-1">
               {comments.post_comments.map((c) => {
                 const isHidden = c.status === 'hidden';
                 return (
-                  <div key={`p-${c.id}`} className="rounded-lg p-3" style={{ background: isHidden ? 'rgba(245,158,11,0.06)' : 'var(--m-surface-2)', border: isHidden ? '1px dashed rgba(245,158,11,0.3)' : '1px solid transparent', opacity: isHidden ? 0.6 : 1 }}>
+                  <div key={`p-${c.id}`} className="rounded-lg p-3" style={{ background: isHidden ? 'rgba(245,158,11,0.06)' : '#161616', border: isHidden ? '1px dashed rgba(245,158,11,0.3)' : '1px solid transparent', opacity: isHidden ? 0.6 : 1 }}>
                     {isHidden && <span className="text-xs font-semibold mb-1 inline-block" style={{ color: '#fbbf24' }}>HIDDEN</span>}
                     <p className="text-sm" style={{ color: '#ccc' }}>{c.comment}</p>
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-xs" style={{ color: '#555' }}>{c.first_name} {c.last_name} &middot; {safeFormat(c.created_at, 'MMM d, h:mm a')}</span>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openReply('posts', c)} className="p-1.5 rounded transition-colors" style={{ color: '#888' }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--m-active-bg)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title="Reply">
+                        <button onClick={() => openReply('posts', c)} className="p-1.5 rounded transition-colors" style={{ color: '#888' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title="Reply">
                           <Reply className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => handleHidePostComment(c.id, isHidden)} className="p-1.5 rounded transition-colors" style={{ color: isHidden ? '#4ade80' : '#f59e0b' }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--m-active-bg)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title={isHidden ? 'Unhide' : 'Hide'}>
+                        <button onClick={() => handleHidePostComment(c.id, isHidden)} className="p-1.5 rounded transition-colors" style={{ color: isHidden ? '#4ade80' : '#f59e0b' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title={isHidden ? 'Unhide' : 'Hide'}>
                           {isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                         </button>
                         <button onClick={() => handleDeleteComment('posts', c.id)} className="p-1.5 rounded transition-colors" style={{ color: '#ff6666' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,100,100,0.08)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title="Delete">
@@ -519,10 +519,10 @@ const Social = () => {
           </div>
 
           <div className="card">
-            <h4 className="font-semibold text-white mb-3 flex items-center gap-2">Event Comments <span className="text-xs font-normal px-2 py-0.5 rounded-full" style={{ background: 'var(--m-active-bg)', color: '#888' }}>{comments.event_comments.length}</span></h4>
+            <h4 className="font-semibold text-white mb-3 flex items-center gap-2">Event Comments <span className="text-xs font-normal px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)', color: '#888' }}>{comments.event_comments.length}</span></h4>
             <div className="space-y-2 max-h-[520px] overflow-auto pr-1">
               {comments.event_comments.map((c) => (
-                <div key={`e-${c.id}`} className="rounded-lg p-3" style={{ background: 'var(--m-surface-2)' }}>
+                <div key={`e-${c.id}`} className="rounded-lg p-3" style={{ background: '#161616' }}>
                   <div className="flex items-start justify-between mb-2">
                     <span className="text-xs font-medium" style={{ color: '#CC0000' }}>{c.event_title}</span>
                     <div className="flex items-center gap-1">
@@ -551,7 +551,7 @@ const Social = () => {
           </div>
 
           <div className="card">
-            <h4 className="font-semibold text-white mb-3 flex items-center gap-2">Media Comments <span className="text-xs font-normal px-2 py-0.5 rounded-full" style={{ background: 'var(--m-active-bg)', color: '#888' }}>{comments.media_comments.length}</span></h4>
+            <h4 className="font-semibold text-white mb-3 flex items-center gap-2">Media Comments <span className="text-xs font-normal px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)', color: '#888' }}>{comments.media_comments.length}</span></h4>
             <div className="space-y-2 max-h-[520px] overflow-auto pr-1">
               {comments.media_comments.map((c) => {
                 const isHidden = c.is_hidden;
@@ -560,7 +560,7 @@ const Social = () => {
                 const isOwnerComment = c.user_id === user?.id;
                 return (
                   <div key={`m-${c.id}`} className="rounded-lg p-3"
-                       style={{ background: isHidden ? 'rgba(245,158,11,0.06)' : 'var(--m-surface-2)',
+                       style={{ background: isHidden ? 'rgba(245,158,11,0.06)' : '#161616',
                                 border: isHidden ? '1px dashed rgba(245,158,11,0.3)' : isReported ? '1px solid rgba(239,68,68,0.3)' : '1px solid transparent',
                                 opacity: isHidden ? 0.6 : 1,
                                 marginLeft: isReply ? '1rem' : '0' }}>
@@ -590,13 +590,13 @@ const Social = () => {
                           setReplyMediaMentionPrefix(`@${authorName} `);
                           setReplyMediaMentionUserId(c.user_id);
                           setReplyMediaMentionName(authorName);
-                        }} className="p-1.5 rounded transition-colors" style={{ color: replyingToMedia === c.id ? '#C9762F' : '#888' }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--m-active-bg)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title="Reply">
+                        }} className="p-1.5 rounded transition-colors" style={{ color: replyingToMedia === c.id ? '#C9762F' : '#888' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title="Reply">
                           <Reply className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => handleHideMediaComment(c.id)} className="p-1.5 rounded transition-colors" style={{ color: isHidden ? '#4ade80' : '#f59e0b' }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--m-active-bg)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title={isHidden ? 'Unhide' : 'Hide'}>
+                        <button onClick={() => handleHideMediaComment(c.id)} className="p-1.5 rounded transition-colors" style={{ color: isHidden ? '#4ade80' : '#f59e0b' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title={isHidden ? 'Unhide' : 'Hide'}>
                           {isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                         </button>
-                        <button onClick={() => handleReportMediaComment(c.id)} className="p-1.5 rounded transition-colors" style={{ color: isReported ? '#ef4444' : '#888' }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--m-active-bg)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title={isReported ? 'Unreport' : 'Report'}>
+                        <button onClick={() => handleReportMediaComment(c.id)} className="p-1.5 rounded transition-colors" style={{ color: isReported ? '#ef4444' : '#888' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title={isReported ? 'Unreport' : 'Report'}>
                           <Flag className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => handleDeleteMediaComment(c.media_id, c.id)} className="p-1.5 rounded transition-colors" style={{ color: '#ff6666' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,100,100,0.08)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'} title="Delete">
@@ -640,12 +640,12 @@ const Social = () => {
                           placeholder={`Reply to ${c.first_name}...`}
                           autoFocus
                           className="flex-1 text-sm rounded-full px-3 py-1.5 outline-none"
-                          style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)', color: '#fff' }}
+                          style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
                         />
                         <button onClick={() => {
                           const topId = isReply ? (c.parent_comment_id || c.id) : c.id;
                           handleMediaReplySubmit(c.media_id, topId);
-                        }} disabled={!replyMediaText.trim()} className="p-1.5 rounded-full transition-colors" style={{ background: replyMediaText.trim() ? '#C9762F' : 'var(--m-surface-2)', color: replyMediaText.trim() ? '#fff' : '#555', cursor: replyMediaText.trim() ? 'pointer' : 'default' }}>
+                        }} disabled={!replyMediaText.trim()} className="p-1.5 rounded-full transition-colors" style={{ background: replyMediaText.trim() ? '#C9762F' : '#1a1a1a', color: replyMediaText.trim() ? '#fff' : '#555', cursor: replyMediaText.trim() ? 'pointer' : 'default' }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                         </button>
                       </div>
@@ -662,8 +662,8 @@ const Social = () => {
       {/* Create / Edit Post / Event Modal */}
       {showPostModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={closeModal}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--m-border)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <h4 className="font-bold text-white">
                 {postMode === 'edit' ? (postType === 'event' ? 'Edit Event' : 'Edit Post') : (postType === 'event' ? 'Create Event' : 'Create Post')}
               </h4>
@@ -671,11 +671,11 @@ const Social = () => {
             </div>
 
             {postMode === 'create' && (
-              <div className="flex gap-1 p-3" style={{ borderBottom: '1px solid var(--m-border)' }}>
-                <button type="button" onClick={() => setPostType('post')} className="flex-1 py-2 rounded-lg text-sm font-medium transition-colors" style={postType === 'post' ? { background: '#CC0000', color: '#fff' } : { background: 'var(--m-active-bg)', color: '#888' }}>
+              <div className="flex gap-1 p-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <button type="button" onClick={() => setPostType('post')} className="flex-1 py-2 rounded-lg text-sm font-medium transition-colors" style={postType === 'post' ? { background: '#CC0000', color: '#fff' } : { background: 'rgba(255,255,255,0.06)', color: '#888' }}>
                   Post
                 </button>
-                <button type="button" onClick={() => setPostType('event')} className="flex-1 py-2 rounded-lg text-sm font-medium transition-colors" style={postType === 'event' ? { background: '#CC0000', color: '#fff' } : { background: 'var(--m-active-bg)', color: '#888' }}>
+                <button type="button" onClick={() => setPostType('event')} className="flex-1 py-2 rounded-lg text-sm font-medium transition-colors" style={postType === 'event' ? { background: '#CC0000', color: '#fff' } : { background: 'rgba(255,255,255,0.06)', color: '#888' }}>
                   Event
                 </button>
               </div>
@@ -774,13 +774,13 @@ const Social = () => {
       {/* Reply Modal */}
       {replyModal.open && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setReplyModal({ open: false, commentId: null, type: null, commentText: '', replyText: '' })}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--m-border)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <h4 className="font-bold text-white">Reply to Comment</h4>
               <button onClick={() => setReplyModal({ open: false, commentId: null, type: null, commentText: '', replyText: '' })} className="p-1 rounded-lg" style={{ color: '#666' }}><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6 space-y-4">
-              <div className="rounded-lg p-3" style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
+              <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <p className="text-sm" style={{ color: '#888' }}>"{replyModal.commentText}"</p>
               </div>
               <textarea value={replyModal.replyText} onChange={(e) => setReplyModal(prev => ({ ...prev, replyText: e.target.value }))} className="input-field h-24 resize-none" placeholder="Write your reply..." autoFocus />

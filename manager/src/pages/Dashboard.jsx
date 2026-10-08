@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   CalendarCheck, DollarSign, Users, TrendingUp,
@@ -14,8 +14,8 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const StatCard = ({ icon: Icon, label, value, sub, color, to }) => (
   <Link to={to || '#'} className="card transition-all duration-200 group" style={{ cursor: 'pointer' }}
-    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(204,0,0,0.25)'; e.currentTarget.style.background = 'var(--m-surface-2)'; }}
-    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--m-border)'; e.currentTarget.style.background = 'var(--m-surface)'; }}
+    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(204,0,0,0.25)'; e.currentTarget.style.background = '#161616'; }}
+    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.background = '#111111'; }}
   >
     <div className="flex items-start justify-between">
       <div>
@@ -93,18 +93,18 @@ const LeaveCalendar = ({ leaves, onMonthChange }) => {
   };
 
   return (
-    <div className="card" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }}>
+    <div className="card" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.06)' }}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-white flex items-center gap-2">
           <Calendar className="w-5 h-5" style={{ color: '#CC0000' }} />
           Approved Leaves
         </h3>
         <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="p-1.5 rounded-lg transition-colors" style={{ color: '#666', background: 'var(--m-active-bg)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--m-active-bg)'} onMouseLeave={(e) => e.currentTarget.style.background = 'var(--m-active-bg)'} aria-label="Previous month">
+          <button onClick={prevMonth} className="p-1.5 rounded-lg transition-colors" style={{ color: '#666', background: 'rgba(255,255,255,0.04)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'} aria-label="Previous month">
             <ChevronLeft className="w-4 h-4" />
           </button>
           <span className="text-sm font-medium text-white min-w-[140px] text-center">{monthName}</span>
-          <button onClick={nextMonth} className="p-1.5 rounded-lg transition-colors" style={{ color: '#666', background: 'var(--m-active-bg)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--m-active-bg)'} onMouseLeave={(e) => e.currentTarget.style.background = 'var(--m-active-bg)'} aria-label="Next month">
+          <button onClick={nextMonth} className="p-1.5 rounded-lg transition-colors" style={{ color: '#666', background: 'rgba(255,255,255,0.04)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'} aria-label="Next month">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -169,14 +169,14 @@ const LeaveCalendar = ({ leaves, onMonthChange }) => {
       {/* Tooltip / Popover */}
       {hoveredDate && dayHasLeaves(Number(hoveredDate.split('-')[2])).length > 0 && (
         <div className="fixed z-50 pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-          <div className="card w-80 p-4 shadow-2xl" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)', boxShadow: '0 0 40px rgba(0,0,0,0.5)' }}>
+          <div className="card w-80 p-4 shadow-2xl" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 0 40px rgba(0,0,0,0.5)' }}>
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-bold text-white">{new Date(hoveredDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}</h4>
               <button onClick={() => setHoveredDate(null)} className="p-1 rounded-lg" style={{ color: '#666' }} onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}>×</button>
             </div>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {dayHasLeaves(Number(hoveredDate.split('-')[2])).map((leave) => (
-                <div key={leave.id} className="flex items-start gap-3 p-3 rounded-lg" style={{ background: 'var(--m-active-bg)', border: `1px solid ${getLeaveColor(leave.leave_type)}40` }}>
+                <div key={leave.id} className="flex items-start gap-3 p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${getLeaveColor(leave.leave_type)}40` }}>
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: getLeaveColor(leave.leave_type) }}>
                     <User className="w-4 h-4" />
                   </div>
@@ -199,6 +199,9 @@ const LeaveCalendar = ({ leaves, onMonthChange }) => {
     </div>
   );
 };
+
+// Need useMemo import
+const { useMemo } = React;
 
 const Dashboard = () => {
   const { user, hasPermission } = useAuthStore();
@@ -343,7 +346,7 @@ const Dashboard = () => {
             {summary?.low_stock_alerts?.length > 0 ? (
               <div className="space-y-2">
                 {summary.low_stock_alerts.slice(0, 5).map((item, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 last:border-0" style={{ borderBottom: '1px solid var(--m-border)' }}>
+                  <div key={i} className="flex items-center justify-between py-2 last:border-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                     <span className="text-sm" style={{ color: '#ccc' }}>{item.name}</span>
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                       item.stock_status === 'critical' ? 'badge-danger' : 'badge-warning'
@@ -369,7 +372,7 @@ const Dashboard = () => {
             {summary?.top_menu_items?.length > 0 ? (
               <div className="space-y-2">
                 {summary.top_menu_items.slice(0, 5).map((item, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 last:border-0" style={{ borderBottom: '1px solid var(--m-border)' }}>
+                  <div key={i} className="flex items-center justify-between py-2 last:border-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                     <div className="flex items-center gap-3">
                       <span className="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center" style={{ background: 'rgba(204,0,0,0.15)', color: '#CC0000' }}>
                         {i + 1}
@@ -414,7 +417,7 @@ const Dashboard = () => {
           {dssLoading && !dss ? (
             <div className="space-y-3">
               {[1,2,3].map(i => (
-                <div key={i} className="rounded-xl h-16 animate-pulse" style={{ background: 'var(--m-surface-2)' }} />
+                <div key={i} className="rounded-xl h-16 animate-pulse" style={{ background: '#1a1a1a' }} />
               ))}
             </div>
           ) : dss?.recommendations?.length > 0 ? (
@@ -435,9 +438,9 @@ const Dashboard = () => {
                     <button
                       onClick={() => navigate(rec.action_route)}
                       className="flex-shrink-0 text-xs px-2.5 py-1 rounded-lg font-medium transition-colors whitespace-nowrap"
-                      style={{ background: 'var(--m-active-bg)', color: '#ccc', border: '1px solid var(--m-border)' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; e.currentTarget.style.color = '#fff'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; e.currentTarget.style.color = '#ccc'; }}
+                      style={{ background: 'rgba(255,255,255,0.06)', color: '#ccc', border: '1px solid rgba(255,255,255,0.08)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = '#fff'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#ccc'; }}
                     >
                       {rec.action_label} →
                     </button>
@@ -466,7 +469,7 @@ const Dashboard = () => {
           </div>
           <div className="space-y-2">
             {summary.recent_staff_activity.slice(0, 5).map((act, i) => (
-              <div key={i} className="flex items-center gap-3 py-2 last:border-0" style={{ borderBottom: '1px solid var(--m-border)' }}>
+              <div key={i} className="flex items-center gap-3 py-2 last:border-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: '#CC0000' }}>
                   {act.first_name?.[0]}{act.last_name?.[0]}
                 </div>

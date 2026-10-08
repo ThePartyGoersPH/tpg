@@ -129,7 +129,7 @@ const Hero = () => {
             <a
               href="#features"
               className="px-8 py-4 rounded-lg font-body font-semibold text-white text-base border transition-all duration-300 hover:bg-white/5"
-              style={{ borderColor: 'var(--m-border)' }}
+              style={{ borderColor: 'rgba(255,255,255,0.15)' }}
               onClick={(e) => { e.preventDefault(); document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }}
             >
               See How It Works
@@ -156,7 +156,7 @@ const Hero = () => {
               <div
                 key={s}
                 className="flex items-center gap-2 px-4 py-2 rounded-full font-body text-sm text-gray-400"
-                style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                 {s}
@@ -194,7 +194,7 @@ const Hero = () => {
                   { label: 'Reservations', value: '247', up: true },
                   { label: 'Staff Active', value: '18', up: false },
                 ].map((s) => (
-                  <div key={s.label} className="rounded-xl p-3" style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
+                  <div key={s.label} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
                     <p className="text-[10px] text-gray-500 font-body mb-1">{s.label}</p>
                     <p className="text-white font-display text-lg leading-none">{s.value}</p>
                     <p className={`text-[10px] mt-1 font-body ${s.up ? 'text-green-400' : 'text-red-400'}`}>{s.up ? '↑ 12%' : '→ Stable'}</p>
@@ -212,7 +212,7 @@ const Hero = () => {
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {['Staff', 'Payroll', 'Events', 'Analytics'].map((m) => (
-                  <div key={m} className="rounded-lg p-2 text-center" style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
+                  <div key={m} className="rounded-lg p-2 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
                     <p className="text-[10px] text-gray-500 font-body">{m}</p>
                   </div>
                 ))}
@@ -223,7 +223,7 @@ const Hero = () => {
       </div>
 
       {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none" style={{ background: 'linear-gradient(to bottom, transparent, var(--m-bg))' }} />
+      <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none" style={{ background: 'linear-gradient(to bottom, transparent, #0A0A0A)' }} />
     </section>
   );
 };

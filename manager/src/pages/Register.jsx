@@ -75,9 +75,9 @@ const DarkInput = ({ label, error, ...props }) => (
     </label>
     <input
       className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-gray-600 outline-none transition-all duration-200"
-      style={{ background: 'var(--m-active-bg)', border: `1px solid ${error ? 'rgba(204,0,0,0.5)' : 'var(--m-border)'}`, fontFamily: "'DM Sans', Inter, sans-serif" }}
+      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${error ? 'rgba(204,0,0,0.5)' : 'rgba(255,255,255,0.08)'}`, fontFamily: "'DM Sans', Inter, sans-serif" }}
       onFocus={(e) => { e.target.style.borderColor = 'rgba(204,0,0,0.5)'; e.target.style.boxShadow = '0 0 0 3px rgba(204,0,0,0.08)'; }}
-      onBlur={(e) => { e.target.style.borderColor = error ? 'rgba(204,0,0,0.5)' : 'var(--m-border)'; e.target.style.boxShadow = 'none'; }}
+      onBlur={(e) => { e.target.style.borderColor = error ? 'rgba(204,0,0,0.5)' : 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
     {error && <p className="mt-1 text-xs" style={{ color: '#ff6666', fontFamily: "'DM Sans', Inter, sans-serif" }}>{error}</p>}
@@ -93,9 +93,9 @@ const DarkSelect = ({ label, error, children, ...props }) => (
     )}
     <select
       className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none transition-all duration-200"
-      style={{ background: 'var(--m-active-bg)', border: `1px solid ${error ? 'rgba(204,0,0,0.5)' : 'var(--m-border)'}`, fontFamily: "'DM Sans', Inter, sans-serif'", colorScheme: 'dark' }}
+      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${error ? 'rgba(204,0,0,0.5)' : 'rgba(255,255,255,0.08)'}`, fontFamily: "'DM Sans', Inter, sans-serif'", colorScheme: 'dark' }}
       onFocus={(e) => { e.target.style.borderColor = 'rgba(204,0,0,0.5)'; }}
-      onBlur={(e) => { e.target.style.borderColor = error ? 'rgba(204,0,0,0.5)' : 'var(--m-border)'; }}
+      onBlur={(e) => { e.target.style.borderColor = error ? 'rgba(204,0,0,0.5)' : 'rgba(255,255,255,0.08)'; }}
       {...props}
     >
       {children}
@@ -112,9 +112,9 @@ const DarkTextarea = ({ label, error, ...props }) => (
     <textarea
       rows={3}
       className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-gray-600 outline-none transition-all duration-200 resize-none"
-      style={{ background: 'var(--m-active-bg)', border: `1px solid ${error ? 'rgba(204,0,0,0.5)' : 'var(--m-border)'}`, fontFamily: "'DM Sans', Inter, sans-serif" }}
+      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${error ? 'rgba(204,0,0,0.5)' : 'rgba(255,255,255,0.08)'}`, fontFamily: "'DM Sans', Inter, sans-serif" }}
       onFocus={(e) => { e.target.style.borderColor = 'rgba(204,0,0,0.5)'; e.target.style.boxShadow = '0 0 0 3px rgba(204,0,0,0.08)'; }}
-      onBlur={(e) => { e.target.style.borderColor = error ? 'rgba(204,0,0,0.5)' : 'var(--m-border)'; e.target.style.boxShadow = 'none'; }}
+      onBlur={(e) => { e.target.style.borderColor = error ? 'rgba(204,0,0,0.5)' : 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
     {error && <p className="mt-1 text-xs" style={{ color: '#ff6666', fontFamily: "'DM Sans', Inter, sans-serif" }}>{error}</p>}
@@ -133,8 +133,8 @@ const StepIndicator = ({ current }) => (
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
               style={{
-                background: done ? '#CC0000' : active ? 'rgba(204,0,0,0.15)' : 'var(--m-active-bg)',
-                border: `1.5px solid ${done || active ? '#CC0000' : 'var(--m-border)'}`,
+                background: done ? '#CC0000' : active ? 'rgba(204,0,0,0.15)' : 'rgba(255,255,255,0.05)',
+                border: `1.5px solid ${done || active ? '#CC0000' : 'rgba(255,255,255,0.1)'}`,
                 color: done || active ? '#fff' : '#555',
                 fontFamily: "'DM Sans', Inter, sans-serif",
               }}
@@ -151,7 +151,7 @@ const StepIndicator = ({ current }) => (
           {i < STEPS.length - 1 && (
             <div
               className="h-[1.5px] w-12 sm:w-20 mx-2 mb-5 transition-all duration-300"
-              style={{ background: i < current ? '#CC0000' : 'var(--m-active-bg)' }}
+              style={{ background: i < current ? '#CC0000' : 'rgba(255,255,255,0.08)' }}
             />
           )}
         </React.Fragment>
@@ -494,7 +494,7 @@ const Register = () => {
     return (
       <div
         className="min-h-screen flex items-center justify-center px-4"
-        style={{ background: 'var(--m-bg)', backgroundImage: 'radial-gradient(ellipse at 50% 30%, rgba(204,0,0,0.1) 0%, transparent 60%)' }}
+        style={{ background: '#0A0A0A', backgroundImage: 'radial-gradient(ellipse at 50% 30%, rgba(204,0,0,0.1) 0%, transparent 60%)' }}
       >
         <div className="w-full max-w-md text-center">
           <div
@@ -528,7 +528,7 @@ const Register = () => {
     <div
       className="min-h-screen flex items-center justify-center px-4 py-12"
       style={{
-        background: 'var(--m-bg)',
+        background: '#0A0A0A',
         backgroundImage: 'radial-gradient(ellipse at 60% 10%, rgba(204,0,0,0.08) 0%, transparent 60%)',
       }}
     >
@@ -564,8 +564,8 @@ const Register = () => {
         <div
           className="rounded-2xl p-8"
           style={{
-            background: 'var(--m-surface)',
-            border: '1px solid var(--m-border)',
+            background: '#111111',
+            border: '1px solid rgba(255,255,255,0.07)',
             boxShadow: '0 0 60px rgba(204,0,0,0.06), 0 30px 60px rgba(0,0,0,0.5)',
           }}
         >
@@ -610,9 +610,9 @@ const Register = () => {
                       onChange={(e) => handleFieldChange('password', e.target.value, setPassword)}
                       placeholder="Min. 6 characters"
                       className="w-full px-4 py-3 pr-11 rounded-xl text-sm text-white placeholder-gray-600 outline-none transition-all duration-200"
-                      style={{ background: 'var(--m-active-bg)', border: `1px solid ${errors.password ? 'rgba(204,0,0,0.5)' : 'var(--m-border)'}`, fontFamily: "'DM Sans', Inter, sans-serif" }}
+                      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${errors.password ? 'rgba(204,0,0,0.5)' : 'rgba(255,255,255,0.08)'}`, fontFamily: "'DM Sans', Inter, sans-serif" }}
                       onFocus={(e) => { e.target.style.borderColor = 'rgba(204,0,0,0.5)'; e.target.style.boxShadow = '0 0 0 3px rgba(204,0,0,0.08)'; }}
-                      onBlur={(e) => { e.target.style.borderColor = errors.password ? 'rgba(204,0,0,0.5)' : 'var(--m-border)'; e.target.style.boxShadow = 'none'; handleFieldBlur('password', password); }}
+                      onBlur={(e) => { e.target.style.borderColor = errors.password ? 'rgba(204,0,0,0.5)' : 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; handleFieldBlur('password', password); }}
                     />
                     <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#555' }}>
                       {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -621,7 +621,7 @@ const Register = () => {
                   {password && (
                     <div className="flex gap-1 mt-1.5">
                       {[1,2,3,4].map((i) => (
-                        <div key={i} className="h-1 flex-1 rounded-full" style={{ background: i <= passwordStrength ? (passwordStrength <= 1 ? '#ff6666' : passwordStrength <= 2 ? '#fbbf24' : '#4ade80') : 'var(--m-active-bg)' }} />
+                        <div key={i} className="h-1 flex-1 rounded-full" style={{ background: i <= passwordStrength ? (passwordStrength <= 1 ? '#ff6666' : passwordStrength <= 2 ? '#fbbf24' : '#4ade80') : 'rgba(255,255,255,0.08)' }} />
                       ))}
                     </div>
                   )}
@@ -636,9 +636,9 @@ const Register = () => {
                       onChange={(e) => handleFieldChange('confirmPassword', e.target.value, setConfirmPassword)}
                       placeholder="Re-enter password"
                       className="w-full px-4 py-3 pr-11 rounded-xl text-sm text-white placeholder-gray-600 outline-none transition-all duration-200"
-                      style={{ background: 'var(--m-active-bg)', border: `1px solid ${errors.confirmPassword ? 'rgba(204,0,0,0.5)' : 'var(--m-border)'}`, fontFamily: "'DM Sans', Inter, sans-serif" }}
+                      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${errors.confirmPassword ? 'rgba(204,0,0,0.5)' : 'rgba(255,255,255,0.08)'}`, fontFamily: "'DM Sans', Inter, sans-serif" }}
                       onFocus={(e) => { e.target.style.borderColor = 'rgba(204,0,0,0.5)'; e.target.style.boxShadow = '0 0 0 3px rgba(204,0,0,0.08)'; }}
-                      onBlur={(e) => { e.target.style.borderColor = errors.confirmPassword ? 'rgba(204,0,0,0.5)' : 'var(--m-border)'; e.target.style.boxShadow = 'none'; handleFieldBlur('confirmPassword', confirmPassword); }}
+                      onBlur={(e) => { e.target.style.borderColor = errors.confirmPassword ? 'rgba(204,0,0,0.5)' : 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; handleFieldBlur('confirmPassword', confirmPassword); }}
                     />
                     <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#555' }}>
                       {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -705,8 +705,8 @@ const Register = () => {
                           key={opt}
                           className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm cursor-pointer select-none transition-colors"
                           style={{
-                            background: checked ? 'rgba(204,0,0,0.10)' : 'var(--m-active-bg)',
-                            border: checked ? '1px solid rgba(204,0,0,0.35)' : '1px solid var(--m-border)',
+                            background: checked ? 'rgba(204,0,0,0.10)' : 'rgba(255,255,255,0.03)',
+                            border: checked ? '1px solid rgba(204,0,0,0.35)' : '1px solid rgba(255,255,255,0.06)',
                             color: checked ? '#fff' : '#bbb',
                             fontFamily: "'DM Sans', Inter, sans-serif"
                           }}
@@ -783,7 +783,7 @@ const Register = () => {
                 </div>
 
                 {/* GCash — Required */}
-                <div className="pt-4 mt-2" style={{ borderTop: '1px solid var(--m-border)' }}>
+                <div className="pt-4 mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                   <div className="flex items-center gap-2 mb-1">
                     <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#CC0000', fontFamily: "'DM Sans', Inter, sans-serif" }}>GCash Details</p>
                     <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(204,0,0,0.1)', color: '#CC0000', border: '1px solid rgba(204,0,0,0.2)' }}>Required for Payouts</span>
@@ -1005,7 +1005,7 @@ const Register = () => {
                   type="button"
                   onClick={handleBack}
                   className="px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200"
-                  style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)', color: '#aaa', fontFamily: "'DM Sans', Inter, sans-serif" }}
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: '#aaa', fontFamily: "'DM Sans', Inter, sans-serif" }}
                 >
                   ← Back
                 </button>

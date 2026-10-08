@@ -359,7 +359,7 @@ const PayrollSettings = () => {
       <div className="card" data-testid="window-settings-card">
         <div className="flex items-start justify-between gap-3 mb-1">
           <h3 className="text-lg font-bold text-white">Leave-to-Cash Conversion Window</h3>
-          <span className="text-xs font-semibold px-2 py-1 rounded-md" style={{ background: 'var(--m-surface-2)', color: windowCfg.configured ? '#4ade80' : '#888' }}>
+          <span className="text-xs font-semibold px-2 py-1 rounded-md" style={{ background: '#161616', color: windowCfg.configured ? '#4ade80' : '#888' }}>
             {windowCfg.configured ? 'Custom schedule' : 'Default: every year, December'}
           </span>
         </div>
@@ -406,9 +406,9 @@ const PayrollSettings = () => {
                         data-testid={`window-month-${month}`}
                         className="px-3 py-2 rounded-md text-xs font-medium transition-colors"
                         style={{
-                          background: on ? '#CC0000' : 'var(--m-surface-2)',
+                          background: on ? '#CC0000' : '#161616',
                           color: on ? '#fff' : '#888',
-                          border: '1px solid var(--m-border)',
+                          border: '1px solid rgba(255,255,255,0.08)',
                         }}
                       >
                         {name}
@@ -465,7 +465,7 @@ const PayrollSettings = () => {
             </p>
 
             {/* Preview */}
-            <div className="rounded-lg px-3 py-3" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+            <div className="rounded-lg px-3 py-3" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
               <p className="text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: '#f59e0b' }}>Windows this year</p>
               <p className="text-sm text-white" data-testid="window-preview">
                 {previewWindows().length ? previewWindows().join('  \u00b7  ') : 'Pick at least one month'}

@@ -217,7 +217,7 @@ const Attendance = () => {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex gap-2 items-center">
-          <div className="flex rounded-lg p-1" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+          <div className="flex rounded-lg p-1" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
             {canViewAll && <button onClick={() => setTab('all')} className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors" style={tab === 'all' ? { background: '#CC0000', color: '#fff' } : { color: '#888' }}>All Staff</button>}
             {showMyAttendanceTab && (
               <button onClick={() => setTab('my')} className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors" style={tab === 'my' ? { background: '#CC0000', color: '#fff' } : { color: '#888' }}>My Attendance</button>
@@ -238,7 +238,7 @@ const Attendance = () => {
       <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ borderBottom: '1px solid var(--m-border)' }}>
+            <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <tr>
                 {(isOwner || (canViewAll && tab === 'all')) && <th className="table-header">Employee</th>}
                 <th className="table-header">Date</th>
@@ -253,7 +253,7 @@ const Attendance = () => {
             </thead>
             <tbody>
               {displayRecords.map((r, i) => (
-                <tr key={r.id || i} className="transition-colors" style={{ borderBottom: '1px solid var(--m-border)' }}
+                <tr key={r.id || i} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.04)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
@@ -277,8 +277,8 @@ const Attendance = () => {
       {/* Create Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <h3 className="font-bold text-white">Add Attendance Record</h3>
               <button onClick={() => setShowModal(false)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}

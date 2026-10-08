@@ -73,7 +73,7 @@ const FeatureCard = ({ icon, title, desc, index }) => {
       className="lp-reveal group relative rounded-2xl p-6 transition-all duration-300 cursor-default"
       style={{
         background: 'rgba(17,17,17,0.8)',
-        border: '1px solid var(--m-border)',
+        border: '1px solid rgba(255,255,255,0.05)',
         backdropFilter: 'blur(10px)',
       }}
     >

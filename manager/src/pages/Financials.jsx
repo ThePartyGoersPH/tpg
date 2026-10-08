@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import useAppTheme from '../hooks/useAppTheme';
 import { DollarSign, TrendingUp, TrendingDown, Wallet, CreditCard, BarChart2, Calendar, Filter, Eye, X, Loader2, ArrowDownToLine, Clock, Receipt } from 'lucide-react';
 import { financialsApi } from '../api/financialsApi';
 import { orderApi } from '../api/orderApi';
@@ -11,8 +10,6 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 
 const Financials = () => {
-  const { chart } = useAppTheme();
-  const tickFill = chart.tick;
   const [autoPayout, setAutoPayout] = useState(null);
   const [cashflow, setCashflow] = useState(null);
   const [trends, setTrends] = useState(null);
@@ -137,7 +134,7 @@ const Financials = () => {
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
-      <div className="flex gap-1 rounded-lg p-1 w-fit" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+      <div className="flex gap-1 rounded-lg p-1 w-fit" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
         {[
           { id: 'overview', label: 'Auto Payout', icon: DollarSign },
           { id: 'cashflow', label: 'Cashflow', icon: TrendingUp },
@@ -219,11 +216,11 @@ const Financials = () => {
           <div className="card">
             <h3 className="font-bold text-white mb-4">Revenue Breakdown</h3>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--m-surface-2)' }}>
+              <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: '#161616' }}>
                 <span className="text-sm" style={{ color: '#888' }}>POS Sales</span>
                 <span className="text-sm font-semibold text-white">₱{Number(autoPayout.total_sales || 0).toLocaleString()}</span>
               </div>
-              <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--m-surface-2)' }}>
+              <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: '#161616' }}>
                 <span className="text-sm" style={{ color: '#888' }}>Reservation Payments</span>
                 <span className="text-sm font-semibold text-white">₱{Number(autoPayout.total_reservations || 0).toLocaleString()}</span>
               </div>
@@ -309,8 +306,8 @@ const Financials = () => {
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={trends.sales_trend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                  <XAxis dataKey="period" tick={{ fontSize: 12, fill: tickFill }} />
-                  <YAxis tick={{ fontSize: 12, fill: tickFill }} />
+                  <XAxis dataKey="period" tick={{ fontSize: 12, fill: '#666' }} />
+                  <YAxis tick={{ fontSize: 12, fill: '#666' }} />
                   <Tooltip />
                   <Legend />
                   <Line type="monotone" dataKey="revenue" stroke="#0066FF" name="Revenue" strokeWidth={2} />
@@ -363,7 +360,7 @@ const Financials = () => {
           <div className="card p-0 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead style={{ borderBottom: '1px solid var(--m-border)' }}>
+                <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <tr>
                     <th className="table-header">Order #</th>
                     <th className="table-header">Table</th>
@@ -384,7 +381,7 @@ const Financials = () => {
                     </tr>
                   ) : posOrders.length > 0 ? (
                     posOrders.map((order) => (
-                      <tr key={order.id} className="transition-colors" style={{ borderBottom: '1px solid var(--m-border)' }}
+                      <tr key={order.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.04)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                       >
@@ -491,7 +488,7 @@ const Financials = () => {
           <div className="card p-0 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead style={{ borderBottom: '1px solid var(--m-border)' }}>
+                <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <tr>
                     <th className="table-header">#</th>
                     <th className="table-header">Reservation</th>
@@ -517,7 +514,7 @@ const Financials = () => {
                         failed: '#ff6666', cancelled: '#555',
                       }[p.status] || '#888';
                       return (
-                        <tr key={p.id} style={{ borderBottom: '1px solid var(--m-border)' }}
+                        <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
                           onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.04)'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                         >
@@ -637,7 +634,7 @@ const Financials = () => {
                   Tax Breakdown
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+                  <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
                     <div>
                       <p className="text-sm font-medium text-white">Net Sales (excl. tax)</p>
                       <p className="text-xs mt-0.5" style={{ color: '#888' }}>Revenue before tax is applied</p>
@@ -659,7 +656,7 @@ const Financials = () => {
                     <p className="text-lg font-bold" style={{ color: '#4ade80' }}>₱{Number(taxReport.total_sales || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                   {Number(taxReport.total_orders || 0) > 0 && (
-                    <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+                    <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
                       <div>
                         <p className="text-sm font-medium text-white">Avg Tax per Order</p>
                         <p className="text-xs mt-0.5" style={{ color: '#888' }}>Based on {Number(taxReport.total_orders).toLocaleString()} orders</p>
@@ -673,7 +670,7 @@ const Financials = () => {
               {/* Daily Breakdown Table */}
               {taxReport.daily && taxReport.daily.length > 0 && (
                 <div className="card p-0 overflow-hidden">
-                  <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
+                  <div className="px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                     <h3 className="font-bold text-white flex items-center gap-2">
                       <BarChart2 className="w-5 h-5" style={{ color: '#CC0000' }} />
                       Daily Tax Breakdown
@@ -681,7 +678,7 @@ const Financials = () => {
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead style={{ borderBottom: '1px solid var(--m-border)' }}>
+                      <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                         <tr>
                           <th className="table-header">Date</th>
                           <th className="table-header text-right">Orders</th>
@@ -697,7 +694,7 @@ const Financials = () => {
                             ? ((Number(row.tax_collected) / Number(row.revenue)) * 100).toFixed(1)
                             : '0.0';
                           return (
-                            <tr key={idx} style={{ borderBottom: '1px solid var(--m-border)' }}
+                            <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
                               onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.04)'; }}
                               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                             >
@@ -715,7 +712,7 @@ const Financials = () => {
                           );
                         })}
                       </tbody>
-                      <tfoot style={{ borderTop: '1px solid var(--m-border)' }}>
+                      <tfoot style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                         <tr style={{ background: '#111' }}>
                           <td className="table-cell font-bold text-white">Total</td>
                           <td className="table-cell text-right font-bold" style={{ color: '#60a5fa' }}>{Number(taxReport.total_orders || 0).toLocaleString()}</td>
@@ -744,10 +741,10 @@ const Financials = () => {
                       'Tax': parseFloat(Number(r.tax_collected).toFixed(2)),
                     }))}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: tickFill }} />
-                      <YAxis tick={{ fontSize: 11, fill: tickFill }} />
+                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#666' }} />
+                      <YAxis tick={{ fontSize: 11, fill: '#666' }} />
                       <Tooltip
-                        contentStyle={{ background: '#111', border: '1px solid var(--m-border)', borderRadius: '8px' }}
+                        contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                         labelStyle={{ color: '#fff' }}
                         formatter={(v) => `₱${Number(v).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`}
                       />
@@ -770,8 +767,8 @@ const Financials = () => {
       {/* Order Detail Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedOrder(null)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#0d0d0d' }}>
               <h3 className="font-bold text-white">Order Details: {selectedOrder.order_number}</h3>
               <button onClick={() => setSelectedOrder(null)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
@@ -804,12 +801,12 @@ const Financials = () => {
                     </div>
                   </div>
 
-                  <div className="pt-4" style={{ borderTop: '1px solid var(--m-border)' }}>
+                  <div className="pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                     <h4 className="font-semibold text-white mb-3">Items Ordered</h4>
                     {selectedOrder.items && selectedOrder.items.length > 0 ? (
                       <div className="space-y-2">
                         {selectedOrder.items.map((item, idx) => (
-                          <div key={idx} className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--m-surface-2)' }}>
+                          <div key={idx} className="flex justify-between items-center p-3 rounded-lg" style={{ background: '#161616' }}>
                             <div>
                               <p className="text-sm font-medium text-white">{item.item_name || item.name}</p>
                               <p className="text-xs" style={{ color: '#666' }}>Qty: {item.quantity} × ₱{Number(item.unit_price || item.price || 0).toLocaleString()}</p>
@@ -823,7 +820,7 @@ const Financials = () => {
                     )}
                   </div>
 
-                  <div className="pt-4 space-y-2" style={{ borderTop: '1px solid var(--m-border)' }}>
+                  <div className="pt-4 space-y-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                     <div className="flex justify-between text-sm">
                       <span style={{ color: '#888' }}>Subtotal</span>
                       <span className="font-medium text-white">₱{Number(selectedOrder.subtotal || 0).toLocaleString()}</span>
@@ -834,7 +831,7 @@ const Financials = () => {
                         <span className="font-medium" style={{ color: '#ff6666' }}>-₱{Number(selectedOrder.discount_amount || 0).toLocaleString()}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-lg font-bold pt-2" style={{ borderTop: '1px solid var(--m-border)' }}>
+                    <div className="flex justify-between text-lg font-bold pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                       <span className="text-white">Total</span>
                       <span style={{ color: '#CC0000' }}>₱{Number(selectedOrder.total_amount || 0).toLocaleString()}</span>
                     </div>

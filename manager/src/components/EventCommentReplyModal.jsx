@@ -94,13 +94,13 @@ const EventCommentReplyModal = ({ notification, draft, onDraftChange, onClose })
     >
       <div
         className="flex flex-col w-full max-w-lg rounded-xl overflow-hidden"
-        style={{ background: 'var(--m-bg)', border: '1px solid var(--m-border)', maxHeight: '85vh' }}
+        style={{ background: '#0A0A0A', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '85vh' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
           className="flex items-center justify-between px-5 py-3"
-          style={{ borderBottom: '1px solid var(--m-border)' }}
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
         >
           <div className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4" style={{ color: '#CC0000' }} />
@@ -112,7 +112,7 @@ const EventCommentReplyModal = ({ notification, draft, onDraftChange, onClose })
         </div>
 
         {/* Event context banner */}
-        <div className="px-5 py-3" style={{ background: 'var(--m-surface-2)', borderBottom: '1px solid var(--m-border)' }}>
+        <div className="px-5 py-3" style={{ background: '#161616', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
           <p className="text-xs" style={{ color: '#888' }}>EVENT</p>
           <p className="text-sm font-semibold text-white truncate">
             {eventInfo?.title || 'Loading event…'}
@@ -138,7 +138,7 @@ const EventCommentReplyModal = ({ notification, draft, onDraftChange, onClose })
                   key={c.id}
                   className="rounded-lg p-3"
                   style={{
-                    background: 'var(--m-surface-2)',
+                    background: '#161616',
                     borderLeft: isOriginal ? '3px solid #CC0000' : '3px solid transparent',
                   }}
                 >
@@ -151,7 +151,7 @@ const EventCommentReplyModal = ({ notification, draft, onDraftChange, onClose })
                   {c.replies && c.replies.length > 0 && (
                     <div className="ml-4 space-y-2 mt-2">
                       {c.replies.map((r) => (
-                        <div key={r.id} className="rounded p-2 text-xs" style={{ background: 'var(--m-surface)' }}>
+                        <div key={r.id} className="rounded p-2 text-xs" style={{ background: '#0d0d0d' }}>
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-medium text-white">{r.user_name}</span>
                             {r.is_bar_owner && (
@@ -173,7 +173,7 @@ const EventCommentReplyModal = ({ notification, draft, onDraftChange, onClose })
         </div>
 
         {/* Reply box */}
-        <div className="px-5 py-3" style={{ borderTop: '1px solid var(--m-border)' }}>
+        <div className="px-5 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <p className="text-xs mb-1" style={{ color: '#666' }}>
             Replying to {replyLabel}
           </p>
@@ -190,7 +190,7 @@ const EventCommentReplyModal = ({ notification, draft, onDraftChange, onClose })
               rows={2}
               placeholder="Type your reply…"
               className="input-field flex-1 text-sm resize-none"
-              style={{ background: 'var(--m-surface-2)' }}
+              style={{ background: '#161616' }}
             />
             <button
               onClick={handleSend}

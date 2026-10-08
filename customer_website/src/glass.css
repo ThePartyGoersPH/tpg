@@ -246,21 +246,6 @@ h1, h2, h3, h4, h5, h6,
 
 [data-theme="light"] .land-hero-v2-title {
   color: #ffffff;
-  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
-}
-
-/* Ghost CTA on the dark photo hero must stay white-on-transparent in light
-   mode too (the global light .btn-ghost goes dark, which vanishes here). */
-[data-theme="light"] .land-hero-v2 .btn-ghost {
-  background: transparent;
-  border: 1.5px solid #ffffff;
-  color: #ffffff;
-}
-
-[data-theme="light"] .land-hero-v2 .btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: #ffffff;
-  color: #ffffff;
 }
 
 [data-theme="light"] .land-hero-v2-outline {
@@ -1133,11 +1118,6 @@ h6 {
 .theme-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.16) !important;
   transform: translateY(-1px);
-}
-
-/* Never let flex crowding crush the toggle (icon collapses to 0x0). */
-.theme-toggle-btn {
-  flex-shrink: 0;
 }
 
 /* Logout — bold filled treatment (no inline override now) */
@@ -3237,52 +3217,6 @@ select.glass-input option {
   cursor: pointer;
 }
 
-/* Hamburger opener (logged-out mobile header). Hidden on desktop. */
-.mobile-hamburger {
-  display: none;
-}
-
-/* ── COMPACT GLASS HEADER (phones) ── */
-@media (max-width: 640px) {
-  .glass-nav {
-    padding: 0 0.75rem;
-    height: 60px;
-  }
-
-  .glass-nav-left .brand span {
-    white-space: nowrap;
-    font-size: 0.68rem !important;
-    letter-spacing: 1px !important;
-  }
-
-  .nav-actions {
-    flex-shrink: 0;
-    gap: 0.4rem;
-  }
-
-  .nav-username {
-    display: none;
-  }
-
-  /* Higher specificity: must beat later .btn re-definitions in mobile.css. */
-  .glass-nav .nav-actions button.nav-auth-btn {
-    display: none;
-  }
-
-  .glass-nav .nav-actions button.mobile-hamburger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: none;
-    border: none;
-    color: var(--color-text-primary);
-    cursor: pointer;
-    padding: 0.5rem;
-    min-width: 44px;
-    min-height: 44px;
-  }
-}
-
 /* ── SEARCH BAR ── */
 .search-bar {
   display: flex;
@@ -4005,7 +3939,7 @@ select.glass-input option {
   padding: 5rem 2rem 4rem;
   overflow: hidden;
   background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.7)),
-    url('/bg-home.jpg') center/cover no-repeat;
+    url('bg-home.jpg') center/cover no-repeat;
 }
 
 [data-theme="light"] .home-hero {
@@ -6305,7 +6239,6 @@ select.glass-input option {
 
 .land-platform-inner {
   max-width: 680px;
-  margin: 0 auto;
 }
 
 .land-platform-text {
@@ -6717,7 +6650,6 @@ select.glass-input option {
 /* ── HERO V2 — Full Bleed Layout ── */
 .land-hero-v2 {
   position: relative;
-  scroll-margin-top: 80px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -6726,7 +6658,7 @@ select.glass-input option {
   overflow: hidden;
   background:
     linear-gradient(to bottom, rgba(10, 10, 10, 0.3) 0%, rgba(10, 10, 10, 0.8) 60%, rgba(10, 10, 10, 0.95) 100%),
-    url('/bg-home.jpg');
+    url("./bg-home.jpg");
   background-size: cover;
   background-position: center;
 }
@@ -7108,22 +7040,8 @@ select.glass-input option {
   transform: scale(1.2);
 }
 
-/* Hero heading must stay inside the content column between desktop and
-   tablet widths (base clamp would overflow ~1024-1300px). */
-@media (max-width: 1300px) {
-  .land-hero-v2-title {
-    font-size: clamp(3rem, 7.5vw, 5rem);
-    letter-spacing: -2px;
-  }
-}
-
 /* Responsive */
 @media (max-width: 1200px) {
-  .land-hero-v2-title {
-    font-size: clamp(2.75rem, 8vw, 5rem);
-    letter-spacing: -2px;
-  }
-
   .land-hero-v2-panel {
     position: relative;
     bottom: auto;
@@ -7149,14 +7067,13 @@ select.glass-input option {
 
 @media (max-width: 768px) {
   .land-hero-v2 {
-    padding: 5rem 1.5rem 2rem;
+    padding: 4rem 1.5rem 2rem;
     min-height: auto;
   }
 
   .land-hero-v2-title {
-    font-size: clamp(2.25rem, 11vw, 3.5rem);
-    letter-spacing: -1px;
-    line-height: 1.02;
+    font-size: clamp(2.5rem, 12vw, 4rem);
+    letter-spacing: -2px;
   }
 
   .land-top-cta {

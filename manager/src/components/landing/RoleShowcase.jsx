@@ -105,7 +105,7 @@ const RoleShowcase = () => {
               style={
                 active === r.id
                   ? { background: r.color, color: '#fff', boxShadow: `0 0 20px ${r.color}60` }
-                  : { background: 'var(--m-active-bg)', color: '#888', border: '1px solid var(--m-border)' }
+                  : { background: 'rgba(255,255,255,0.04)', color: '#888', border: '1px solid rgba(255,255,255,0.07)' }
               }
             >
               <span>{r.emoji}</span>
@@ -119,7 +119,7 @@ const RoleShowcase = () => {
           key={active}
           className="rounded-2xl overflow-hidden role-card-enter"
           style={{
-            background: 'var(--m-surface)',
+            background: '#111111',
             border: `1px solid ${role.color}30`,
             boxShadow: `0 0 60px ${role.color}10`,
           }}
@@ -128,7 +128,7 @@ const RoleShowcase = () => {
             {/* Left: description */}
             <div
               className="p-8 lg:p-12 border-b lg:border-b-0 lg:border-r"
-              style={{ borderColor: 'var(--m-border)' }}
+              style={{ borderColor: 'rgba(255,255,255,0.05)' }}
             >
               <div className="flex items-center gap-3 mb-6">
                 <div
@@ -149,7 +149,7 @@ const RoleShowcase = () => {
               {/* Access level bar */}
               <div className="space-y-3">
                 <p className="font-body text-xs text-gray-600 uppercase tracking-widest">Access Level</p>
-                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--m-active-bg)' }}>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
                   <div
                     className="h-full rounded-full transition-all duration-700"
                     style={{
@@ -173,7 +173,7 @@ const RoleShowcase = () => {
                   <div
                     key={f.text}
                     className="flex items-center gap-3 p-3 rounded-xl"
-                    style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}
+                    style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}
                   >
                     <span className="text-base flex-shrink-0">{f.icon}</span>
                     <span className="font-body text-gray-300 text-xs leading-snug">{f.text}</span>

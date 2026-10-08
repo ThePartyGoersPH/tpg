@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Search, ChevronDown, GitBranch, X, CheckCheck, Megaphone, Menu, Sun, Moon } from 'lucide-react';
-import useAppTheme from '../../hooks/useAppTheme';
+import { Bell, Search, ChevronDown, GitBranch, X, CheckCheck, Megaphone } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { parseUTC } from '../../utils/dateUtils';
 import useAuthStore from '../../stores/authStore';
@@ -77,9 +76,8 @@ const resolveNotificationRoute = (notif) => {
   return route;
 };
 
-const Header = ({ onMenu }) => {
+const Header = () => {
   const { user } = useAuthStore();
-  const { theme, toggleTheme } = useAppTheme();
   const { branches, selectedBranch, selectedBarId, fetchBranches, switchBranch } = useBranchStore();
   const location = useLocation();
   const navigate = useNavigate();
@@ -193,19 +191,10 @@ const Header = ({ onMenu }) => {
   return (
     <header
       className="h-16 flex items-center justify-between px-6 sticky top-0 z-30"
-      style={{ background: 'var(--m-surface)', borderBottom: '1px solid var(--m-border)' }}
+      style={{ background: '#111111', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
     >
-      <div className="flex items-center gap-3 min-w-0">
-        {onMenu && (
-          <button
-            onClick={onMenu}
-            className="lg:hidden p-2 -ml-2 rounded-lg text-gray-400 hover:text-white"
-            aria-label="Open navigation menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-        )}
-        <h2 className="text-base font-bold text-white tracking-wide truncate">
+      <div className="flex items-center gap-4">
+        <h2 className="text-base font-bold text-white tracking-wide">
           {typeof pageTitle === 'function' ? pageTitle() : pageTitle}
         </h2>
 
@@ -214,7 +203,7 @@ const Header = ({ onMenu }) => {
             <button
               onClick={() => setBranchOpen((v) => !v)}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200"
-              style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)', color: '#ccc' }}
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#ccc' }}
             >
               <GitBranch className="w-3.5 h-3.5" style={{ color: '#CC0000' }} />
               <span className="font-medium max-w-[160px] truncate">
@@ -224,8 +213,8 @@ const Header = ({ onMenu }) => {
             </button>
 
             {branchOpen && (
-              <div className="absolute top-full left-0 mt-1 w-64 rounded-xl shadow-2xl py-1 z-50" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
-                <div className="px-3 py-2" style={{ borderBottom: '1px solid var(--m-border)' }}>
+              <div className="absolute top-full left-0 mt-1 w-64 rounded-xl shadow-2xl py-1 z-50" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div className="px-3 py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#555' }}>Switch Branch</p>
                 </div>
                 {branches.map((b) => (
@@ -234,7 +223,7 @@ const Header = ({ onMenu }) => {
                     onClick={() => handleSwitch(b.id)}
                     className={`w-full text-left px-3 py-2.5 flex items-center gap-3 transition-colors ${b.is_locked ? 'opacity-40' : ''}`}
                     style={b.id === selectedBarId ? { background: 'rgba(204,0,0,0.08)' } : {}}
-                    onMouseEnter={(e) => { if (b.id !== selectedBarId) e.currentTarget.style.background = 'var(--m-active-bg)'; }}
+                    onMouseEnter={(e) => { if (b.id !== selectedBarId) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
                     onMouseLeave={(e) => { if (b.id !== selectedBarId) e.currentTarget.style.background = 'transparent'; }}
                     disabled={b.is_locked}
                   >
@@ -256,7 +245,7 @@ const Header = ({ onMenu }) => {
 
       <div className="flex items-center gap-3">
         {/* Search */}
-        <div className="hidden md:flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+        <div className="hidden md:flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
           <Search className="w-4 h-4" style={{ color: '#444' }} />
           <input
             type="text"
@@ -266,24 +255,13 @@ const Header = ({ onMenu }) => {
           />
         </div>
 
-        {/* Theme toggle */}
-        <button
-          onClick={toggleTheme}
-          className="p-2 rounded-lg transition-colors"
-          style={{ color: '#666' }}
-          aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-          title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-        >
-          {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-        </button>
-
         {/* Notifications */}
         <div className="relative">
           <button
             onClick={() => { setNotifOpen(!notifOpen); if (!notifOpen) { fetchNotifications(); fetchAnnouncements(); } }}
             className="relative p-2 rounded-lg transition-colors"
             style={{ color: '#666' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; e.currentTarget.style.color = '#fff'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#fff'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#666'; }}
           >
             <Bell className="w-5 h-5" />
@@ -295,8 +273,8 @@ const Header = ({ onMenu }) => {
           </button>
 
           {notifOpen && (
-            <div className="absolute top-full right-0 mt-2 w-96 max-w-[calc(100vw-2rem)] rounded-xl shadow-2xl z-50" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
-              <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--m-border)' }}>
+            <div className="absolute top-full right-0 mt-2 w-96 rounded-xl shadow-2xl z-50" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <h3 className="font-semibold text-white text-sm">
                   Notifications {unreadCount > 0 && <span style={{ color: '#CC0000' }}>({unreadCount})</span>}
                 </h3>
@@ -314,7 +292,7 @@ const Header = ({ onMenu }) => {
                       }}
                       className="p-1.5 rounded-lg transition-colors"
                       style={{ color: '#666' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; e.currentTarget.style.color = '#fff'; }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#fff'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#666'; }}
                       title="Mark all as read"
                     >
@@ -325,7 +303,7 @@ const Header = ({ onMenu }) => {
                     onClick={() => setNotifOpen(false)}
                     className="p-1.5 rounded-lg transition-colors"
                     style={{ color: '#666' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; e.currentTarget.style.color = '#fff'; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#fff'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#666'; }}
                   >
                     <X className="w-4 h-4" />
@@ -340,14 +318,14 @@ const Header = ({ onMenu }) => {
                     {/* Platform Announcements */}
                     {announcements.length > 0 && (
                       <>
-                        <div className="px-4 py-2" style={{ background: 'rgba(204,0,0,0.05)', borderBottom: '1px solid var(--m-border)' }}>
+                        <div className="px-4 py-2" style={{ background: 'rgba(204,0,0,0.05)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#CC0000' }}>Platform Announcements</p>
                         </div>
                         {announcements.map((ann) => (
                           <div
                             key={`ann-${ann.id}`}
                             className="px-4 py-3"
-                            style={{ borderBottom: '1px solid var(--m-border)', background: 'rgba(204,0,0,0.03)' }}
+                            style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: 'rgba(204,0,0,0.03)' }}
                           >
                             <div className="flex items-start gap-3">
                               <Megaphone className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#CC0000' }} />
@@ -358,7 +336,7 @@ const Header = ({ onMenu }) => {
                             </div>
                           </div>
                         ))}
-                        <div className="px-4 py-2" style={{ background: 'var(--m-active-bg)', borderBottom: '1px solid var(--m-border)' }}>
+                        <div className="px-4 py-2" style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#555' }}>Your Notifications</p>
                         </div>
                       </>
@@ -372,10 +350,10 @@ const Header = ({ onMenu }) => {
                       role="button"
                       tabIndex={0}
                       className="px-4 py-3 cursor-pointer transition-colors"
-                      style={{ borderBottom: '1px solid var(--m-border)', background: !notif.is_read ? 'rgba(204,0,0,0.04)' : 'transparent' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; }}
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: !notif.is_read ? 'rgba(204,0,0,0.04)' : 'transparent' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = !notif.is_read ? 'rgba(204,0,0,0.04)' : 'transparent'; }}
-                      onFocus={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; }}
+                      onFocus={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
                       onBlur={(e) => { e.currentTarget.style.background = !notif.is_read ? 'rgba(204,0,0,0.04)' : 'transparent'; }}
                       onClick={() => handleNotifClick(notif)}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNotifClick(notif); } }}
@@ -405,7 +383,7 @@ const Header = ({ onMenu }) => {
         </div>
 
         {/* User Avatar */}
-        <div className="flex items-center gap-3 pl-3" style={{ borderLeft: '1px solid var(--m-border)' }}>
+        <div className="flex items-center gap-3 pl-3" style={{ borderLeft: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden" style={{ background: '#CC0000' }}>
             {user?.profile_picture ? (
               <img src={getUploadUrl(user.profile_picture)} alt="" className="w-full h-full object-cover" />

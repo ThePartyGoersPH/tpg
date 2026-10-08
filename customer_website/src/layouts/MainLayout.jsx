@@ -1,7 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
-import BottomNav from '../components/layout/BottomNav';
 import { useAuth } from '../hooks/useAuth';
 
 function MainLayout() {
@@ -39,7 +38,6 @@ function MainLayout() {
         </div>
       </main>
       <Footer />
-      <BottomNav />
     </>
   );
 }

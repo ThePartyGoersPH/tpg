@@ -173,7 +173,7 @@ const Menu = () => {  const [items, setItems] = useState([]);
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-full sm:w-72" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+        <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-full sm:w-72" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
           <Search className="w-4 h-4" style={{ color: '#555' }} />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search menu..." className="bg-transparent text-sm outline-none flex-1 text-white placeholder-gray-600" />
         </div>
@@ -189,9 +189,9 @@ const Menu = () => {  const [items, setItems] = useState([]);
         {filtered.map((item) => (
           <div key={item.id} className="card p-0 overflow-hidden transition-all duration-200"
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(204,0,0,0.2)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--m-border)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; }}
           >
-            <div className="h-36 relative group" style={{ background: 'var(--m-surface-2)' }}>
+            <div className="h-36 relative group" style={{ background: '#1a1a1a' }}>
               {item.inventory_image ? (
                 <img src={getUploadUrl(item.inventory_image)} alt="" className="w-full h-full object-cover" />
               ) : (
@@ -223,7 +223,7 @@ const Menu = () => {  const [items, setItems] = useState([]);
                 <span className="text-lg font-extrabold" style={{ color: '#CC0000' }}>₱{Number(item.selling_price || 0).toLocaleString()}</span>
                 {item.category && <span className="badge-gray text-xs">{item.category}</span>}
               </div>
-              <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: '1px solid var(--m-border)' }}>
+              <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                 <span className="text-xs" style={{ color: '#666' }}>Stock: {formatAtomicStock(item)}{item.sell_unit_type === 'pack' ? ` · sells by the pack (${item.units_per_sale} per order)` : ''}</span>
                 {can('menu_update') && (
                   <div className="flex items-center gap-1">
@@ -252,11 +252,11 @@ const Menu = () => {  const [items, setItems] = useState([]);
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-md" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <h3 className="font-bold text-white">{editing ? 'Edit Menu Item' : 'Add to Menu'}</h3>
               <button onClick={() => setShowModal(false)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'var(--m-active-bg)'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; e.currentTarget.style.background = 'transparent'; }}
               ><X className="w-5 h-5" /></button>
             </div>
@@ -295,7 +295,7 @@ const Menu = () => {  const [items, setItems] = useState([]);
                       className="px-3 py-2 text-xs font-medium rounded-lg transition-colors"
                       style={form.sell_unit_type === opt.value
                         ? { background: 'rgba(204,0,0,0.15)', color: '#fff', border: '1px solid rgba(204,0,0,0.4)' }
-                        : { background: 'var(--m-active-bg)', color: '#888', border: '1px solid var(--m-border)' }}
+                        : { background: 'rgba(255,255,255,0.04)', color: '#888', border: '1px solid rgba(255,255,255,0.08)' }}
                     >
                       {opt.label}
                     </button>

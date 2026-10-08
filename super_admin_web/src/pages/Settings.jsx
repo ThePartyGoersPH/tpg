@@ -3,7 +3,6 @@ import { platformAPI, paymentsAPI } from '../api/services';
 import { formatDateTime } from '../utils/formatters';
 import { Shield, DollarSign, Bell, Plus, Trash2, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { confirmDestructive, swalSuccess, swalError } from '../utils/swal';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('maintenance');
@@ -80,14 +79,9 @@ export default function Settings() {
   };
 
   const handleDeleteAnnouncement = async (id) => {
-    const ok = await confirmDestructive({
-      title: 'Delete this announcement?',
-      text: 'This action is permanent and cannot be undone.',
-      confirmText: 'Delete',
-    });
-    if (!ok) return;
-    try { const r = await platformAPI.deleteAnnouncement(id); if(r.data.success){swalSuccess(r.data.message || 'Deleted');setAnnouncements(p=>p.filter(a=>a.id!==id));} }
-    catch(e){swalError(e.response?.data?.message || 'Failed to delete announcement')}
+    if(!confirm('Delete this announcement?'))return;
+    try { const r = await platformAPI.deleteAnnouncement(id); if(r.data.success){toast.success('Deleted');setAnnouncements(p=>p.filter(a=>a.id!==id));} }
+    catch(e){toast.error('Failed')}
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-500"></div></div>;

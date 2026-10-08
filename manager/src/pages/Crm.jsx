@@ -94,7 +94,7 @@ const Crm = () => {
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             {loyalty.tiers.map((t) => (
-              <div key={t.tier} className="rounded-lg p-3 flex items-center justify-between" style={{ background: 'var(--m-active-bg)' }}>
+              <div key={t.tier} className="rounded-lg p-3 flex items-center justify-between" style={{ background: 'rgba(255,255,255,0.03)' }}>
                 <div className="flex items-center gap-2">
                   <Crown className="w-4 h-4" style={{ color: t.tier === 'VIP' ? '#f59e0b' : t.tier === 'Regular' ? '#3b82f6' : '#10b981' }} />
                   <span className="text-sm font-semibold text-white">{t.tier}</span>
@@ -116,7 +116,7 @@ const Crm = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr style={{ color: '#888', borderBottom: '1px solid var(--m-border)' }}>
+                <tr style={{ color: '#888', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                   <th className="text-left py-2">Name</th>
                   <th className="text-left py-2">Spend</th>
                   <th className="text-left py-2">Orders</th>
@@ -127,7 +127,7 @@ const Crm = () => {
               </thead>
               <tbody>
                 {customers.map((c) => (
-                  <tr key={c.id} style={{ borderBottom: '1px solid var(--m-border)' }} className="hover:bg-white/5">
+                  <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }} className="hover:bg-white/5">
                     <td className="py-2 text-white">{c.name}
                       {c.is_follower && <UserCheck className="w-3 h-3 inline ml-1" style={{ color: '#10b981' }} />}
                     </td>
@@ -160,14 +160,14 @@ const Crm = () => {
                 <p className="text-xs flex items-center gap-1" style={{ color: '#aaa' }}><Mail className="w-3 h-3" /> {detail.email}</p>
                 <p className="text-xs flex items-center gap-1" style={{ color: '#aaa' }}><Phone className="w-3 h-3" /> {detail.phone || '—'}</p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-center">
-                <div className="rounded p-2" style={{ background: 'var(--m-active-bg)' }}>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="rounded p-2" style={{ background: 'rgba(255,255,255,0.03)' }}>
                   <p className="text-sm font-bold text-white">{php(detail.total_spent)}</p><p className="text-[10px]" style={{ color: '#888' }}>Spend</p>
                 </div>
-                <div className="rounded p-2" style={{ background: 'var(--m-active-bg)' }}>
+                <div className="rounded p-2" style={{ background: 'rgba(255,255,255,0.03)' }}>
                   <p className="text-sm font-bold text-white">{detail.order_count}</p><p className="text-[10px]" style={{ color: '#888' }}>Orders</p>
                 </div>
-                <div className="rounded p-2" style={{ background: 'var(--m-active-bg)' }}>
+                <div className="rounded p-2" style={{ background: 'rgba(255,255,255,0.03)' }}>
                   <p className="text-sm font-bold text-white">{detail.reservation_count}</p><p className="text-[10px]" style={{ color: '#888' }}>Resv</p>
                 </div>
               </div>

@@ -106,7 +106,7 @@ const SubscriptionApprovals = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-xl p-1 w-fit" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+      <div className="flex gap-1 rounded-xl p-1 w-fit" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
         <button
           onClick={() => setTab('pending')}
           className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -238,7 +238,7 @@ const SubscriptionApprovals = () => {
             <div className="card overflow-hidden p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface-2)' }}>
+                  <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161616' }}>
                     <tr>
                       <th className="text-left px-4 py-3 font-semibold" style={{ color: '#888' }}>Owner</th>
                       <th className="text-left px-4 py-3 font-semibold" style={{ color: '#888' }}>Plan</th>
@@ -251,8 +251,8 @@ const SubscriptionApprovals = () => {
                   </thead>
                   <tbody>
                     {filteredHistory.map((sub) => (
-                      <tr key={sub.id} className="transition-colors" style={{ borderBottom: '1px solid var(--m-border)' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; }}
+                      <tr key={sub.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                       >
                         <td className="px-4 py-3">
@@ -284,7 +284,7 @@ const SubscriptionApprovals = () => {
       {/* Reject Modal */}
       {rejectModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => !processing && setRejectModal(null)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-sm p-6" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-sm p-6" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
             <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(204,0,0,0.12)' }}>
               <AlertTriangle className="w-6 h-6" style={{ color: '#ff6666' }} />
             </div>

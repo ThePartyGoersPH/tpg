@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { posApi } from '../api/pos';
-import { confirmDialog } from '../utils/confirmDialog';
 
 function currency(value) {
   return `PHP ${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
@@ -77,7 +76,7 @@ export default function OrdersTab({ canManage, canView }) {
 
   const cancelOrder = async (orderId) => {
     if (!canManage) return;
-    const ok = await confirmDialog({ title: 'Cancel this order?', confirmText: 'Cancel Order', danger: true });
+    const ok = window.confirm('Cancel this order?');
     if (!ok) return;
 
     try {

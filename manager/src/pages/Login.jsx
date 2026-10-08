@@ -48,7 +48,7 @@ const Login = () => {
     <div
       className="min-h-screen flex items-center justify-center px-4"
       style={{
-        background: 'var(--m-bg)',
+        background: '#0A0A0A',
         backgroundImage: 'radial-gradient(ellipse at 60% 20%, rgba(204,0,0,0.1) 0%, transparent 60%)',
       }}
     >
@@ -71,8 +71,8 @@ const Login = () => {
         <div
           className="rounded-2xl p-8"
           style={{
-            background: 'var(--m-surface)',
-            border: '1px solid var(--m-border)',
+            background: '#111111',
+            border: '1px solid rgba(255,255,255,0.07)',
             boxShadow: '0 0 60px rgba(204,0,0,0.08), 0 30px 60px rgba(0,0,0,0.5)',
           }}
         >
@@ -111,12 +111,12 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-gray-600 outline-none transition-all duration-200"
                 style={{
-                  background: 'var(--m-active-bg)',
-                  border: '1px solid var(--m-border)',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
                   fontFamily: "'DM Sans', Inter, sans-serif",
                 }}
                 onFocus={(e) => { e.target.style.borderColor = 'rgba(204,0,0,0.5)'; e.target.style.boxShadow = '0 0 0 3px rgba(204,0,0,0.08)'; }}
-                onBlur={(e) => { e.target.style.borderColor = 'var(--m-border)'; e.target.style.boxShadow = 'none'; }}
+                onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; }}
                 placeholder="you@example.com"
                 required
                 autoFocus
@@ -137,12 +137,12 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 pr-11 rounded-xl text-sm text-white placeholder-gray-600 outline-none transition-all duration-200"
                   style={{
-                    background: 'var(--m-active-bg)',
-                    border: '1px solid var(--m-border)',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
                     fontFamily: "'DM Sans', Inter, sans-serif",
                   }}
                   onFocus={(e) => { e.target.style.borderColor = 'rgba(204,0,0,0.5)'; e.target.style.boxShadow = '0 0 0 3px rgba(204,0,0,0.08)'; }}
-                  onBlur={(e) => { e.target.style.borderColor = 'var(--m-border)'; e.target.style.boxShadow = 'none'; }}
+                  onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; }}
                   placeholder="Enter your password"
                   required
                 />
@@ -194,7 +194,7 @@ const Login = () => {
 
           <div
             className="mt-6 pt-6 text-center text-sm"
-            style={{ borderTop: '1px solid var(--m-border)', fontFamily: "'DM Sans', Inter, sans-serif" }}
+            style={{ borderTop: '1px solid rgba(255,255,255,0.05)', fontFamily: "'DM Sans', Inter, sans-serif" }}
           >
             <span style={{ color: '#555' }}>Don't have an account? </span>
             <Link

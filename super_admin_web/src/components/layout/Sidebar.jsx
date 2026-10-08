@@ -33,20 +33,17 @@ const navigation = [
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-export default function Sidebar({ mobileOpen, onClose }) {
+export default function Sidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
 
   const handleLogout = () => {
-    if (onClose) onClose();
     logout();
     navigate('/login');
   };
 
   return (
-    <div className={`flex flex-col w-64 glass-sidebar h-dvh fixed left-0 top-0 z-30 transition-transform duration-300 ${
-      mobileOpen ? 'translate-x-0' : '-translate-x-full'
-    } lg:translate-x-0`}>
+    <div className="flex flex-col w-64 glass-sidebar h-screen fixed left-0 top-0 z-30">
       <div className="flex items-center gap-3 h-16 px-5">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-red-800 flex items-center justify-center shadow-lg">
           <span className="text-white font-black text-sm">SA</span>
@@ -58,10 +55,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
       </div>
 
       <div className="flex-1 overflow-y-auto py-3 scrollbar-thin">
-        <nav
-          className="px-3 space-y-0.5"
-          onClick={(e) => { if (e.target.closest('a[href]') && onClose) onClose(); }}
-        >
+        <nav className="px-3 space-y-0.5">
           {navigation.map((item) => (
             <NavLink
               key={item.name}

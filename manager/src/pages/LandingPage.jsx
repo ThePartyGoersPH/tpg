@@ -18,7 +18,7 @@ const Navbar = () => (
     style={{
       background: 'rgba(10,10,10,0.85)',
       backdropFilter: 'blur(20px)',
-      borderBottom: '1px solid var(--m-border)',
+      borderBottom: '1px solid rgba(255,255,255,0.05)',
     }}
   >
     <div className="flex items-center gap-3">

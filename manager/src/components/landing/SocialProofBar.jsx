@@ -20,9 +20,9 @@ const SocialProofBar = () => {
     <section
       className="relative py-6 overflow-hidden"
       style={{
-        background: 'var(--m-surface)',
-        borderTop: '1px solid var(--m-border)',
-        borderBottom: '1px solid var(--m-border)',
+        background: '#111111',
+        borderTop: '1px solid rgba(255,255,255,0.05)',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
       }}
     >
       {/* Red line accent */}

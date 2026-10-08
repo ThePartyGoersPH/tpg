@@ -9,7 +9,7 @@ const PLANS = [
     desc: 'Perfect for single-branch bars getting started.',
     popular: false,
     color: 'rgba(255,255,255,0.08)',
-    borderColor: 'var(--m-border)',
+    borderColor: 'rgba(255,255,255,0.08)',
     features: [
       '1 Branch',
       'Up to 10 Staff Accounts',
@@ -19,7 +19,7 @@ const PLANS = [
       'Community Support',
     ],
     cta: 'Get Started Free',
-    ctaStyle: { background: 'var(--m-active-bg)', color: '#fff', border: '1px solid var(--m-border)' },
+    ctaStyle: { background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' },
   },
   {
     name: 'Pro',
@@ -50,7 +50,7 @@ const PLANS = [
     desc: 'Built for bar groups, chains, and large-scale operations.',
     popular: false,
     color: 'rgba(255,255,255,0.04)',
-    borderColor: 'var(--m-border)',
+    borderColor: 'rgba(255,255,255,0.08)',
     features: [
       'Unlimited Branches',
       'Dedicated Account Manager',
@@ -61,7 +61,7 @@ const PLANS = [
       'Custom Analytics',
     ],
     cta: 'Contact Us',
-    ctaStyle: { background: 'var(--m-active-bg)', color: '#fff', border: '1px solid var(--m-border)' },
+    ctaStyle: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' },
   },
 ];
 
@@ -118,7 +118,7 @@ const PlanCard = ({ plan, index }) => {
           <div key={f} className="flex items-center gap-3">
             <div
               className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center"
-              style={{ background: plan.popular ? 'rgba(204,0,0,0.2)' : 'var(--m-active-bg)' }}
+              style={{ background: plan.popular ? 'rgba(204,0,0,0.2)' : 'rgba(255,255,255,0.06)' }}
             >
               <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
                 <path d="M1 3L3 5L7 1" stroke={plan.popular ? '#CC0000' : '#666'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

@@ -214,7 +214,7 @@ const Packages = () => {
             </div>
 
             {pkg.inclusions && pkg.inclusions.length > 0 && (
-              <div className="mb-3 p-3 rounded-lg" style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
+              <div className="mb-3 p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#888' }}>Inclusions:</p>
                 <ul className="space-y-1">
                   {pkg.inclusions.map((inc, idx) => (
@@ -244,7 +244,7 @@ const Packages = () => {
               <p className="text-xs mb-3" style={{ color: '#fbbf24' }}>No tables assigned yet — customers will pick manually.</p>
             )}
 
-            <div className="flex items-center justify-end gap-1 pt-3" style={{ borderTop: '1px solid var(--m-border)' }}>
+            <div className="flex items-center justify-end gap-1 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
               <button onClick={() => handleToggle(pkg)} className="p-1 rounded transition-colors">
                 {pkg.is_active ? <ToggleRight className="w-4 h-4" style={{ color: '#4ade80' }} /> : <ToggleLeft className="w-4 h-4" style={{ color: '#555' }} />}
               </button>
@@ -266,8 +266,8 @@ const Packages = () => {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-10" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-10" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#111111' }}>
               <h3 className="font-bold text-white">{editing ? 'Edit Package' : 'Create Package'}</h3>
               <button onClick={() => setShowModal(false)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}>
                 <X className="w-5 h-5" />
@@ -287,7 +287,7 @@ const Packages = () => {
                 <input type="number" step="0.01" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="input-field" required placeholder="0.00" />
               </div>
 
-              <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
+              <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, requires_table: !form.requires_table, table_ids: !form.requires_table ? (form.table_ids || []) : [] })}
@@ -315,7 +315,7 @@ const Packages = () => {
                       {barTables.filter((t) => t.is_active !== 0).map((t) => {
                         const checked = (form.table_ids || []).includes(Number(t.id));
                         return (
-                          <label key={t.id} className="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors" style={{ background: checked ? 'rgba(201,118,47,0.15)' : 'var(--m-active-bg)', border: checked ? '1px solid rgba(201,118,47,0.4)' : '1px solid var(--m-border)' }}>
+                          <label key={t.id} className="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors" style={{ background: checked ? 'rgba(201,118,47,0.15)' : 'rgba(255,255,255,0.03)', border: checked ? '1px solid rgba(201,118,47,0.4)' : '1px solid rgba(255,255,255,0.06)' }}>
                             <input
                               type="checkbox"
                               checked={checked}
@@ -343,8 +343,8 @@ const Packages = () => {
                 </div>
                 <div className="space-y-2">
                   {form.inclusions.map((inc, index) => (
-                    <div key={index} className="flex gap-2 items-start p-3 rounded-lg" style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    <div key={index} className="flex gap-2 items-start p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="flex-1 grid grid-cols-3 gap-2">
                         <div className="col-span-2">
                           <select
                             value={inc.item_name}

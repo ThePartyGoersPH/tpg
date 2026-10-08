@@ -184,9 +184,9 @@ const OCRDocumentScanner = ({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-colors"
-            style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)', color: '#ccc' }}
+            style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)', color: '#ccc' }}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(204,0,0,0.3)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--m-border)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
           >
             <Upload className="w-4 h-4" />
             <span className="text-sm font-medium">Upload File</span>
@@ -217,7 +217,7 @@ const OCRDocumentScanner = ({
 
       {/* Camera View */}
       {showCamera && (
-        <div className="relative rounded-xl overflow-hidden" style={{ background: '#000', border: '1px solid var(--m-border)' }}>
+        <div className="relative rounded-xl overflow-hidden" style={{ background: '#000', border: '1px solid rgba(255,255,255,0.1)' }}>
           <video
             ref={videoRef}
             autoPlay
@@ -242,7 +242,7 @@ const OCRDocumentScanner = ({
               type="button"
               onClick={stopCamera}
               className="px-6 py-3 rounded-xl font-semibold transition-colors"
-              style={{ background: 'var(--m-active-bg)', color: '#fff' }}
+              style={{ background: 'rgba(255,255,255,0.1)', color: '#fff' }}
             >
               Cancel
             </button>
@@ -252,7 +252,7 @@ const OCRDocumentScanner = ({
 
       {/* File Preview */}
       {file && (
-        <div className="rounded-xl p-4" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+        <div className="rounded-xl p-4" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <CheckCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#4ade80' }} />

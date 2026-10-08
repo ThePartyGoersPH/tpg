@@ -40,7 +40,7 @@ const Settings = () => {
           <h3 className="font-bold text-white">Account Settings</h3>
         </div>
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--m-surface-2)' }}>
+          <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: '#161616' }}>
             <div>
               <p className="text-sm font-medium text-white">Account Status</p>
               <p className="text-xs" style={{ color: '#888' }}>Your account is currently active</p>
@@ -49,7 +49,7 @@ const Settings = () => {
               {user?.is_active ? 'Active' : 'Inactive'}
             </span>
           </div>
-          <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--m-surface-2)' }}>
+          <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: '#161616' }}>
             <div>
               <p className="text-sm font-medium text-white">Role</p>
               <p className="text-xs" style={{ color: '#888' }}>Your current role in the system</p>
@@ -58,7 +58,7 @@ const Settings = () => {
               {user?.role?.replace('_', ' ')}
             </span>
           </div>
-          <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--m-surface-2)' }}>
+          <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: '#161616' }}>
             <div>
               <p className="text-sm font-medium text-white">Bar ID</p>
               <p className="text-xs" style={{ color: '#888' }}>Your assigned bar/branch</p>
@@ -89,7 +89,7 @@ const Settings = () => {
             <h3 className="font-bold text-white">Purchase Order Approval</h3>
           </div>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 rounded-lg gap-4" style={{ background: 'var(--m-surface-2)' }}>
+            <div className="flex items-center justify-between p-3 rounded-lg gap-4" style={{ background: '#161616' }}>
               <div>
                 <p className="text-sm font-medium text-white">Finance Approval Threshold (₱)</p>
                 <p className="text-xs" style={{ color: '#888' }}>
@@ -132,7 +132,7 @@ const Settings = () => {
             { label: 'Staff Alerts', desc: 'Get notified for staff activities' },
             { label: 'Low Stock Alerts', desc: 'Get notified when stock is low' },
           ].map((item) => (
-            <div key={item.label} className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--m-surface-2)' }}>
+            <div key={item.label} className="flex items-center justify-between p-3 rounded-lg" style={{ background: '#161616' }}>
               <div>
                 <p className="text-sm font-medium text-white">{item.label}</p>
                 <p className="text-xs" style={{ color: '#888' }}>{item.desc}</p>

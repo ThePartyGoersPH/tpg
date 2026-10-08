@@ -598,18 +598,18 @@ const Staff = () => {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex gap-2 items-center flex-wrap">
-          <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-full sm:w-64" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+          <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-full sm:w-64" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
             <Search className="w-4 h-4" style={{ color: '#555' }} />
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search staff..." data-testid="staff-search" className="bg-transparent text-sm outline-none flex-1 text-white placeholder-gray-600" />
           </div>
-          <div className="flex rounded-lg p-1" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+          <div className="flex rounded-lg p-1" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
             <button onClick={() => setTab('active')} className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors" style={tab === 'active' ? { background: '#CC0000', color: '#fff' } : { color: '#888' }}>Active</button>
             <button onClick={() => setTab('archived')} className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors" style={tab === 'archived' ? { background: '#CC0000', color: '#fff' } : { color: '#888' }}>Archived</button>
             <button onClick={() => setTab('fully_deactivated')} className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors" style={tab === 'fully_deactivated' ? { background: '#CC0000', color: '#fff' } : { color: '#888' }}>Fully Deactivated</button>
           </div>
-          <div className="flex items-center rounded-lg p-1 gap-1" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
-            <button onClick={() => setView('list')} className={`p-2 rounded-md transition-colors ${view === 'list' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`} style={view === 'list' ? { background: 'var(--m-active-bg)' } : {}} title="List view" aria-label="List view" aria-pressed={view === 'list'}><List className="w-4 h-4" /></button>
-            <button onClick={() => setView('grid')} className={`p-2 rounded-md transition-colors ${view === 'grid' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`} style={view === 'grid' ? { background: 'var(--m-active-bg)' } : {}} title="Grid view" aria-label="Grid view" aria-pressed={view === 'grid'}><LayoutGrid className="w-4 h-4" /></button>
+          <div className="flex items-center rounded-lg p-1 gap-1" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <button onClick={() => setView('list')} className={`p-2 rounded-md transition-colors ${view === 'list' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`} style={view === 'list' ? { background: 'rgba(255,255,255,0.08)' } : {}} title="List view" aria-label="List view" aria-pressed={view === 'list'}><List className="w-4 h-4" /></button>
+            <button onClick={() => setView('grid')} className={`p-2 rounded-md transition-colors ${view === 'grid' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`} style={view === 'grid' ? { background: 'rgba(255,255,255,0.08)' } : {}} title="Grid view" aria-label="Grid view" aria-pressed={view === 'grid'}><LayoutGrid className="w-4 h-4" /></button>
           </div>
         </div>
         <button onClick={openCreate} className="btn-primary flex items-center gap-2"><Plus className="w-4 h-4" /> Add Staff</button>
@@ -619,7 +619,7 @@ const Staff = () => {
         <div className="card p-0 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ borderBottom: '1px solid var(--m-border)' }}>
+              <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <tr>
                   <th className="table-header">Name</th>
                   <th className="table-header">Email</th>
@@ -634,7 +634,7 @@ const Staff = () => {
               </thead>
               <tbody>
                 {filtered.map((u) => (
-                  <tr key={u.id} className="transition-colors" style={{ borderBottom: '1px solid var(--m-border)' }}
+                  <tr key={u.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(204,0,0,0.04)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   >
@@ -738,11 +738,11 @@ const Staff = () => {
       </div>
       ) : (
         filtered.length === 0 ? (
-          <div className="text-center py-12 rounded-xl" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)', color: '#555' }}>No staff found.</div>
+          <div className="text-center py-12 rounded-xl" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)', color: '#555' }}>No staff found.</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((u) => (
-              <div key={u.id} className="rounded-xl p-4 flex flex-col gap-3" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+              <div key={u.id} className="rounded-xl p-4 flex flex-col gap-3" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: 'rgba(204,0,0,0.3)' }}>
@@ -776,7 +776,7 @@ const Staff = () => {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center justify-end gap-1 flex-wrap pt-1" style={{ borderTop: '1px solid var(--m-border)' }}>
+                <div className="flex items-center justify-end gap-1 flex-wrap pt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                   {tab === 'active' ? (
                     <>
                       {canManageSchedules && <button onClick={() => openScheduleEditor(u)} className="p-1.5 rounded-lg" style={{ color: '#666' }} title="Working Hours"><Clock className="w-4 h-4" /></button>}
@@ -805,8 +805,8 @@ const Staff = () => {
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto" onClick={() => setShowModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto my-auto" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-10" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto my-auto" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-10" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#111111' }}>
               <h3 className="font-bold text-white">{editing ? 'Edit Staff' : 'Add Staff'}</h3>
               <button onClick={() => setShowModal(false)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}><X className="w-5 h-5" /></button>
             </div>
@@ -916,7 +916,7 @@ onChange={(e) => {
                         style={
                           createPermissionPreset === key
                             ? { background: `${color}22`, color, border: `1px solid ${color}66` }
-                            : { background: 'var(--m-active-bg)', color: '#888', border: '1px solid var(--m-border)' }
+                            : { background: 'rgba(255,255,255,0.04)', color: '#888', border: '1px solid rgba(255,255,255,0.08)' }
                         }
                       >
                          {label}
@@ -967,13 +967,13 @@ onChange={(e) => {
       {/* Permissions Modal */}
       {showPermModal && permTarget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowPermModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 sticky top-0" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 sticky top-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#111111' }}>
               <h3 className="font-bold text-white">Permissions: {permTarget.first_name} {permTarget.last_name}</h3>
               <button onClick={() => setShowPermModal(false)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}><X className="w-5 h-5" /></button>
             </div>
 
-            <div className="px-6 py-4" style={{ background: 'var(--m-surface)', borderBottom: '1px solid var(--m-border)' }}>
+            <div className="px-6 py-4" style={{ background: '#0d0d0d', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <p className="text-xs font-medium mb-2" style={{ color: '#888' }}>Quick Presets:</p>
               <div className="flex flex-wrap gap-2">
                 {PRESET_ORDER.map((key) => {
@@ -983,7 +983,7 @@ onChange={(e) => {
                     <button key={key} onClick={() => applyPreset(key)}
                       className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
                       style={{
-                        background: isActive ? `${color}22` : 'var(--m-active-bg)',
+                        background: isActive ? `${color}22` : 'rgba(255,255,255,0.06)',
                         color: isActive ? color : '#aaa',
                         border: `1px solid ${isActive ? color : 'rgba(255,255,255,0.08)'}`,
                       }}
@@ -996,7 +996,7 @@ onChange={(e) => {
             <div className="p-6 space-y-1">
               {permissions.map((p) => (
                 <label key={p.id} className="flex items-center gap-3 py-1.5 cursor-pointer rounded px-2 transition-colors" style={{ borderRadius: '6px' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--m-active-bg)'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <input type="checkbox" checked={userPerms.includes(p.id)} onChange={() => togglePerm(p.id)} className="w-4 h-4 rounded" style={{ accentColor: '#CC0000' }} />
@@ -1009,7 +1009,7 @@ onChange={(e) => {
                 </label>
               ))}
             </div>
-            <div className="px-6 py-4 sticky bottom-0 flex gap-3" style={{ borderTop: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
+            <div className="px-6 py-4 sticky bottom-0 flex gap-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: '#111111' }}>
               <button onClick={() => setShowPermModal(false)} className="btn-secondary flex-1">Cancel</button>
               <button onClick={savePermissions} disabled={saving} className="btn-primary flex-1 flex items-center justify-center gap-2">
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />} Save Permissions
@@ -1022,8 +1022,8 @@ onChange={(e) => {
       {/* Reset Password Modal */}
       {showResetModal && resetTarget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowResetModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-sm" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-sm" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <h3 className="font-bold text-white">Reset Password</h3>
               <button onClick={() => setShowResetModal(false)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}><X className="w-5 h-5" /></button>
             </div>
@@ -1044,8 +1044,8 @@ onChange={(e) => {
       {/* Working Hours Modal */}
       {showScheduleModal && scheduleTarget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => !scheduleSaving && setShowScheduleModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 sticky top-0" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 sticky top-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#111111' }}>
               <div>
                 <h3 className="font-bold text-white">Working Hours Setup</h3>
                 <p className="text-xs mt-0.5" style={{ color: '#888' }}>
@@ -1063,7 +1063,7 @@ onChange={(e) => {
               </div>
             ) : (
               <>
-                <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
+                <div className="px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <button
                     type="button"
                     onClick={applyMondayTemplate}
@@ -1076,7 +1076,7 @@ onChange={(e) => {
 
                 <div className="p-6 overflow-x-auto">
                   <table className="w-full min-w-[980px]">
-                    <thead style={{ borderBottom: '1px solid var(--m-border)' }}>
+                    <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                       <tr>
                         <th className="table-header text-left">Day</th>
                         <th className="table-header">Active</th>
@@ -1094,7 +1094,7 @@ onChange={(e) => {
                         const disabled = !row.is_active || row.is_rest_day;
 
                         return (
-                          <tr key={value} style={{ borderBottom: '1px solid var(--m-border)' }}>
+                          <tr key={value} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                             <td className="table-cell font-medium text-white">{label}</td>
                             <td className="table-cell text-center">
                               <input
@@ -1175,7 +1175,7 @@ onChange={(e) => {
                   </p>
                 </div>
 
-                <div className="px-6 py-4 sticky bottom-0 flex gap-3" style={{ borderTop: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
+                <div className="px-6 py-4 sticky bottom-0 flex gap-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: '#111111' }}>
                   <button onClick={() => !scheduleSaving && setShowScheduleModal(false)} className="btn-secondary flex-1" disabled={scheduleSaving}>
                     Cancel
                   </button>

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Search, AlertCircle, FileText, DollarSign, Flag, Menu, Sun, Moon } from 'lucide-react';
+import { Bell, Search, AlertCircle, FileText, DollarSign, Flag, CheckCheck } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
-import { useAppTheme } from '../../hooks/useAppTheme';
 import { dashboardAPI } from '../../api/services';
 import { formatCurrentDateLabel, formatDateTime } from '../../utils/formatters';
 
@@ -28,9 +27,8 @@ const destinationFor = (n) => {
   return n?.action_url || null;
 };
 
-export default function Navbar({ onMenu }) {
+export default function Navbar() {
   const user = useAuthStore((s) => s.user);
-  const { theme, toggleTheme } = useAppTheme();
   const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -102,17 +100,8 @@ export default function Navbar({ onMenu }) {
   }, [user?.role]);
 
   return (
-    <div className="glass-navbar h-14 flex items-center justify-between px-4 lg:px-6 gap-2">
-      {onMenu && (
-        <button
-          onClick={onMenu}
-          className="lg:hidden p-2 -ml-2 rounded-lg text-white/50 hover:text-white"
-          aria-label="Open navigation menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-      )}
-      <div className="flex-1 max-w-xl min-w-0">
+    <div className="glass-navbar h-14 flex items-center justify-between px-6 overflow-visible">
+      <div className="flex-1 max-w-xl">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/30" />
           <input
@@ -123,15 +112,7 @@ export default function Navbar({ onMenu }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-1 lg:gap-3 ml-2 lg:ml-6">
-        <button
-          onClick={toggleTheme}
-          className="p-2 text-white/40 hover:text-white/80 hover:bg-white/[0.06] rounded-lg transition"
-          aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-          title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-        >
-          {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-        </button>
+      <div className="flex items-center gap-3 ml-6">
         <div className="relative">
           <button
             onClick={() => setNotifOpen((v) => !v)}
@@ -145,7 +126,7 @@ export default function Navbar({ onMenu }) {
           {notifOpen && (
             <>
               <div className="fixed inset-0 z-[9998]" onClick={() => setNotifOpen(false)} />
-              <div className="notif-panel-mobile absolute right-0 mt-2 w-[360px] max-w-[calc(100vw-2rem)] max-h-[420px] overflow-y-auto p-3 z-[9999] border border-white/[0.12] rounded-xl shadow-2xl" style={{background: 'rgba(20, 10, 25, 0.97)', backdropFilter: 'blur(24px)'}}>
+              <div className="absolute right-0 mt-2 w-[360px] max-w-[calc(100vw-2rem)] max-h-[420px] overflow-y-auto p-3 z-[9999] border border-white/[0.12] rounded-xl shadow-2xl" style={{background: 'rgba(20, 10, 25, 0.97)', backdropFilter: 'blur(24px)'}}>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-xs font-semibold text-white/80 uppercase tracking-wider">Notifications</h4>
                   <div className="flex items-center gap-2">

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { History, LayoutGrid, Map, RefreshCw, Search, Table2, Users, Wallet } from 'lucide-react';
 import { io } from 'socket.io-client';
-import { confirmDialog } from '../utils/confirmDialog';
 import { posApi } from '../api/pos';
 
 function money(value) {
@@ -132,7 +131,7 @@ function TableStatusCard({ table, updating, onChangeStatus }) {
         <span>{Number(table.capacity || 0) === 1 ? 'guest' : 'guests'}</span>
       </div>
 
-      <div className="table-actions table-action-group" role="group" aria-label="Table status">
+      <div className="table-actions">
         {action('available', 'Available', 'available')}
         {action('reserved', 'Reserve', 'reserve')}
         {action('unavailable', 'Block', 'block')}
@@ -218,7 +217,7 @@ export default function ActivityPage({ canManage, canView }) {
 
   const payReservationBalance = async () => {
     if (!reservationResult?.id || reservationPayLoading) return;
-    const ok = await confirmDialog({ title: 'Collect reservation balance?', message: `Collect the remaining balance using ${methodLabel(reservationPaymentMethod)}?`, confirmText: 'Collect' });
+    const ok = window.confirm(`Collect remaining reservation balance using ${methodLabel(reservationPaymentMethod)}?`);
     if (!ok) return;
 
     setReservationPayLoading(true);
@@ -262,7 +261,9 @@ export default function ActivityPage({ canManage, canView }) {
     if (currentStatus === nextStatus) return;
 
     if (nextStatus === 'available') {
-      const confirmed = await confirmDialog({ title: `Mark Table ${String(table?.table_number || tableId).padStart(2, '0')} as available?`, confirmText: 'Mark Available' });
+      const confirmed = window.confirm(
+        `Mark Table ${String(table?.table_number || tableId).padStart(2, '0')} as available?`
+      );
       if (!confirmed) return;
     }
 
@@ -417,7 +418,7 @@ export default function ActivityPage({ canManage, canView }) {
 
   const cancelPendingOrder = async () => {
     if (!selectedOrderId || cancellingOrder) return;
-    const ok = await confirmDialog({ title: 'Cancel this pending order?', confirmText: 'Cancel Order', danger: true });
+    const ok = window.confirm('Cancel this pending order?');
     if (!ok) return;
 
     setCancellingOrder(true);

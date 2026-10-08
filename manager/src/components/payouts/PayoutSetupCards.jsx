@@ -222,7 +222,7 @@ const PayoutSetupCards = ({ variant = 'full' }) => {
           {/* Mode toggle */}
           <div className="flex items-center gap-2">
             <span className="text-xs" style={{ color: '#888' }}>Mode:</span>
-            <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--m-border)' }}>
+            <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
               {['test', 'live'].map((m) => (
                 <button
                   key={m}

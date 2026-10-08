@@ -134,7 +134,7 @@ const Promotions = () => {
                   {p.valid_from && format(parseUTC(p.valid_from), 'MMM d')} — {p.valid_until && format(parseUTC(p.valid_until), 'MMM d, yyyy')}
                 </p>
               )}
-              <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: '1px solid var(--m-border)' }}>
+              <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                 <span className="text-xs" style={{ color: '#555' }}>Redeemed: {p.redeemed_count || 0}{p.max_redemptions ? `/${p.max_redemptions}` : ''}</span>
                 <div className="flex items-center gap-1">
                   <button onClick={() => handleToggle(p.id)} className="p-1 rounded transition-colors">
@@ -152,8 +152,8 @@ const Promotions = () => {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-10" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-10" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#111111' }}>
               <h3 className="font-bold text-white">{editing ? 'Edit Promotion' : 'Create Promotion'}</h3>
               <button onClick={() => setShowModal(false)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}><X className="w-5 h-5" /></button>
             </div>

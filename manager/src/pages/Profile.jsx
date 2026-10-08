@@ -244,7 +244,7 @@ const Profile = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-lg p-1 w-fit" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+      <div className="flex gap-1 rounded-lg p-1 w-fit" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
         <button onClick={() => setTab('info')} className="px-4 py-2 rounded-md text-sm font-medium transition-colors" style={tab === 'info' ? { background: '#CC0000', color: '#fff' } : { color: '#888' }}>Information</button>
         <button onClick={() => setTab('security')} className="px-4 py-2 rounded-md text-sm font-medium transition-colors" style={tab === 'security' ? { background: '#CC0000', color: '#fff' } : { color: '#888' }}>Security</button>
       </div>
@@ -254,12 +254,12 @@ const Profile = () => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-white">Personal Information</h3>
             {!editing ? (
-              <button onClick={handleEdit} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)', color: '#fff' }}>
+              <button onClick={handleEdit} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}>
                 <Pencil className="w-4 h-4" /> Edit Profile
               </button>
             ) : (
               <div className="flex items-center gap-2">
-                <button onClick={handleCancel} disabled={saving} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium" style={{ background: 'transparent', border: '1px solid var(--m-border)', color: '#aaa' }}>
+                <button onClick={handleCancel} disabled={saving} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: '#aaa' }}>
                   <X className="w-4 h-4" /> Cancel
                 </button>
                 <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: '#CC0000' }}>
@@ -307,28 +307,28 @@ const Profile = () => {
           ) : (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--m-surface-2)' }}>
+                <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: '#161616' }}>
                   <User className="w-5 h-5" style={{ color: '#555' }} />
                   <div>
                     <p className="text-xs" style={{ color: '#666' }}>Full Name</p>
                     <p className="text-sm font-medium text-white">{user.first_name} {user.last_name}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--m-surface-2)' }}>
+                <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: '#161616' }}>
                   <Mail className="w-5 h-5" style={{ color: '#555' }} />
                   <div>
                     <p className="text-xs" style={{ color: '#666' }}>Email</p>
                     <p className="text-sm font-medium text-white">{user.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--m-surface-2)' }}>
+                <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: '#161616' }}>
                   <Phone className="w-5 h-5" style={{ color: '#555' }} />
                   <div>
                     <p className="text-xs" style={{ color: '#666' }}>Phone</p>
                     <p className="text-sm font-medium text-white">{user.phone_number || '—'}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--m-surface-2)' }}>
+                <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: '#161616' }}>
                   <Calendar className="w-5 h-5" style={{ color: '#555' }} />
                   <div>
                     <p className="text-xs" style={{ color: '#666' }}>Date of Birth</p>
@@ -336,7 +336,7 @@ const Profile = () => {
                   </div>
                 </div>
               </div>
-              <div className="mt-4 p-3 rounded-lg" style={{ background: 'var(--m-surface-2)' }}>
+              <div className="mt-4 p-3 rounded-lg" style={{ background: '#161616' }}>
                 <p className="text-xs" style={{ color: '#666' }}>Role</p>
                 <p className="text-sm font-medium text-white capitalize">{user.role?.replace('_', ' ')}</p>
               </div>
@@ -380,7 +380,7 @@ const Profile = () => {
       {/* ── Crop Modal ── */}
       {cropModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.8)' }}>
-          <div className="bg-[var(--m-surface-2)] rounded-xl p-5 w-full max-w-lg mx-4" style={{ border: '1px solid var(--m-border)' }}>
+          <div className="bg-[#1a1a1a] rounded-xl p-5 w-full max-w-lg mx-4" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-white">Crop Profile Picture</h3>
               <button onClick={handleCropCancel} disabled={uploadingAvatar} className="p-1 rounded-lg hover:bg-white/10 transition-colors">
@@ -416,7 +416,7 @@ const Profile = () => {
             </div>
 
             <div className="flex justify-end gap-2">
-              <button onClick={handleCropCancel} disabled={uploadingAvatar} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ background: 'transparent', border: '1px solid var(--m-border)', color: '#aaa' }}>
+              <button onClick={handleCropCancel} disabled={uploadingAvatar} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: '#aaa' }}>
                 Cancel
               </button>
               <button onClick={handleCropSave} disabled={uploadingAvatar} className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 inline-flex items-center gap-2" style={{ background: '#CC0000' }}>

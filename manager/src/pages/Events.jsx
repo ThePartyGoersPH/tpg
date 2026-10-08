@@ -386,7 +386,7 @@ const Events = () => {
   return (
     <div className="space-y-4">
       {/* Tab Switcher */}
-      <div className="flex gap-1 rounded-lg p-1 w-fit" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+      <div className="flex gap-1 rounded-lg p-1 w-fit" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
         <button onClick={() => setTab('events')} className="px-4 py-2 rounded-md text-sm font-medium transition-colors" style={tab === 'events' ? { background: '#CC0000', color: '#fff' } : { color: '#888' }}>
           Events
         </button>
@@ -457,7 +457,7 @@ const Events = () => {
                       </button>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 text-xs pt-2" style={{ borderTop: '1px solid var(--m-border)', color: '#666' }}>
+                  <div className="flex items-center gap-3 text-xs pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', color: '#666' }}>
                     <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> {post.like_count || 0}</span>
                     <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" /> {post.comment_count || post.comments_count || 0}</span>
                   </div>
@@ -479,7 +479,7 @@ const Events = () => {
                 ) : (
                   <div className="space-y-3">
                     {archivedEvents.map((ev) => (
-                      <div key={ev.id} className="rounded-lg p-3" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+                      <div key={ev.id} className="rounded-lg p-3" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="font-semibold text-white">{ev.title}</p>
@@ -503,7 +503,7 @@ const Events = () => {
                 ) : (
                   <div className="space-y-3">
                     {archivedPosts.map((post) => (
-                      <div key={post.id} className="rounded-lg p-3" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+                      <div key={post.id} className="rounded-lg p-3" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}>
                         <p className="text-sm" style={{ color: '#ccc' }}>{post.content || post.text}</p>
                         <p className="text-xs mt-1" style={{ color: '#666' }}>
                           {post.updated_at ? format(parseUTC(post.updated_at), 'MMM d, yyyy • h:mm a') : post.created_at ? format(parseUTC(post.created_at), 'MMM d, yyyy • h:mm a') : ''}
@@ -529,7 +529,7 @@ const Events = () => {
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-full sm:w-72" style={{ background: 'var(--m-surface-2)', border: '1px solid var(--m-border)' }}>
+        <div className="flex items-center gap-2 rounded-lg px-3 py-2 w-full sm:w-72" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
           <Search className="w-4 h-4" style={{ color: '#555' }} />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search events..." className="bg-transparent text-sm outline-none flex-1 text-white placeholder-gray-600" />
         </div>
@@ -555,7 +555,7 @@ const Events = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filtered.map((ev) => (
           <div key={ev.id} className="card p-0 overflow-hidden transition-shadow cursor-pointer" onClick={() => openDetail(ev)}>
-            <div className="h-40 relative group" style={{ background: 'var(--m-surface-2)' }}>
+            <div className="h-40 relative group" style={{ background: '#1a1a1a' }}>
               {ev.image_path || ev.image_url ? (
                 <img src={getUploadUrl(ev.image_path || ev.image_url)} alt="" className="w-full h-full object-cover" />
               ) : (
@@ -610,8 +610,8 @@ const Events = () => {
       {/* Event Details Modal */}
       {detailModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDetailModal(null)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--m-border)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <h3 className="font-bold text-white">{detailModal.title || 'Event Details'}</h3>
               <button onClick={() => setDetailModal(null)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}><X className="w-5 h-5" /></button>
             </div>
@@ -630,7 +630,7 @@ const Events = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <button onClick={handleToggleLike} className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                        style={detailLiked ? { background: '#CC0000', color: '#fff' } : { background: 'var(--m-surface-2)', color: '#ccc' }}
+                        style={detailLiked ? { background: '#CC0000', color: '#fff' } : { background: '#1a1a1a', color: '#ccc' }}
                       >
                         {detailLiked ? 'Unlike' : 'Like'} Event
                       </button>
@@ -677,7 +677,7 @@ const Events = () => {
                       {Array.isArray(detailModal.comments) && detailModal.comments.length > 0 ? (
                         <div className="space-y-3">
                           {detailModal.comments.map((c) => (
-                            <div key={c.id} className="rounded-lg p-3" style={{ background: 'var(--m-surface-2)' }}>
+                            <div key={c.id} className="rounded-lg p-3" style={{ background: '#161616' }}>
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-xs font-medium" style={{ color: '#ccc' }}>{c.first_name} {c.last_name}</span>
                                 <span className="text-xs" style={{ color: '#555' }}>{c.created_at ? format(parseUTC(c.created_at), 'MMM d, h:mm a') : ''}</span>
@@ -686,7 +686,7 @@ const Events = () => {
                               {c.replies && c.replies.length > 0 && (
                                 <div className="ml-4 space-y-2 mt-2">
                                   {c.replies.map((r) => (
-                                    <div key={r.id} className="rounded p-2 text-xs" style={{ background: 'var(--m-surface)' }}>
+                                    <div key={r.id} className="rounded p-2 text-xs" style={{ background: '#0d0d0d' }}>
                                       <div className="flex items-center gap-2 mb-1">
                                         <span className="font-medium text-white">{r.first_name} {r.last_name}</span>
                                         {r.role && String(r.role).toLowerCase() === 'bar_owner' && (
@@ -731,8 +731,8 @@ const Events = () => {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" style={{ background: 'var(--m-surface)', border: '1px solid var(--m-border)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-10" style={{ borderBottom: '1px solid var(--m-border)', background: 'var(--m-surface)' }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-10" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#111111' }}>
               <h3 className="font-bold text-white">{editing ? 'Edit Event' : 'Create Event'}</h3>
               <button onClick={() => setShowModal(false)} className="p-1 rounded-lg transition-colors" style={{ color: '#666' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}><X className="w-5 h-5" /></button>
             </div>

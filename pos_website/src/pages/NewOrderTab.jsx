@@ -3,7 +3,6 @@ import { posApi } from '../api/pos';
 import { Beer, GlassWater, Minus, Package, Plus, ReceiptText, Search, UtensilsCrossed } from 'lucide-react';
 import { getUploadUrl } from '../api/client';
 import { io } from 'socket.io-client';
-import { confirmDialog } from '../utils/confirmDialog';
 
 function currency(value) {
   return `PHP ${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
@@ -437,7 +436,7 @@ export default function NewOrderTab({ canManage, onOrderCreated }) {
 
   const cancelCreatedOrder = async () => {
     if (!paymentPrompt?.id || cancellingOrder) return;
-    const ok = await confirmDialog({ title: 'Cancel this order?', message: 'This will mark it as cancelled and remove it from active pending orders.', confirmText: 'Cancel Order', danger: true });
+    const ok = window.confirm('Cancel this order? This will mark it as cancelled and remove it from active pending orders.');
     if (!ok) return;
 
     setCancellingOrder(true);

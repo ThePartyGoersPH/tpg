@@ -10,7 +10,7 @@ const VIDEO_WIDTH = 640;
 const VIDEO_HEIGHT = 480;
 
 const SWAL_DARK = {
-  background: 'var(--m-surface-2)',
+  background: '#1a1a1a',
   color: '#e5e5e5',
   confirmButtonColor: '#C9762F',
   cancelButtonColor: '#555',
@@ -418,9 +418,9 @@ export default function QRCheckin() {
             onClick={() => setMode(mode === 'camera' ? 'manual' : 'camera')}
             style={{
               padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600,
-              background: mode === 'manual' ? 'rgba(201,118,47,0.15)' : 'var(--m-active-bg)',
+              background: mode === 'manual' ? 'rgba(201,118,47,0.15)' : 'rgba(255,255,255,0.06)',
               color: mode === 'manual' ? '#C9762F' : '#aaa',
-              border: `1px solid ${mode === 'manual' ? 'rgba(201,118,47,0.3)' : 'var(--m-border)'}`,
+              border: `1px solid ${mode === 'manual' ? 'rgba(201,118,47,0.3)' : 'rgba(255,255,255,0.08)'}`,
               cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
             }}
           >
@@ -435,7 +435,7 @@ export default function QRCheckin() {
         <div style={{
           position: 'relative', width: '100%', aspectRatio: '1', borderRadius: '16px',
           overflow: 'hidden', background: '#111', marginBottom: '1.5rem',
-          border: '1px solid var(--m-border)',
+          border: '1px solid rgba(255,255,255,0.08)',
         }}>
           <div id={SCAN_REGION_ID} style={{ width: '100%', height: '100%' }} />
 
@@ -502,7 +502,7 @@ export default function QRCheckin() {
               autoFocus
               style={{
                 flex: 1, padding: '0.7rem 1rem', borderRadius: '10px',
-                background: 'var(--m-active-bg)', border: '1px solid var(--m-border)',
+                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
                 color: '#fff', fontSize: '0.95rem', fontFamily: "'Sora', monospace",
                 outline: 'none',
               }}
@@ -535,7 +535,7 @@ export default function QRCheckin() {
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0.6rem 0.8rem', borderRadius: '8px',
-                background: 'var(--m-active-bg)', border: '1px solid var(--m-border)',
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)',
                 fontSize: '0.8rem',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -563,8 +563,8 @@ export default function QRCheckin() {
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
         .swal-dark-popup {
-          background: var(--m-surface-2) !important;
-          border: 1px solid var(--m-border) !important;
+          background: #1a1a1a !important;
+          border: 1px solid rgba(255,255,255,0.1) !important;
           border-radius: 16px !important;
           box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
         }

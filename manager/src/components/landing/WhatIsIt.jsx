@@ -67,13 +67,13 @@ const WhatIsIt = () => {
             <div
               className="rounded-2xl overflow-hidden relative"
               style={{
-                background: 'var(--m-surface)',
+                background: '#111111',
                 border: '1px solid rgba(204,0,0,0.15)',
                 boxShadow: '0 0 60px rgba(204,0,0,0.08), 0 30px 60px rgba(0,0,0,0.5)',
               }}
             >
               {/* Header bar */}
-              <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--m-border)' }}>
+              <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded" style={{ background: '#CC0000' }} />
                   <span className="font-display text-white text-sm tracking-wider">PLATFORM BAR SYSTEM</span>
@@ -96,7 +96,7 @@ const WhatIsIt = () => {
                     <div
                       key={m.label}
                       className="rounded-xl p-3"
-                      style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}
+                      style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
                     >
                       <p className="text-[10px] text-gray-500 font-body mb-1.5">{m.label}</p>
                       <p className="font-display text-white text-xl">{m.val}</p>
@@ -106,7 +106,7 @@ const WhatIsIt = () => {
                 </div>
 
                 {/* Activity feed */}
-                <div className="rounded-xl p-3" style={{ background: 'var(--m-active-bg)', border: '1px solid var(--m-border)' }}>
+                <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <p className="text-[10px] text-gray-500 font-body mb-2 uppercase tracking-wider">Live Activity</p>
                   <div className="space-y-2">
                     {[
