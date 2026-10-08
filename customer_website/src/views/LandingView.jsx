@@ -135,15 +135,6 @@ function LandingView() {
           ))}
         </div>
 
-        {/* Mobile-only: compact header area with logo + theme toggle */}
-        <div className="land-hero-mobile-header">
-          <div className="land-hero-mobile-brand">
-            <div className="land-hero-mobile-logo" />
-            <span className="land-hero-mobile-wordmark">Party Goers</span>
-          </div>
-          <ThemeToggle />
-        </div>
-
         {/* Side Navigation - Left (desktop only, hidden on mobile via CSS) */}
         <nav className="land-side-nav">
           <a href="#platform" className="land-side-link">Work</a>

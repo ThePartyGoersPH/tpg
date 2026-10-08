@@ -236,29 +236,8 @@ img[data-lazy].loaded { opacity: 1; }
 /* Hide scrollbar but keep functionality */
 .table-scroll::-webkit-scrollbar { width: 4px; }
 
-/* ── LandingView mobile header ── */
+/* ── LandingView mobile header removed (header lives in GlassNav) ── */
 @media (max-width: 768px) {
-  .land-hero-mobile-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.5rem 1rem;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    margin-bottom: 1rem;
-  }
-  .land-hero-mobile-brand {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .land-hero-mobile-logo {
-    width: 32px;
-    height: 32px;
-    flex-shrink: 0;
-  }
-  .land-hero-mobile-wordmark {
-    fontSize: '0.85rem', fontWeight: 700, color: '#fff';
-  }
   /* Hide desktop-only elements on mobile */
   .land-side-nav { display: none !important; }
   .land-top-cta { display: none !important; }
