@@ -1,0 +1,1167 @@
+{
+	"id": "ff6df5bb-0758-4302-a425-c1f8c7f5b3db",
+	"name": "THESIS HR SYSTEM - AUTO TESTS (HR + STAFF)",
+	"timestamp": "2026-02-13T17:35:38.171Z",
+	"collection_id": "52145161-ca712b5f-367e-44e7-abc5-62d25d8c34af",
+	"folder_id": 0,
+	"environment_id": "0",
+	"totalPass": 45,
+	"delay": 0,
+	"persist": true,
+	"status": "finished",
+	"startedAt": "2026-02-13T17:35:34.486Z",
+	"totalFail": 0,
+	"results": [
+		{
+			"id": "463741b5-d06a-4621-944f-dc372444b2bd",
+			"name": "Login (HR) -> save HR_TOKEN",
+			"url": "http://localhost:3000/auth/login",
+			"time": 60,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"HR login status 200": true,
+				"HR login success true": true,
+				"HR_TOKEN saved": true
+			},
+			"testPassFailCounts": {
+				"HR login status 200": {
+					"pass": 1,
+					"fail": 0
+				},
+				"HR login success true": {
+					"pass": 1,
+					"fail": 0
+				},
+				"HR_TOKEN saved": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				60
+			],
+			"allTests": [
+				{
+					"HR login status 200": true,
+					"HR login success true": true,
+					"HR_TOKEN saved": true
+				}
+			]
+		},
+		{
+			"id": "901afd80-63f4-43e2-89f6-0aca4f3523a6",
+			"name": "Login (STAFF) -> save STAFF_TOKEN + employeeUserId",
+			"url": "http://localhost:3000/auth/login",
+			"time": 56,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Staff login status 200": true,
+				"Staff login success true": true,
+				"STAFF_TOKEN saved": true
+			},
+			"testPassFailCounts": {
+				"Staff login status 200": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Staff login success true": {
+					"pass": 1,
+					"fail": 0
+				},
+				"STAFF_TOKEN saved": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				56
+			],
+			"allTests": [
+				{
+					"Staff login status 200": true,
+					"Staff login success true": true,
+					"STAFF_TOKEN saved": true
+				}
+			]
+		},
+		{
+			"id": "c11b1985-9c27-4547-b726-1846bb7bb3b1",
+			"name": "Auth Me (HR)",
+			"url": "http://localhost:3000/auth/me",
+			"time": 3,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Auth me HR 200": true,
+				"role is hr": true,
+				"has bar_id": true
+			},
+			"testPassFailCounts": {
+				"Auth me HR 200": {
+					"pass": 1,
+					"fail": 0
+				},
+				"role is hr": {
+					"pass": 1,
+					"fail": 0
+				},
+				"has bar_id": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				3
+			],
+			"allTests": [
+				{
+					"Auth me HR 200": true,
+					"role is hr": true,
+					"has bar_id": true
+				}
+			]
+		},
+		{
+			"id": "ac1e009d-8759-4530-94b8-b78bc60b0ecb",
+			"name": "Auth Me (STAFF)",
+			"url": "http://localhost:3000/auth/me",
+			"time": 3,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Auth me staff 200": true
+			},
+			"testPassFailCounts": {
+				"Auth me staff 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				3
+			],
+			"allTests": [
+				{
+					"Auth me staff 200": true
+				}
+			]
+		},
+		{
+			"id": "0102a0f4-a73b-4134-a88a-00f4e8791c60",
+			"name": "List Employees",
+			"url": "http://localhost:3000/hr/employees",
+			"time": 4,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"List employees 200": true
+			},
+			"testPassFailCounts": {
+				"List employees 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				4
+			],
+			"allTests": [
+				{
+					"List employees 200": true
+				}
+			]
+		},
+		{
+			"id": "65ea8ef8-92d5-4a1f-acc6-c40d1960dddc",
+			"name": "Staff Time-In/Out",
+			"url": "http://localhost:3000/attendance/employee/attendance",
+			"time": 5,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Time-in status ok": true
+			},
+			"testPassFailCounts": {
+				"Time-in status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				5
+			],
+			"allTests": [
+				{
+					"Time-in status ok": true
+				}
+			]
+		},
+		{
+			"id": "d5938fd0-7a64-4b1c-b7dc-90900e97abf2",
+			"name": "Staff Time-Out",
+			"url": "http://localhost:3000/attendance/employee/attendance",
+			"time": 4,
+			"responseCode": {
+				"code": 400,
+				"name": "Bad Request"
+			},
+			"tests": {
+				"Time-out status ok": true
+			},
+			"testPassFailCounts": {
+				"Time-out status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				4
+			],
+			"allTests": [
+				{
+					"Time-out status ok": true
+				}
+			]
+		},
+		{
+			"id": "77f7332d-6735-4cb6-adad-409b41b03fdd",
+			"name": "HR Attendance Report",
+			"url": "http://localhost:3000/hr/attendance?from=2026-02-01&to=2026-02-28&employee_user_id=30",
+			"time": 3,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Attendance report 200": true
+			},
+			"testPassFailCounts": {
+				"Attendance report 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				3
+			],
+			"allTests": [
+				{
+					"Attendance report 200": true
+				}
+			]
+		},
+		{
+			"id": "2b7acf83-721e-418b-a64b-d01e331354fe",
+			"name": "Staff Apply Leave (creates leaveId)",
+			"url": "http://localhost:3000/api/leaves",
+			"time": 5,
+			"responseCode": {
+				"code": 201,
+				"name": "Created"
+			},
+			"tests": {
+				"Apply leave status ok": true
+			},
+			"testPassFailCounts": {
+				"Apply leave status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				5
+			],
+			"allTests": [
+				{
+					"Apply leave status ok": true
+				}
+			]
+		},
+		{
+			"id": "596ec3d0-84fc-41e1-beeb-3561c23cec53",
+			"name": "Staff View Own Leaves",
+			"url": "http://localhost:3000/api/leaves/my",
+			"time": 4,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"View own leaves 200": true
+			},
+			"testPassFailCounts": {
+				"View own leaves 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				4
+			],
+			"allTests": [
+				{
+					"View own leaves 200": true
+				}
+			]
+		},
+		{
+			"id": "ca907ea0-fa9a-4a61-9dfe-df3dd3e7ae54",
+			"name": "HR List All Leaves",
+			"url": "http://localhost:3000/api/leaves",
+			"time": 4,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"List leaves 200": true
+			},
+			"testPassFailCounts": {
+				"List leaves 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				4
+			],
+			"allTests": [
+				{
+					"List leaves 200": true
+				}
+			]
+		},
+		{
+			"id": "dddec34b-3b92-473b-85e7-16ea345b93da",
+			"name": "HR Decide Leave (approve) using leaveId",
+			"url": "http://localhost:3000/api/leaves/21/decision",
+			"time": 5,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Decide leave status ok": true
+			},
+			"testPassFailCounts": {
+				"Decide leave status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				5
+			],
+			"allTests": [
+				{
+					"Decide leave status ok": true
+				}
+			]
+		},
+		{
+			"id": "d0178113-37d9-48c4-aec2-ae70e68dc545",
+			"name": "Create Payroll Run (saves payrollRunId)",
+			"url": "http://localhost:3000/hr/payroll/run",
+			"time": 5,
+			"responseCode": {
+				"code": 409,
+				"name": "Conflict"
+			},
+			"tests": {
+				"Create payroll run status ok": true
+			},
+			"testPassFailCounts": {
+				"Create payroll run status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				5
+			],
+			"allTests": [
+				{
+					"Create payroll run status ok": true
+				}
+			]
+		},
+		{
+			"id": "f989deeb-2aba-456d-8671-a26b120f5c06",
+			"name": "List Payroll Runs",
+			"url": "http://localhost:3000/hr/payroll/runs",
+			"time": 4,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"List runs 200": true
+			},
+			"testPassFailCounts": {
+				"List runs 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				4
+			],
+			"allTests": [
+				{
+					"List runs 200": true
+				}
+			]
+		},
+		{
+			"id": "b7036e2a-e489-423a-9d7e-c539d9ca0523",
+			"name": "Generate Payroll Items",
+			"url": "http://localhost:3000/hr/payroll/runs//generate",
+			"time": 2,
+			"responseCode": {
+				"code": 404,
+				"name": "Not Found"
+			},
+			"tests": {
+				"Generate payroll status ok": true
+			},
+			"testPassFailCounts": {
+				"Generate payroll status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				2
+			],
+			"allTests": [
+				{
+					"Generate payroll status ok": true
+				}
+			]
+		},
+		{
+			"id": "c4132894-a189-46fd-97ac-152ae787cb8e",
+			"name": "View Payroll Items",
+			"url": "http://localhost:3000/hr/payroll/runs//items",
+			"time": 2,
+			"responseCode": {
+				"code": 404,
+				"name": "Not Found"
+			},
+			"tests": {
+				"Payroll items status ok": true
+			},
+			"testPassFailCounts": {
+				"Payroll items status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				2
+			],
+			"allTests": [
+				{
+					"Payroll items status ok": true
+				}
+			]
+		},
+		{
+			"id": "ff3c60e1-ab74-488d-866a-f8c8410ca06b",
+			"name": "Finalize Payroll Run",
+			"url": "http://localhost:3000/hr/payroll/runs//finalize",
+			"time": 2,
+			"responseCode": {
+				"code": 404,
+				"name": "Not Found"
+			},
+			"tests": {
+				"Finalize status ok": true
+			},
+			"testPassFailCounts": {
+				"Finalize status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				2
+			],
+			"allTests": [
+				{
+					"Finalize status ok": true
+				}
+			]
+		},
+		{
+			"id": "3ffcbf34-27e6-45a8-ab78-85854a5df9e1",
+			"name": "HR List Documents",
+			"url": "http://localhost:3000/documents",
+			"time": 4,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"HR docs list 200": true
+			},
+			"testPassFailCounts": {
+				"HR docs list 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				4
+			],
+			"allTests": [
+				{
+					"HR docs list 200": true
+				}
+			]
+		},
+		{
+			"id": "ce6ccd24-6f50-45f0-993b-43eec4c7223c",
+			"name": "Staff My Documents",
+			"url": "http://localhost:3000/documents/my",
+			"time": 3,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Staff my docs 200": true
+			},
+			"testPassFailCounts": {
+				"Staff my docs 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				3
+			],
+			"allTests": [
+				{
+					"Staff my docs 200": true
+				}
+			]
+		},
+		{
+			"id": "96759667-357e-4ae7-ab25-fb0b3cad2ca5",
+			"name": "HR Approve Document",
+			"url": "http://localhost:3000/hr/documents/5/approve",
+			"time": 2,
+			"responseCode": {
+				"code": 404,
+				"name": "Not Found"
+			},
+			"tests": {
+				"Approve document status ok": true
+			},
+			"testPassFailCounts": {
+				"Approve document status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				2
+			],
+			"allTests": [
+				{
+					"Approve document status ok": true
+				}
+			]
+		},
+		{
+			"id": "6a65b65c-ceed-47a8-a01c-2257003edebb",
+			"name": "Staff Download Own Doc (docId auto from previous request)",
+			"url": "http://localhost:3000/documents/5/download",
+			"time": 5,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Download status ok": true
+			},
+			"testPassFailCounts": {
+				"Download status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				5
+			],
+			"allTests": [
+				{
+					"Download status ok": true
+				}
+			]
+		},
+		{
+			"id": "97534bce-ee8f-4b51-b1bf-97e0ecb8b417",
+			"name": "Register Customer (optional)",
+			"url": "http://localhost:3000/auth/register",
+			"time": 2,
+			"responseCode": {
+				"code": 409,
+				"name": "Conflict"
+			},
+			"tests": {
+				"Register status ok": true
+			},
+			"testPassFailCounts": {
+				"Register status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				2
+			],
+			"allTests": [
+				{
+					"Register status ok": true
+				}
+			]
+		},
+		{
+			"id": "3626a2cd-6d71-470a-878c-7e8bead53573",
+			"name": "Login (CUSTOMER) -> save CUSTOMER_TOKEN",
+			"url": "http://localhost:3000/auth/login",
+			"time": 54,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Customer login 200": true,
+				"Customer login success true": true,
+				"CUSTOMER_TOKEN saved": true
+			},
+			"testPassFailCounts": {
+				"Customer login 200": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Customer login success true": {
+					"pass": 1,
+					"fail": 0
+				},
+				"CUSTOMER_TOKEN saved": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				54
+			],
+			"allTests": [
+				{
+					"Customer login 200": true,
+					"Customer login success true": true,
+					"CUSTOMER_TOKEN saved": true
+				}
+			]
+		},
+		{
+			"id": "73dc222f-5d51-40e6-a928-6b6f8fa530f5",
+			"name": "Login (OWNER) -> save OWNER_TOKEN",
+			"url": "http://localhost:3000/auth/login",
+			"time": 55,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Owner login 200": true,
+				"Owner login success true": true,
+				"OWNER_TOKEN saved": true
+			},
+			"testPassFailCounts": {
+				"Owner login 200": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Owner login success true": {
+					"pass": 1,
+					"fail": 0
+				},
+				"OWNER_TOKEN saved": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				55
+			],
+			"allTests": [
+				{
+					"Owner login 200": true,
+					"Owner login success true": true,
+					"OWNER_TOKEN saved": true
+				}
+			]
+		},
+		{
+			"id": "b6aa86e8-f91b-443b-945e-5a8d7c9f9ff4",
+			"name": "Public - Available Tables",
+			"url": "http://localhost:3000/public/bars/11/available-tables?date=2026-03-01&time=19:00&party_size=2",
+			"time": 3,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Available tables 200": true
+			},
+			"testPassFailCounts": {
+				"Available tables 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				3
+			],
+			"allTests": [
+				{
+					"Available tables 200": true
+				}
+			]
+		},
+		{
+			"id": "f09b3ff0-4d7c-4eff-a206-de478cb85505",
+			"name": "Customer - Create Reservation (saves reservationId)",
+			"url": "http://localhost:3000/reservations",
+			"time": 4,
+			"responseCode": {
+				"code": 409,
+				"name": "Conflict"
+			},
+			"tests": {
+				"Create reservation status ok": true
+			},
+			"testPassFailCounts": {
+				"Create reservation status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				4
+			],
+			"allTests": [
+				{
+					"Create reservation status ok": true
+				}
+			]
+		},
+		{
+			"id": "8b62b3de-06d3-41dd-8ce4-54a7087a5cf0",
+			"name": "Owner - List Reservations (pending)",
+			"url": "http://localhost:3000/owner/reservations?status=pending",
+			"time": 4,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Owner list reservations 200": true
+			},
+			"testPassFailCounts": {
+				"Owner list reservations 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				4
+			],
+			"allTests": [
+				{
+					"Owner list reservations 200": true
+				}
+			]
+		},
+		{
+			"id": "952e2b84-cf5a-4dae-a07f-634d42b78ad9",
+			"name": "Owner - Approve Reservation (uses reservationId)",
+			"url": "http://localhost:3000/owner/reservations//status",
+			"time": 2,
+			"responseCode": {
+				"code": 404,
+				"name": "Not Found"
+			},
+			"tests": {
+				"Owner approve status ok": true
+			},
+			"testPassFailCounts": {
+				"Owner approve status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				2
+			],
+			"allTests": [
+				{
+					"Owner approve status ok": true
+				}
+			]
+		},
+		{
+			"id": "56c146dd-61e4-471b-82c8-f12f80e0c501",
+			"name": "Owner - Cancel Reservation (uses reservationId)",
+			"url": "http://localhost:3000/owner/reservations//status",
+			"time": 2,
+			"responseCode": {
+				"code": 404,
+				"name": "Not Found"
+			},
+			"tests": {
+				"Owner cancel status ok": true
+			},
+			"testPassFailCounts": {
+				"Owner cancel status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				2
+			],
+			"allTests": [
+				{
+					"Owner cancel status ok": true
+				}
+			]
+		},
+		{
+			"id": "93cd63ea-b165-4fcf-9e8d-17c02dfdfa09",
+			"name": "Owner - Create Inventory Item (saves inventoryItemId)",
+			"url": "http://localhost:3000/owner/inventory",
+			"time": 5,
+			"responseCode": {
+				"code": 201,
+				"name": "Created"
+			},
+			"tests": {
+				"Create inventory status ok": true
+			},
+			"testPassFailCounts": {
+				"Create inventory status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				5
+			],
+			"allTests": [
+				{
+					"Create inventory status ok": true
+				}
+			]
+		},
+		{
+			"id": "d0eaec02-aeda-414a-b719-5353d0fb42eb",
+			"name": "Owner - List Inventory",
+			"url": "http://localhost:3000/owner/inventory",
+			"time": 3,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"List inventory 200": true
+			},
+			"testPassFailCounts": {
+				"List inventory 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				3
+			],
+			"allTests": [
+				{
+					"List inventory 200": true
+				}
+			]
+		},
+		{
+			"id": "0329fd6c-ad16-4710-8722-0c72cd887b9a",
+			"name": "Owner - Update Inventory (make low stock)",
+			"url": "http://localhost:3000/owner/inventory/2",
+			"time": 5,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Update inventory status ok": true
+			},
+			"testPassFailCounts": {
+				"Update inventory status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				5
+			],
+			"allTests": [
+				{
+					"Update inventory status ok": true
+				}
+			]
+		},
+		{
+			"id": "4baa231a-d152-4699-9aa7-2e8e4c16008f",
+			"name": "Owner - Record Sale (deduct stock)",
+			"url": "http://localhost:3000/owner/sales",
+			"time": 6,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Record sale status ok": true
+			},
+			"testPassFailCounts": {
+				"Record sale status ok": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				6
+			],
+			"allTests": [
+				{
+					"Record sale status ok": true
+				}
+			]
+		},
+		{
+			"id": "3e8d3f70-4f04-435b-8374-12872a6def67",
+			"name": "Owner DSS - Inventory Low Stock",
+			"url": "http://localhost:3000/owner/dss/inventory",
+			"time": 4,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"DSS inventory 200": true
+			},
+			"testPassFailCounts": {
+				"DSS inventory 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				4
+			],
+			"allTests": [
+				{
+					"DSS inventory 200": true
+				}
+			]
+		},
+		{
+			"id": "3cdac00c-1190-4619-a3fb-2aff64578baa",
+			"name": "Owner DSS - Reservations Summary",
+			"url": "http://localhost:3000/owner/dss/reservations-summary?from=2026-03-01&to=2026-03-31",
+			"time": 5,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"DSS reservations summary 200": true
+			},
+			"testPassFailCounts": {
+				"DSS reservations summary 200": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				5
+			],
+			"allTests": [
+				{
+					"DSS reservations summary 200": true
+				}
+			]
+		}
+	],
+	"count": 1,
+	"totalTime": 339,
+	"collection": {
+		"requests": [
+			{
+				"id": "463741b5-d06a-4621-944f-dc372444b2bd",
+				"method": "POST"
+			},
+			{
+				"id": "901afd80-63f4-43e2-89f6-0aca4f3523a6",
+				"method": "POST"
+			},
+			{
+				"id": "c11b1985-9c27-4547-b726-1846bb7bb3b1",
+				"method": "GET"
+			},
+			{
+				"id": "ac1e009d-8759-4530-94b8-b78bc60b0ecb",
+				"method": "GET"
+			},
+			{
+				"id": "0102a0f4-a73b-4134-a88a-00f4e8791c60",
+				"method": "GET"
+			},
+			{
+				"id": "65ea8ef8-92d5-4a1f-acc6-c40d1960dddc",
+				"method": "POST"
+			},
+			{
+				"id": "d5938fd0-7a64-4b1c-b7dc-90900e97abf2",
+				"method": "POST"
+			},
+			{
+				"id": "77f7332d-6735-4cb6-adad-409b41b03fdd",
+				"method": "GET"
+			},
+			{
+				"id": "2b7acf83-721e-418b-a64b-d01e331354fe",
+				"method": "POST"
+			},
+			{
+				"id": "596ec3d0-84fc-41e1-beeb-3561c23cec53",
+				"method": "GET"
+			},
+			{
+				"id": "ca907ea0-fa9a-4a61-9dfe-df3dd3e7ae54",
+				"method": "GET"
+			},
+			{
+				"id": "dddec34b-3b92-473b-85e7-16ea345b93da",
+				"method": "PATCH"
+			},
+			{
+				"id": "d0178113-37d9-48c4-aec2-ae70e68dc545",
+				"method": "POST"
+			},
+			{
+				"id": "f989deeb-2aba-456d-8671-a26b120f5c06",
+				"method": "GET"
+			},
+			{
+				"id": "b7036e2a-e489-423a-9d7e-c539d9ca0523",
+				"method": "POST"
+			},
+			{
+				"id": "c4132894-a189-46fd-97ac-152ae787cb8e",
+				"method": "GET"
+			},
+			{
+				"id": "ff3c60e1-ab74-488d-866a-f8c8410ca06b",
+				"method": "PATCH"
+			},
+			{
+				"id": "3ffcbf34-27e6-45a8-ab78-85854a5df9e1",
+				"method": "GET"
+			},
+			{
+				"id": "ce6ccd24-6f50-45f0-993b-43eec4c7223c",
+				"method": "GET"
+			},
+			{
+				"id": "96759667-357e-4ae7-ab25-fb0b3cad2ca5",
+				"method": "PATCH"
+			},
+			{
+				"id": "6a65b65c-ceed-47a8-a01c-2257003edebb",
+				"method": "GET"
+			},
+			{
+				"id": "97534bce-ee8f-4b51-b1bf-97e0ecb8b417",
+				"method": "POST"
+			},
+			{
+				"id": "3626a2cd-6d71-470a-878c-7e8bead53573",
+				"method": "POST"
+			},
+			{
+				"id": "73dc222f-5d51-40e6-a928-6b6f8fa530f5",
+				"method": "POST"
+			},
+			{
+				"id": "b6aa86e8-f91b-443b-945e-5a8d7c9f9ff4",
+				"method": "GET"
+			},
+			{
+				"id": "f09b3ff0-4d7c-4eff-a206-de478cb85505",
+				"method": "POST"
+			},
+			{
+				"id": "8b62b3de-06d3-41dd-8ce4-54a7087a5cf0",
+				"method": "GET"
+			},
+			{
+				"id": "952e2b84-cf5a-4dae-a07f-634d42b78ad9",
+				"method": "PATCH"
+			},
+			{
+				"id": "56c146dd-61e4-471b-82c8-f12f80e0c501",
+				"method": "PATCH"
+			},
+			{
+				"id": "93cd63ea-b165-4fcf-9e8d-17c02dfdfa09",
+				"method": "POST"
+			},
+			{
+				"id": "d0eaec02-aeda-414a-b719-5353d0fb42eb",
+				"method": "GET"
+			},
+			{
+				"id": "0329fd6c-ad16-4710-8722-0c72cd887b9a",
+				"method": "PATCH"
+			},
+			{
+				"id": "4baa231a-d152-4699-9aa7-2e8e4c16008f",
+				"method": "POST"
+			},
+			{
+				"id": "3e8d3f70-4f04-435b-8374-12872a6def67",
+				"method": "GET"
+			},
+			{
+				"id": "3cdac00c-1190-4619-a3fb-2aff64578baa",
+				"method": "GET"
+			}
+		]
+	}
+}

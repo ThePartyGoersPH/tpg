@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Environment variables (contain real secrets - NEVER commit)
+.env
+.env.*
+!.env.example
+
+# Uploads (user-generated content)
+uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+".env" 

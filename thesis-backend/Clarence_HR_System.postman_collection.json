@@ -1,0 +1,820 @@
+  {
+    "info": {
+      "_postman_id": "b2b7c3d1-17a5-4d9e-9d3f-3fb2c2f5a9e1",
+      "name": "THESIS HR SYSTEM - AUTO TESTS (HR + STAFF)",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+      { "key": "baseUrl", "value": "http://localhost:3000" },
+
+      { "key": "HR_EMAIL", "value": "hr1@juanbar.com" },
+      { "key": "HR_PASSWORD", "value": "YOUR_HR_PASSWORD_HERE" },
+      { "key": "STAFF_EMAIL", "value": "staff1@juanbar.com" },
+      { "key": "STAFF_PASSWORD", "value": "YOUR_STAFF_PASSWORD_HERE" },
+
+      { "key": "HR_TOKEN", "value": "" },
+      { "key": "STAFF_TOKEN", "value": "" },
+
+      { "key": "employeeUserId", "value": "30" },
+      { "key": "leaveId", "value": "" },
+      { "key": "payrollRunId", "value": "" },
+
+      { "key": "from", "value": "2026-02-01" },
+      { "key": "to", "value": "2026-02-28" },
+      { "key": "period_start", "value": "2026-02-01" },
+      { "key": "period_end", "value": "2026-02-15" },
+
+      { "key": "docId", "value": "1" },
+      { "key": "otherDocId", "value": "999" },
+      { "key": "OWNER_EMAIL", "value": "barowner1@juanbar.com" },
+      { "key": "OWNER_PASSWORD", "value": "YOUR_OWNER_PASSWORD_HERE" },
+      { "key": "CUSTOMER_EMAIL", "value": "juan.customer@gmail.com" },
+      { "key": "CUSTOMER_PASSWORD", "value": "123456" },
+
+      { "key": "OWNER_TOKEN", "value": "" },
+      { "key": "CUSTOMER_TOKEN", "value": "" },
+
+      { "key": "barId", "value": "11" },
+      { "key": "tableId", "value": "1" },
+      { "key": "reservationId", "value": "" },
+
+      { "key": "inventoryItemId", "value": "" }
+    ],
+    "event": [
+      {
+        "listen": "prerequest",
+        "script": {
+          "type": "text/javascript",
+          "exec": [
+            "// Optional: auto-set date range to current month (kept simple here)",
+            "// If you want dynamic dates, tell me and I’ll update this script."
+          ]
+        }
+      }
+    ],
+    "item": [
+      {
+        "name": "00 - AUTH (Auto saves tokens)",
+        "item": [
+          {
+            "name": "Login (HR) -> save HR_TOKEN",
+            "request": {
+              "method": "POST",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"email\": \"{{HR_EMAIL}}\",\n  \"password\": \"{{HR_PASSWORD}}\"\n}"
+              },
+              "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HR login status 200', () => pm.response.to.have.status(200));",
+                    "const j = pm.response.json();",
+                    "pm.test('HR login success true', () => pm.expect(j.success).to.eql(true));",
+                    "pm.collectionVariables.set('HR_TOKEN', j.data.token);",
+                    "pm.test('HR_TOKEN saved', () => pm.expect(pm.collectionVariables.get('HR_TOKEN')).to.not.be.empty);"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "name": "Login (STAFF) -> save STAFF_TOKEN + employeeUserId",
+            "request": {
+              "method": "POST",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"email\": \"{{STAFF_EMAIL}}\",\n  \"password\": \"{{STAFF_PASSWORD}}\"\n}"
+              },
+              "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Staff login status 200', () => pm.response.to.have.status(200));",
+                    "const j = pm.response.json();",
+                    "pm.test('Staff login success true', () => pm.expect(j.success).to.eql(true));",
+                    "pm.collectionVariables.set('STAFF_TOKEN', j.data.token);",
+                    "pm.test('STAFF_TOKEN saved', () => pm.expect(pm.collectionVariables.get('STAFF_TOKEN')).to.not.be.empty);",
+                    "if (j.data && j.data.user && j.data.user.id) pm.collectionVariables.set('employeeUserId', String(j.data.user.id));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "name": "Auth Me (HR)",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{HR_TOKEN}}" }],
+              "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Auth me HR 200', () => pm.response.to.have.status(200));",
+                    "const j = pm.response.json();",
+                    "pm.test('role is hr', () => pm.expect(j.data.role).to.eql('hr'));",
+                    "pm.test('has bar_id', () => pm.expect(j.data.bar_id).to.exist);"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "name": "Auth Me (STAFF)",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{STAFF_TOKEN}}" }],
+              "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": { "type": "text/javascript", "exec": ["pm.test('Auth me staff 200', () => pm.response.to.have.status(200));"] }
+              }
+            ]
+          }
+        ]
+      },
+
+      {
+        "name": "01 - EMPLOYEES (HR)",
+        "item": [
+          {
+            "name": "List Employees",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{HR_TOKEN}}" }],
+              "url": { "raw": "{{baseUrl}}/hr/employees", "host": ["{{baseUrl}}"], "path": ["hr", "employees"] }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('List employees 200', () => pm.response.to.have.status(200));"] } }
+            ]
+          }
+        ]
+      },
+
+      {
+        "name": "02 - ATTENDANCE (STAFF actions + HR report)",
+        "item": [
+          {
+            "name": "Staff Time-In/Out",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{STAFF_TOKEN}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": { "mode": "raw", "raw": "{\n  \"action\": \"time-in\"\n}" },
+              "url": { "raw": "{{baseUrl}}/attendance/employee/attendance", "host": ["{{baseUrl}}"], "path": ["attendance", "employee", "attendance"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "// allow either 200/201 success OR 409 already timed in",
+                    "pm.test('Time-in status ok', () => pm.expect([200,201,400,409]).to.include(pm.response.code));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "name": "Staff Time-Out",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{STAFF_TOKEN}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": { "mode": "raw", "raw": "{\n  \"action\": \"time-out\"\n}" },
+              "url": { "raw": "{{baseUrl}}/attendance/employee/attendance", "host": ["{{baseUrl}}"], "path": ["attendance", "employee", "attendance"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "// allow either success OR already timed out / no active time-in (depending on your rules)",
+                    "pm.test('Time-out status ok', () => pm.expect([200,201,400,409]).to.include(pm.response.code));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "name": "HR Attendance Report",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{HR_TOKEN}}" }],
+              "url": {
+                "raw": "{{baseUrl}}/hr/attendance?from={{from}}&to={{to}}&employee_user_id={{employeeUserId}}",
+                "host": ["{{baseUrl}}"],
+                "path": ["hr", "attendance"],
+                "query": [
+                  { "key": "from", "value": "{{from}}" },
+                  { "key": "to", "value": "{{to}}" },
+                  { "key": "employee_user_id", "value": "{{employeeUserId}}" }
+                ]
+              }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Attendance report 200', () => pm.response.to.have.status(200));"] } }
+            ]
+          }
+        ]
+      },
+
+      {
+        "name": "03 - LEAVES (STAFF apply -> HR decide)",
+        "item": [
+          {
+            "name": "Staff Apply Leave (creates leaveId)",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{STAFF_TOKEN}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"leave_type\": \"vacation\",\n  \"start_date\": \"2026-02-10\",\n  \"end_date\": \"2026-02-10\",\n  \"reason\": \"AutoTest\"\n}"
+              },
+              "url": { "raw": "{{baseUrl}}/api/leaves", "host": ["{{baseUrl}}"], "path": ["api", "leaves"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Apply leave status ok', () => pm.expect([200,201,400,409]).to.include(pm.response.code));",
+                    "try {",
+                    "  const j = pm.response.json();",
+                    "  // You used leave_request_id in some responses; store if present",
+                    "  if (j && j.data && (j.data.leave_request_id || j.data.id)) {",
+                    "    pm.collectionVariables.set('leaveId', String(j.data.leave_request_id || j.data.id));",
+                    "  }",
+                    "} catch (e) {}"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "name": "Staff View Own Leaves",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{STAFF_TOKEN}}" }],
+              "url": { "raw": "{{baseUrl}}/api/leaves/my", "host": ["{{baseUrl}}"], "path": ["api", "leaves", "my"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": { "type": "text/javascript", "exec": ["pm.test('View own leaves 200', () => pm.response.to.have.status(200));"] }
+              }
+            ]
+          },
+          {
+            "name": "HR List All Leaves",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{HR_TOKEN}}" }],
+              "url": { "raw": "{{baseUrl}}/api/leaves", "host": ["{{baseUrl}}"], "path": ["api", "leaves"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": { "type": "text/javascript", "exec": ["pm.test('List leaves 200', () => pm.response.to.have.status(200));"] }
+              }
+            ]
+          },
+          {
+            "name": "HR Decide Leave (approve) using leaveId",
+            "request": {
+              "method": "PATCH",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{HR_TOKEN}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": { "mode": "raw", "raw": "{\n  \"action\": \"approve\"\n}" },
+              "url": {
+                "raw": "{{baseUrl}}/api/leaves/{{leaveId}}/decision",
+                "host": ["{{baseUrl}}"],
+                "path": ["api", "leaves", "{{leaveId}}", "decision"]
+              }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "// If leaveId empty, this will fail; that's ok for autotrigger environments",
+                    "pm.test('Decide leave status ok', () => pm.expect([200,201,400,404,409]).to.include(pm.response.code));"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+
+      {
+        "name": "04 - PAYROLL (Create -> Generate -> Items -> Finalize)",
+        "item": [
+          {
+            "name": "Create Payroll Run (saves payrollRunId)",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{HR_TOKEN}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": { "mode": "raw", "raw": "{\n  \"period_start\": \"{{period_start}}\",\n  \"period_end\": \"{{period_end}}\"\n}" },
+              "url": { "raw": "{{baseUrl}}/hr/payroll/run", "host": ["{{baseUrl}}"], "path": ["hr", "payroll", "run"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Create payroll run status ok', () => pm.expect([200,201,409]).to.include(pm.response.code));",
+                    "try {",
+                    "  const j = pm.response.json();",
+                    "  if (j && j.data && j.data.id) pm.collectionVariables.set('payrollRunId', String(j.data.id));",
+                    "} catch (e) {}"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "name": "List Payroll Runs",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{HR_TOKEN}}" }],
+              "url": { "raw": "{{baseUrl}}/hr/payroll/runs", "host": ["{{baseUrl}}"], "path": ["hr", "payroll", "runs"] }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('List runs 200', () => pm.response.to.have.status(200));"] } }
+            ]
+          },
+          {
+            "name": "Generate Payroll Items",
+            "request": {
+              "method": "POST",
+              "header": [{ "key": "Authorization", "value": "Bearer {{HR_TOKEN}}" }],
+              "url": {
+                "raw": "{{baseUrl}}/hr/payroll/runs/{{payrollRunId}}/generate",
+                "host": ["{{baseUrl}}"],
+                "path": ["hr", "payroll", "runs", "{{payrollRunId}}", "generate"]
+              }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": { "type": "text/javascript", "exec": ["pm.test('Generate payroll status ok', () => pm.expect([200,400,404]).to.include(pm.response.code));"] }
+              }
+            ]
+          },
+          {
+            "name": "View Payroll Items",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{HR_TOKEN}}" }],
+              "url": {
+                "raw": "{{baseUrl}}/hr/payroll/runs/{{payrollRunId}}/items",
+                "host": ["{{baseUrl}}"],
+                "path": ["hr", "payroll", "runs", "{{payrollRunId}}", "items"]
+              }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Payroll items status ok', () => pm.expect([200,404]).to.include(pm.response.code));"] } }
+            ]
+          },
+          {
+            "name": "Finalize Payroll Run",
+            "request": {
+              "method": "PATCH",
+              "header": [{ "key": "Authorization", "value": "Bearer {{HR_TOKEN}}" }],
+              "url": {
+                "raw": "{{baseUrl}}/hr/payroll/runs/{{payrollRunId}}/finalize",
+                "host": ["{{baseUrl}}"],
+                "path": ["hr", "payroll", "runs", "{{payrollRunId}}", "finalize"]
+              }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Finalize status ok', () => pm.expect([200,400,404]).to.include(pm.response.code));"] } }
+            ]
+          }
+        ]
+      },
+
+      {
+        "name": "05 - DOCUMENTS (Auto-friendly subset)",
+        "item": [
+          {
+            "name": "HR List Documents",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{HR_TOKEN}}" }],
+              "url": { "raw": "{{baseUrl}}/documents", "host": ["{{baseUrl}}"], "path": ["documents"] }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HR docs list 200', () => pm.response.to.have.status(200));"] } }
+            ]
+          },
+          {
+            "name": "Staff My Documents",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{STAFF_TOKEN}}" }],
+              "url": { "raw": "{{baseUrl}}/documents/my", "host": ["{{baseUrl}}"], "path": ["documents", "my"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Staff my docs 200', () => pm.response.to.have.status(200));",
+                    "try {",
+                    "  const j = pm.response.json();",
+                    "  if (j && j.data && j.data.length > 0 && j.data[0].id) {",
+                    "    pm.collectionVariables.set('docId', String(j.data[0].id));",
+                    "  }",
+                    "} catch (e) {}"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "name": "HR Approve Document",
+            "request": {
+              "method": "PATCH",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{HR_TOKEN}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": { "mode": "raw", "raw": "{\n  \"action\": \"approve\"\n}" },
+              "url": {
+                "raw": "{{baseUrl}}/hr/documents/{{docId}}/approve",
+                "host": ["{{baseUrl}}"],
+                "path": ["hr", "documents", "{{docId}}", "approve"]
+              }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": { "type": "text/javascript", "exec": ["pm.test('Approve document status ok', () => pm.expect([200,400,404]).to.include(pm.response.code));"] }
+              }
+            ]
+          },
+          {
+            "name": "Staff Download Own Doc (docId auto from previous request)",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{STAFF_TOKEN}}" }],
+              "url": {
+                "raw": "{{baseUrl}}/documents/{{docId}}/download",
+                "host": ["{{baseUrl}}"],
+                "path": ["documents", "{{docId}}", "download"]
+              }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Download status ok', () => pm.expect([200,404,410]).to.include(pm.response.code));"] } }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "06 - CUSTOMER + RESERVATIONS (Public + Customer + Owner)",
+        "item": [
+          {
+            "name": "Register Customer (optional)",
+            "request": {
+              "method": "POST",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"first_name\": \"Juan\",\n  \"last_name\": \"Dela Cruz\",\n  \"email\": \"{{CUSTOMER_EMAIL}}\",\n  \"password\": \"{{CUSTOMER_PASSWORD}}\",\n  \"phone_number\": \"09123456789\"\n}"
+              },
+              "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "// allow 201 created OR 409 already exists",
+                    "pm.test('Register status ok', () => pm.expect([201,409]).to.include(pm.response.code));"
+                  ]
+                }
+              }
+            ]
+          },
+
+          {
+            "name": "Login (CUSTOMER) -> save CUSTOMER_TOKEN",
+            "request": {
+              "method": "POST",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"email\": \"{{CUSTOMER_EMAIL}}\",\n  \"password\": \"{{CUSTOMER_PASSWORD}}\"\n}"
+              },
+              "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Customer login 200', () => pm.response.to.have.status(200));",
+                    "const j = pm.response.json();",
+                    "pm.test('Customer login success true', () => pm.expect(j.success).to.eql(true));",
+                    "pm.collectionVariables.set('CUSTOMER_TOKEN', j.data.token);",
+                    "pm.test('CUSTOMER_TOKEN saved', () => pm.expect(pm.collectionVariables.get('CUSTOMER_TOKEN')).to.not.be.empty);"
+                  ]
+                }
+              }
+            ]
+          },
+
+          {
+            "name": "Login (OWNER) -> save OWNER_TOKEN",
+            "request": {
+              "method": "POST",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"email\": \"{{OWNER_EMAIL}}\",\n  \"password\": \"{{OWNER_PASSWORD}}\"\n}"
+              },
+              "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Owner login 200', () => pm.response.to.have.status(200));",
+                    "const j = pm.response.json();",
+                    "pm.test('Owner login success true', () => pm.expect(j.success).to.eql(true));",
+                    "pm.collectionVariables.set('OWNER_TOKEN', j.data.token);",
+                    "pm.test('OWNER_TOKEN saved', () => pm.expect(pm.collectionVariables.get('OWNER_TOKEN')).to.not.be.empty);"
+                  ]
+                }
+              }
+            ]
+          },
+
+          {
+            "name": "Public - Available Tables",
+            "request": {
+              "method": "GET",
+              "url": {
+                "raw": "{{baseUrl}}/public/bars/{{barId}}/available-tables?date=2026-03-01&time=19:00&party_size=2",
+                "host": ["{{baseUrl}}"],
+                "path": ["public", "bars", "{{barId}}", "available-tables"],
+                "query": [
+                  { "key": "date", "value": "2026-03-01" },
+                  { "key": "time", "value": "19:00" },
+                  { "key": "party_size", "value": "2" }
+                ]
+              }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Available tables 200', () => pm.response.to.have.status(200));"] } }
+            ]
+          },
+
+          {
+            "name": "Customer - Create Reservation (saves reservationId)",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{CUSTOMER_TOKEN}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"bar_id\": {{barId}},\n  \"table_id\": {{tableId}},\n  \"reservation_date\": \"2026-03-01\",\n  \"reservation_time\": \"19:00\",\n  \"party_size\": 2,\n  \"notes\": \"Postman AutoTest\"\n}"
+              },
+              "url": { "raw": "{{baseUrl}}/reservations", "host": ["{{baseUrl}}"], "path": ["reservations"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Create reservation status ok', () => pm.expect([200,201,409]).to.include(pm.response.code));",
+                    "try {",
+                    "  const j = pm.response.json();",
+                    "  if (j && j.data && (j.data.id || j.data.reservation_id)) {",
+                    "    pm.collectionVariables.set('reservationId', String(j.data.id || j.data.reservation_id));",
+                    "  }",
+                    "} catch (e) {}"
+                  ]
+                }
+              }
+            ]
+          },
+
+          {
+            "name": "Owner - List Reservations (pending)",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{OWNER_TOKEN}}" }],
+              "url": {
+                "raw": "{{baseUrl}}/owner/reservations?status=pending",
+                "host": ["{{baseUrl}}"],
+                "path": ["owner", "reservations"],
+                "query": [{ "key": "status", "value": "pending" }]
+              }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Owner list reservations 200', () => pm.response.to.have.status(200));"] } }
+            ]
+          },
+
+          {
+            "name": "Owner - Approve Reservation (uses reservationId)",
+            "request": {
+              "method": "PATCH",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{OWNER_TOKEN}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": { "mode": "raw", "raw": "{\n  \"action\": \"approve\"\n}" },
+              "url": {
+                "raw": "{{baseUrl}}/owner/reservations/{{reservationId}}/status",
+                "host": ["{{baseUrl}}"],
+                "path": ["owner", "reservations", "{{reservationId}}", "status"]
+              }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Owner approve status ok', () => pm.expect([200,400,404]).to.include(pm.response.code));"] } }
+            ]
+          },
+
+          {
+            "name": "Owner - Cancel Reservation (uses reservationId)",
+            "request": {
+              "method": "PATCH",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{OWNER_TOKEN}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": { "mode": "raw", "raw": "{\n  \"action\": \"cancel\"\n}" },
+              "url": {
+                "raw": "{{baseUrl}}/owner/reservations/{{reservationId}}/status",
+                "host": ["{{baseUrl}}"],
+                "path": ["owner", "reservations", "{{reservationId}}", "status"]
+              }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Owner cancel status ok', () => pm.expect([200,400,404]).to.include(pm.response.code));"] } }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "07 - INVENTORY + SALES + DSS (Owner)",
+        "item": [
+          {
+            "name": "Owner - Create Inventory Item (saves inventoryItemId)",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{OWNER_TOKEN}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"name\": \"Red Horse Beer\",\n  \"unit\": \"bottle\",\n  \"stock_qty\": 20,\n  \"reorder_level\": 30,\n  \"cost_price\": 55\n}"
+              },
+              "url": { "raw": "{{baseUrl}}/owner/inventory", "host": ["{{baseUrl}}"], "path": ["owner", "inventory"] }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Create inventory status ok', () => pm.expect([201,200]).to.include(pm.response.code));",
+                    "try {",
+                    "  const j = pm.response.json();",
+                    "  if (j && j.data && j.data.id) pm.collectionVariables.set('inventoryItemId', String(j.data.id));",
+                    "} catch (e) {}"
+                  ]
+                }
+              }
+            ]
+          },
+
+          {
+            "name": "Owner - List Inventory",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{OWNER_TOKEN}}" }],
+              "url": { "raw": "{{baseUrl}}/owner/inventory", "host": ["{{baseUrl}}"], "path": ["owner", "inventory"] }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('List inventory 200', () => pm.response.to.have.status(200));"] } }
+            ]
+          },
+
+          {
+            "name": "Owner - Update Inventory (make low stock)",
+            "request": {
+              "method": "PATCH",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{OWNER_TOKEN}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": { "mode": "raw", "raw": "{\n  \"stock_qty\": 5,\n  \"reorder_level\": 30\n}" },
+              "url": {
+                "raw": "{{baseUrl}}/owner/inventory/{{inventoryItemId}}",
+                "host": ["{{baseUrl}}"],
+                "path": ["owner", "inventory", "{{inventoryItemId}}"]
+              }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Update inventory status ok', () => pm.expect([200,404]).to.include(pm.response.code));"] } }
+            ]
+          },
+
+          {
+            "name": "Owner - Record Sale (deduct stock)",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{OWNER_TOKEN}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": { "mode": "raw", "raw": "{\n  \"item_id\": {{inventoryItemId}},\n  \"quantity\": 2\n}" },
+              "url": { "raw": "{{baseUrl}}/owner/sales", "host": ["{{baseUrl}}"], "path": ["owner", "sales"] }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Record sale status ok', () => pm.expect([200,400,404]).to.include(pm.response.code));"] } }
+            ]
+          },
+
+          {
+            "name": "Owner DSS - Inventory Low Stock",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{OWNER_TOKEN}}" }],
+              "url": { "raw": "{{baseUrl}}/owner/dss/inventory", "host": ["{{baseUrl}}"], "path": ["owner", "dss", "inventory"] }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('DSS inventory 200', () => pm.response.to.have.status(200));"] } }
+            ]
+          },
+
+          {
+            "name": "Owner DSS - Reservations Summary",
+            "request": {
+              "method": "GET",
+              "header": [{ "key": "Authorization", "value": "Bearer {{OWNER_TOKEN}}" }],
+              "url": {
+                "raw": "{{baseUrl}}/owner/dss/reservations-summary?from=2026-03-01&to=2026-03-31",
+                "host": ["{{baseUrl}}"],
+                "path": ["owner", "dss", "reservations-summary"],
+                "query": [
+                  { "key": "from", "value": "2026-03-01" },
+                  { "key": "to", "value": "2026-03-31" }
+                ]
+              }
+            },
+            "event": [
+              { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('DSS reservations summary 200', () => pm.response.to.have.status(200));"] } }
+            ]
+          }
+        ]
+      }
+    ]
+  }

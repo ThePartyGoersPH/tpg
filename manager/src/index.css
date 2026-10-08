@@ -1,0 +1,277 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans antialiased;
+    background-color: #0A0A0A;
+    color: #ffffff;
+  }
+}
+
+@layer components {
+  /* ── Buttons ── */
+  .btn-primary {
+    @apply px-4 py-2 rounded-lg font-medium text-white transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed;
+    background: #CC0000;
+    box-shadow: 0 0 16px rgba(204,0,0,0.25);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: #991500;
+    box-shadow: 0 0 24px rgba(204,0,0,0.4);
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #cccccc;
+  }
+  .btn-secondary:hover {
+    background: rgba(255,255,255,0.09);
+    color: #ffffff;
+  }
+
+  .btn-danger {
+    @apply px-4 py-2 rounded-lg font-medium text-white transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed;
+    background: #991500;
+    border: 1px solid rgba(204,0,0,0.4);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: #CC0000;
+  }
+
+  /* ── Card ── */
+  .card {
+    @apply rounded-xl p-6;
+    background: #111111;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  /* ── Inputs ── */
+  .input-field {
+    @apply w-full px-3 py-2 rounded-lg text-sm text-white transition-all duration-200 focus:outline-none;
+    background: #161616;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #ffffff;
+  }
+  .input-field::placeholder { color: #555555; }
+  .input-field:focus {
+    border-color: rgba(204,0,0,0.5);
+    box-shadow: 0 0 0 3px rgba(204,0,0,0.08);
+  }
+  .input-field:disabled {
+    background: #0a0a0a;
+    color: #666666;
+    border-color: rgba(255,255,255,0.04);
+    cursor: not-allowed;
+  }
+
+  /* ── Native select dropdowns ──
+     Options inherit white text from the styled <select>, but browsers render the
+     open dropdown list on a light/system background, making the text invisible.
+     Force a dark color-scheme and give options explicit colors. */
+  select {
+    color-scheme: dark;
+  }
+  select option {
+    color: #ffffff;
+    background-color: #161616;
+  }
+  select option:disabled {
+    color: #555555;
+  }
+
+  /* Dark map tiles filter — inverts OSM light tiles to dark theme */
+  .leaflet-container {
+    background: #1a1a1a;
+  }
+  .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(1.3) contrast(1.1);
+  }
+  /* Counteract filter on marker so it displays normally */
+  .leaflet-marker-pane,
+  .leaflet-overlay-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(1) contrast(1);
+  }
+
+  /* ── Label ── */
+  .label {
+    @apply block text-xs font-semibold uppercase tracking-wider mb-1.5;
+    color: #666666;
+  }
+
+  /* ── Badges ── */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+  .badge-success {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(34,197,94,0.12);
+    color: #4ade80;
+    border: 1px solid rgba(34,197,94,0.2);
+  }
+  .badge-warning {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(245,158,11,0.12);
+    color: #fbbf24;
+    border: 1px solid rgba(245,158,11,0.2);
+  }
+  .badge-danger {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(204,0,0,0.12);
+    color: #ff6666;
+    border: 1px solid rgba(204,0,0,0.25);
+  }
+  .badge-info {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(59,130,246,0.12);
+    color: #60a5fa;
+    border: 1px solid rgba(59,130,246,0.2);
+  }
+  .badge-gray {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(255,255,255,0.07);
+    color: #888888;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .badge-purple {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(168,85,247,0.12);
+    color: #c084fc;
+    border: 1px solid rgba(168,85,247,0.2);
+  }
+
+  /* ── Table ── */
+  .table-header {
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider;
+    background: #161616;
+    color: #666666;
+  }
+  .table-cell {
+    @apply px-4 py-3 text-sm;
+    color: #cccccc;
+  }
+  .table-row-hover:hover {
+    background: rgba(204,0,0,0.04);
+  }
+
+  /* ── Absence Balances table — roomier rows so badges / icons breathe ── */
+  .leave-table .table-cell {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    vertical-align: middle;
+  }
+  .leave-table .table-header {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    vertical-align: middle;
+  }
+  /* tighter gutters so the View / Actions columns never get clipped */
+  .leave-table .table-cell,
+  .leave-table .table-header {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .leave-table .badge-info,
+  .leave-table .badge-warning,
+  .leave-table .badge-success,
+  .leave-table .badge-danger,
+  .leave-table .badge-gray {
+    justify-content: center;
+  }
+}
+
+@layer utilities {
+  @keyframes slideDown {
+    from { opacity: 0; max-height: 0; transform: translateY(-10px); }
+    to   { opacity: 1; max-height: 500px; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .animate-slideDown { animation: slideDown 0.2s ease-out forwards; }
+  .animate-fadeIn    { animation: fadeIn 0.15s ease-out forwards; }
+}
+
+/* ─── Landing Page Animations ─── */
+
+/* Scroll reveal */
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.65s cubic-bezier(0.22,1,0.36,1), transform 0.65s cubic-bezier(0.22,1,0.36,1);
+}
+.lp-reveal.lp-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Hero stagger fade-in */
+@keyframes heroFadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hero-fade-in {
+  opacity: 0;
+  animation: heroFadeUp 0.7s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+
+/* Red pulsing glow on CTA button */
+@keyframes redGlowPulse {
+  0%, 100% { box-shadow: 0 0 30px rgba(204,0,0,0.45), 0 0 60px rgba(204,0,0,0.15); }
+  50%       { box-shadow: 0 0 50px rgba(204,0,0,0.65), 0 0 100px rgba(204,0,0,0.3); }
+}
+.glow-btn-red {
+  animation: redGlowPulse 2.5s ease-in-out infinite;
+}
+.glow-pulse-red {
+  animation: redGlowPulse 2.5s ease-in-out infinite;
+}
+
+/* Floating mockup */
+@keyframes floatCard {
+  0%, 100% { transform: translateY(-50%) translateY(0px); }
+  50%       { transform: translateY(-50%) translateY(-14px); }
+}
+.floating-card {
+  animation: floatCard 5s ease-in-out infinite;
+}
+
+/* Marquee scroll */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-track {
+  animation: marquee 28s linear infinite;
+  white-space: nowrap;
+}
+.marquee-track:hover { animation-play-state: paused; }
+
+/* Role tab card entrance */
+@keyframes roleCardEnter {
+  from { opacity: 0; transform: scale(0.97) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.role-card-enter {
+  animation: roleCardEnter 0.35s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.22);
+}
