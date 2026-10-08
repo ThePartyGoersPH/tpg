@@ -1127,6 +1127,15 @@ function getGoogleAudiences() {
   return [...new Set([primary, ...extras].filter(Boolean))];
 }
 
+// Fail-soft but loud: without an audience the /auth/google routes can only
+// answer 500. Surface it once at boot so it shows in pm2 logs.
+if (!getGoogleAudiences().length) {
+  console.warn(
+    "[auth] WARNING: GOOGLE_CLIENT_ID / GOOGLE_CLIENT_IDS is not set — " +
+    "Google sign-in will return 'Google OAuth not configured on server' until it is."
+  );
+}
+
 function calculateAgeFromDob(dob) {
   if (!dob) return null;
   const today = new Date();

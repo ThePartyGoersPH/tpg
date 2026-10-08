@@ -5,6 +5,7 @@ import { useView } from '../hooks/useView';
 import { VIEWS } from '../contexts/ViewContext';
 import { Mail, ArrowLeft, KeyRound, Calendar, ShieldCheck, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import apiClient from '../api/client';
+import { isGoogleConfigured, googleSignInErrorText } from '../utils/googleAuth';
 
 function GoogleIcon() {
   return (
@@ -154,7 +155,7 @@ function LoginView() {
   };
 
   const onGoogleSuccess = (credentialResponse) => handleGoogleSuccess(credentialResponse.credential);
-  const onGoogleError = () => setGoogleError('Google sign-in was cancelled or failed. Please try again.');
+  const onGoogleError = () => setGoogleError(googleSignInErrorText());
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -495,17 +496,23 @@ function LoginView() {
             {googleError && !authError && <p className="error-text" style={{ marginTop: '-0.25rem' }}>{googleError}</p>}
 
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <GoogleLogin
-                onSuccess={onGoogleSuccess}
-                onError={onGoogleError}
-                theme="filled_black"
-                shape="pill"
-                size="large"
-                text="signin_with"
-                width="320"
-                useOneTap={false}
-                disabled={googleSubmitting}
-              />
+              {isGoogleConfigured() ? (
+                <GoogleLogin
+                  onSuccess={onGoogleSuccess}
+                  onError={onGoogleError}
+                  theme="filled_black"
+                  shape="pill"
+                  size="large"
+                  text="signin_with"
+                  width="320"
+                  useOneTap={false}
+                  disabled={googleSubmitting}
+                />
+              ) : (
+                <p className="text-muted text-center" style={{ fontSize: '0.85rem' }}>
+                  Google sign-in is not configured for this site yet. Please use email sign-in.
+                </p>
+              )}
             </div>
 
             <p className="text-muted text-center" style={{ fontSize: '0.85rem' }}>

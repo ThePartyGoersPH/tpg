@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useView } from '../hooks/useView';
 import { VIEWS } from '../contexts/ViewContext';
 import apiClient from '../api/client';
+import { isGoogleConfigured, googleSignInErrorText } from '../utils/googleAuth';
 import { Mail, CheckCircle, Calendar, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
 function useCountdown(initial = 0) {
@@ -418,17 +419,23 @@ function RegisterView() {
 
           {googleError && <p className="error-text">{googleError}</p>}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => setGoogleError('Google sign-in was cancelled or failed.')}
-              theme="filled_black"
-              shape="pill"
-              size="large"
-              text="signup_with"
-              width="320"
-              useOneTap={false}
-              disabled={googleSubmitting}
-            />
+            {isGoogleConfigured() ? (
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setGoogleError(googleSignInErrorText())}
+                theme="filled_black"
+                shape="pill"
+                size="large"
+                text="signup_with"
+                width="320"
+                useOneTap={false}
+                disabled={googleSubmitting}
+              />
+            ) : (
+              <p className="text-muted text-center" style={{ fontSize: '0.85rem' }}>
+                Google sign-up is not configured for this site yet. Please register with email.
+              </p>
+            )}
           </div>
 
           <p className="text-muted text-center" style={{ fontSize: '0.85rem' }}>

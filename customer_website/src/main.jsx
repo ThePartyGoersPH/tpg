@@ -44,7 +44,7 @@ import './styles/enhancements.css';
 import './styles/feedSidebar.css';
 import './styles/mobile.css';
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+import { GOOGLE_CLIENT_ID } from './utils/googleAuth';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <ErrorBoundary>
