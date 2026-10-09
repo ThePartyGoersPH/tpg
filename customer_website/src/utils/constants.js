@@ -11,6 +11,22 @@ export function isCustomerPortalUser(user) {
   return CUSTOMER_PORTAL_ROLES.includes(raw);
 }
 
+/**
+ * True when a signed-in user object explicitly reports an unverified email:
+ * `isVerified === false`, `is_verified` falsy, or `verified === 'UNVERIFIED'`.
+ * Missing flags mean "unknown", not "unverified", so this never nags by
+ * default — callers render the reminder only on an explicit negative signal.
+ */
+export function isEmailUnverified(user) {
+  if (!user || typeof user !== 'object') return false;
+
+  if (user.isVerified === false) return true;
+  if (user.is_verified === false || user.is_verified === 0) return true;
+  if (String(user.verified || '').trim().toUpperCase() === 'UNVERIFIED') return true;
+
+  return false;
+}
+
 // Roles that may see the owner/manager management view on a bar profile.
 export const BAR_OWNER_PREVIEW_ROLES = ['bar_owner', 'manager'];
 

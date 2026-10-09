@@ -112,24 +112,11 @@ async function requireAuth(req, res, next) {
       });
     }
 
-    // SECURITY: Block stale tokens for customers whose email was never
-    // confirmed. Login already refuses unverified accounts, but a token can
-    // outlive the flag (e.g. a session minted before the guard existed), so
-    // the same rule is enforced on every request. Customer-only effect —
-    // staff/owners/admins are untouched, and their verification state is
-    // governed by onboarding instead.
-    if (String(rows[0].role || "").trim().toLowerCase() === "customer" && !Number(rows[0].is_verified || 0)) {
-      return res.status(403).json({
-        success: false,
-        code: "EMAIL_NOT_VERIFIED",
-        email: rows[0].email,
-        message: "Please verify your email before using the platform. Request a new verification code below to continue."
-      });
-    }
-
     // SECURITY: Block pending/rejected customers holding stale tokens.
     // Customer-only effect (staff/owners/admins pass through untouched),
-    // and intentionally audit-free to avoid log spam.
+    // and intentionally audit-free to avoid log spam. Runs before the
+    // verification split so a pending account is refused on every method,
+    // reads included — approval is a harder gate than verification.
     try {
       const { checkCustomerApproval } = require("../utils/customerApproval");
       const approvalBlock = checkCustomerApproval(rows[0]);
@@ -139,6 +126,24 @@ async function requireAuth(req, res, next) {
     } catch (_) {
       // Approval columns predate older schemas — fail open here so legacy
       // databases keep working; login-time gates still enforce approval.
+    }
+
+    // LIMITED SESSION for customers whose email was never confirmed: safe
+    // reads (GET/HEAD/OPTIONS) pass through so they can browse with the banner
+    // reminder, but every state-changing request is refused until they verify.
+    // Customer-only effect — staff/owners/admins are untouched. The flag is
+    // attached for downstream handlers that want to tailor responses.
+    if (String(rows[0].role || "").trim().toLowerCase() === "customer" && !Number(rows[0].is_verified || 0)) {
+      const method = String(req.method || "GET").trim().toUpperCase();
+      if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+        return res.status(403).json({
+          success: false,
+          code: "EMAIL_NOT_VERIFIED",
+          email: rows[0].email,
+          message: "Please verify your email to unlock this action. Check your inbox for the verification link and code."
+        });
+      }
+      rows[0].email_unverified = true;
     }
 
     const roleName = String(rows[0].role_name || rows[0].role || "").toUpperCase();

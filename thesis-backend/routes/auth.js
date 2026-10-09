@@ -625,24 +625,12 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // Block unverified customer accounts.
-    // Approval is a separate gate, so an admin may still approve an unverified
-    // sign-up — but nobody reaches the platform until the email is confirmed.
-    // A verification email (link + 6-digit OTP) is issued automatically when the
-    // old one expired or was never sent, so the customer always has a way forward.
-    if (String(user.role || '').trim().toLowerCase() === 'customer' && !user.is_verified) {
-      const issued = await issueEmailVerification(user.email);
-      return res.status(403).json({
-        success: false,
-        code: "EMAIL_NOT_VERIFIED",
-        message: issued.sent
-          ? "Please verify your email. We just sent you a verification link and a 6-digit code."
-          : "Please verify your email before logging in. Check your inbox for the confirmation link.",
-        email: user.email,
-        verification_sent: issued.sent,
-        verification_method: "link+otp"
-      });
-    }
+    // Email verification does NOT block login. An unverified customer receives a
+    // limited session instead: safe reads are allowed so they can browse with
+    // the banner reminder, while requireAuth refuses every state-changing
+    // request until the email is confirmed. Approval, bans and deactivation
+    // above still block outright. The per-login re-issue happens below, after
+    // the password is proven, so a wrong password never mints or mails a code.
 
     // Detect Google-only accounts (password stored as empty string)
     if (!user.password) {
@@ -799,6 +787,21 @@ router.post("/login", async (req, res) => {
       return res.status(403).json({ success: false, ...approvalBlock });
     }
 
+    // Limited session for unverified customers: the password above is already
+    // proven, so mint-or-reuse a link + OTP and mail it only when the previous
+    // one expired or was never sent. The session flags below drive the banner;
+    // requireAuth enforces the read-only part of the bargain.
+    const emailUnverified =
+      String(user.role || "").trim().toLowerCase() === "customer" && !Number(user.is_verified || 0);
+    let verificationSent = false;
+    if (emailUnverified) {
+      try {
+        verificationSent = (await issueEmailVerification(user.email)).sent === true;
+      } catch (_) {
+        verificationSent = false;
+      }
+    }
+
     // Generate token
     const token = signToken(user);
 
@@ -843,6 +846,7 @@ router.post("/login", async (req, res) => {
           isVerified: Number(user.is_verified || 0) === 1,
           verified: Number(user.is_verified || 0) === 1 ? "VERIFIED" : "UNVERIFIED"
         },
+        ...(emailUnverified ? { verification_sent: verificationSent, verification_method: "link+otp" } : {}),
         permissions: permissionCodes,
         bar_ban_notices: barBanNotices
       }

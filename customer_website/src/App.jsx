@@ -7,11 +7,13 @@ import { isOwnerPreview, isBarOwner, canOrderAtBar, filterNavItems, isCustomerOn
 import { managerPortalUrl } from './utils/managerLinks';
 import { socialService } from './services/socialService';
 import { authService } from './services/authService';
+import { setForbiddenUnverifiedHandler } from './api/client';
 import { formatDate } from './utils/dateHelpers';
 import { imageUrl } from './utils/imageUrl';
 import { sortNotifications } from './utils/notificationSort';
 import { Bell, Home, Wine, MapPin, CalendarDays, BookMarked, CreditCard, User, Menu, X, Star, Heart, PartyPopper, Megaphone, MessageCircle } from 'lucide-react';
 import ThemeToggle from './components/ui/ThemeToggle';
+import EmailVerificationBanner from './components/auth/EmailVerificationBanner';
 
 import LandingView from './views/LandingView';
 import LoginView from './views/LoginView';
@@ -747,6 +749,16 @@ function App() {
     }
   }, [isAuthenticated]);
 
+  // An unverified customer can browse (reads pass) but writes are refused
+  // with EMAIL_NOT_VERIFIED. Route that moment to the code entry screen with
+  // the address prefilled instead of leaving a bare error on screen.
+  useEffect(() => {
+    setForbiddenUnverifiedHandler((data) => {
+      if (currentView === VIEWS.VERIFY_EMAIL) return;
+      navigate(VIEWS.VERIFY_EMAIL, { email: data?.email || user?.email || '' });
+    });
+  }, [navigate, currentView, user?.email]);
+
   useEffect(() => {
     if (!liveNotification) return;
     const timeoutId = setTimeout(() => setLiveNotification(null), 6000);
@@ -783,6 +795,7 @@ function App() {
 
   return (
     <div className={`app-shell ${isAuthenticated ? 'with-sidebar' : ''} ${sidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
+      <EmailVerificationBanner />
       <OwnerPreviewBanner />
       <GlassNav 
         onOpenNotif={() => setNotifOpen(true)} 

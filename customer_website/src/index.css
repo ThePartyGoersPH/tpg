@@ -1475,6 +1475,106 @@ textarea {
   font-size: 1.1rem;
 }
 
+/* ═══════════════════════════════════════════════════ */
+/* EMAIL VERIFICATION BANNER (non-blocking reminder)   */
+/* ═══════════════════════════════════════════════════ */
+.email-verification-banner {
+  position: sticky;
+  top: 0;
+  z-index: 1200;
+  background: #fef3c7;
+  border-bottom: 2px solid #f59e0b;
+  color: #92400e;
+  padding: 0.55rem 0;
+  padding-top: calc(0.55rem + env(safe-area-inset-top, 0px));
+}
+
+.email-verification-banner__inner {
+  width: min(1200px, 100% - 2rem);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  text-align: center;
+}
+
+.email-verification-banner__icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.email-verification-banner__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.email-verification-banner__text {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.email-verification-banner__notice {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.email-verification-banner__notice.is-ok {
+  color: #166534;
+}
+
+.email-verification-banner__notice.is-err {
+  color: #991b1b;
+}
+
+.email-verification-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.evb-btn {
+  appearance: none;
+  border: 1px solid #92400e;
+  background: #92400e;
+  color: #fffbeb;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.evb-btn:hover:not(:disabled) {
+  background: #78350f;
+  border-color: #78350f;
+}
+
+.evb-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.evb-btn--ghost {
+  background: transparent;
+  color: #92400e;
+}
+
+.evb-btn--ghost:hover:not(:disabled) {
+  background: rgba(146, 64, 14, 0.12);
+  border-color: #92400e;
+}
+
 .maintenance-overlay {
   min-height: 50vh;
   display: flex;
