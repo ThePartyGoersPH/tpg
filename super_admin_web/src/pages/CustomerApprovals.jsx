@@ -48,6 +48,7 @@ export default function CustomerApprovals() {
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
   const [tab, setTab] = useState('pending');
+  const [verified, setVerified] = useState('all');
   const [search, setSearch] = useState('');
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, total_pages: 0 });
   const [selected, setSelected] = useState([]);
@@ -61,6 +62,7 @@ export default function CustomerApprovals() {
         page: overrides.page ?? 1,
         limit: 20,
         ...(overrides.search ? { search: overrides.search } : {}),
+        ...(overrides.verified && overrides.verified !== 'all' ? { verified: overrides.verified } : {}),
       };
       const res = await customerApprovalsAPI.list(params);
       if (res.data?.success) {
@@ -84,11 +86,11 @@ export default function CustomerApprovals() {
     }
   }, []);
 
-  const refresh = useCallback((t = tab, pg = 1, q = search) => {
-    fetchList({ tab: t, page: pg, search: q });
+  const refresh = useCallback((t = tab, pg = 1, q = search, v = verified) => {
+    fetchList({ tab: t, page: pg, search: q, verified: v });
     fetchStats();
     notifyChanged();
-  }, [tab, search, fetchList, fetchStats]);
+  }, [tab, search, verified, fetchList, fetchStats]);
 
   // Deep-link from notifications (?status=pending) applies once on mount.
   useEffect(() => {
@@ -96,7 +98,7 @@ export default function CustomerApprovals() {
     const t = ['pending', 'approved', 'rejected', 'all'].includes(initial) ? initial : 'pending';
     setTab(t);
     setPagination((p) => ({ ...p, page: 1 }));
-    fetchList({ tab: t, page: 1 });
+    fetchList({ tab: t, page: 1, verified });
     fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -104,18 +106,24 @@ export default function CustomerApprovals() {
   const switchTab = (t) => {
     setTab(t);
     setPagination((p) => ({ ...p, page: 1 }));
-    fetchList({ tab: t, page: 1, search });
+    fetchList({ tab: t, page: 1, search, verified });
+  };
+
+  const switchVerified = (v) => {
+    setVerified(v);
+    setPagination((p) => ({ ...p, page: 1 }));
+    fetchList({ tab, page: 1, search, verified: v });
   };
 
   const doSearch = () => {
     setPagination((p) => ({ ...p, page: 1 }));
-    fetchList({ tab, page: 1, search });
+    fetchList({ tab, page: 1, search, verified });
   };
 
   const changePage = (next) => {
     if (next < 1 || next > (pagination.total_pages || 1)) return;
     setPagination((p) => ({ ...p, page: next }));
-    fetchList({ tab, page: next, search });
+    fetchList({ tab, page: next, search, verified });
   };
 
   const handleApprove = async (c) => {
@@ -299,6 +307,16 @@ export default function CustomerApprovals() {
                 onKeyDown={(e) => e.key === 'Enter' && doSearch()}
               />
             </div>
+            <select
+              className="glass-input text-sm"
+              value={verified}
+              onChange={(e) => switchVerified(e.target.value)}
+              aria-label="Filter by email verification"
+            >
+              <option value="all">All verification</option>
+              <option value="verified">Verified only</option>
+              <option value="unverified">Unverified only{stats.unverified > 0 ? ` (${stats.unverified})` : ''}</option>
+            </select>
             <button onClick={doSearch} className="btn-red text-xs px-4">Search</button>
           </div>
           <div className="flex gap-2 tab-pills-scroll">

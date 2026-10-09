@@ -1525,6 +1525,7 @@ router.get("/customer-approvals", async (req, res) => {
   try {
     const status = String(req.query.status || "pending").trim().toLowerCase();
     const search = String(req.query.search || "").trim();
+    const verified = String(req.query.verified || "all").trim().toLowerCase();
     const page = Math.max(1, Number(req.query.page || 1));
     const limit = Math.min(Math.max(Number(req.query.limit || 10), 1), 100);
     const offset = (page - 1) * limit;
@@ -1534,6 +1535,11 @@ router.get("/customer-approvals", async (req, res) => {
     if (["pending", "approved", "rejected"].includes(status)) {
       where.push("u.approval_status = ?");
       params.push(status);
+    }
+    if (verified === "verified") {
+      where.push("u.is_verified = 1");
+    } else if (verified === "unverified") {
+      where.push("COALESCE(u.is_verified, 0) <> 1");
     }
     if (search) {
       where.push("(CONCAT(u.first_name, ' ', u.last_name) LIKE ? OR u.email LIKE ? OR u.phone_number LIKE ?)");
@@ -1583,6 +1589,12 @@ router.get("/customer-approvals/stats", async (req, res) => {
       const key = String(r.status || "").trim().toLowerCase();
       if (key in counts) counts[key] = Number(r.cnt || 0);
     }
+    const [[unvRow]] = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM users
+       WHERE LOWER(COALESCE(role, '')) = 'customer'
+         AND COALESCE(is_verified, 0) <> 1`
+    );
+    counts.unverified = Number(unvRow?.cnt || 0);
     return res.json({ success: true, data: counts });
   } catch (err) {
     console.error("SA CUSTOMER APPROVALS STATS ERROR:", err);
