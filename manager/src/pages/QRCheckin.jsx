@@ -318,7 +318,7 @@ export default function QRCheckin() {
       buttonsStyling: true,
       customClass: { popup: 'swal-dark-popup', confirmButton: 'swal-confirm-btn' },
     }).then((result) => {
-      if (resStatus === 'pending' && result.isConfirmed) window.location.href = '/manager/reservations';
+      if (resStatus === 'pending' && result.isConfirmed) window.location.href = ((import.meta.env.BASE_URL || '/') === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')) + '/reservations';
     });
 
     alertDialogOpen.current = false;

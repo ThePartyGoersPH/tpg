@@ -49,7 +49,7 @@ class ErrorBoundary extends React.Component {
                 Try Again
               </button>
               <button
-                onClick={() => { window.location.href = '/manager/dashboard'; }}
+                onClick={() => { window.location.href = ((import.meta.env.BASE_URL || '/') === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')) + '/dashboard'; }}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
                 style={{ background: 'rgba(255,255,255,0.06)', color: '#ccc', border: '1px solid rgba(255,255,255,0.08)' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}

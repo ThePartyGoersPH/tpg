@@ -22,7 +22,7 @@ function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return (
-    <Router basename="/admin">
+    <Router basename={import.meta.env.BASE_URL === '/' ? undefined : import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <Toaster position="top-right" />
       <Routes>
         <Route

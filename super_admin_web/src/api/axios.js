@@ -29,8 +29,14 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      // Basename-aware: never leave the portal root, and never redirect for
+      // auth-endpoint failures (a failed login must stay on the page).
+      const base = import.meta.env.BASE_URL || '/';
+      const appRoot = base === '/' ? '' : base.replace(/\/$/, '');
+      const onLoginPage = window.location.pathname.endsWith('/login');
+      const isAuthCall = String(error.config?.url || '').includes('/auth/');
+      if (!onLoginPage && !isAuthCall) {
+        window.location.href = `${appRoot}/login`;
       }
     }
     return Promise.reject(error);

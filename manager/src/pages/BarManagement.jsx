@@ -703,7 +703,7 @@ const BarManagement = () => {
             <RefreshCw className="w-4 h-4 mr-2" /> Refresh & Retry
           </button>
           <button
-            onClick={() => window.location.href = '/manager/bar-registration'}
+            onClick={() => window.location.href = ((import.meta.env.BASE_URL || '/') === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')) + '/bar-registration'}
             className="btn-secondary flex-1"
           >
             Register New Bar

@@ -21,7 +21,7 @@ export default function ProtectedRoute({ children }) {
           <button
             onClick={() => {
               useAuthStore.getState().logout();
-              window.location.href = '/admin/login';
+              window.location.href = `${(import.meta.env.BASE_URL || '/') === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')}/login`;
             }}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
           >
