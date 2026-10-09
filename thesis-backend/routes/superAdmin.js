@@ -1453,7 +1453,7 @@ async function applyCustomerDecision(conn, { customerId, action, reason, adminId
   }
 
   const [rows] = await conn.query(
-    `SELECT id, first_name, email, role, approval_status
+    `SELECT id, first_name, email, role, approval_status, is_verified
      FROM users WHERE id = ? LIMIT 1 FOR UPDATE`,
     [customerId]
   );
@@ -1465,8 +1465,12 @@ async function applyCustomerDecision(conn, { customerId, action, reason, adminId
   }
 
   const current = String(target.approval_status || "approved").trim().toLowerCase();
-  if (normalizedAction === "approve" && current === "approved") {
-    const err = new Error("This customer is already approved — no action needed. Reject first to revoke, then approve again if needed.");
+  const isVerified = Number(target.is_verified || 0) === 1;
+  // Approving also sets verification, so an already-approved account that is
+  // still unverified (pre-verification-flag backlog) stays actionable instead
+  // of being stuck: the admin can run Approve to fix the missing flag.
+  if (normalizedAction === "approve" && current === "approved" && isVerified) {
+    const err = new Error("This customer is already approved and verified — no action needed. Reject first to revoke, then approve again if needed.");
     err.statusCode = 400;
     throw err;
   }

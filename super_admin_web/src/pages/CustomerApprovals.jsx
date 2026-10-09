@@ -216,6 +216,13 @@ export default function CustomerApprovals() {
     );
   };
 
+  const canApprove = (c) => {
+    const s = String(c.approval_status || '').toLowerCase();
+    // Approved-but-unverified rows stay actionable so an admin can backfill
+    // the missing verification flag instead of only seeing "Revoke".
+    return s === 'pending' || s === 'rejected' || (s === 'approved' && !Number(c.is_verified));
+  };
+
   const rowActions = (c) => {
     const s = String(c.approval_status || '').toLowerCase();
     return (
@@ -226,13 +233,13 @@ export default function CustomerApprovals() {
         >
           <Eye className="h-3 w-3" />View
         </button>
-        {(s === 'pending' || s === 'rejected') && (
+        {canApprove(c) && (
           <button
             onClick={() => handleApprove(c)}
             disabled={acting}
             className="text-xs font-medium px-2 py-1 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 flex items-center gap-1 disabled:opacity-50"
           >
-            <UserCheck className="h-3 w-3" />Approve
+            <UserCheck className="h-3 w-3" />{s === 'approved' ? 'Verify' : 'Approve'}
           </button>
         )}
         {(s === 'pending' || s === 'approved') && (
@@ -483,14 +490,13 @@ export default function CustomerApprovals() {
               ))}
             </div>
             <div className="flex justify-end gap-2 mt-5">
-              {(String(detail.approval_status || '').toLowerCase() === 'pending' ||
-                String(detail.approval_status || '').toLowerCase() === 'rejected') && (
+              {canApprove(detail) && (
                 <button
                   onClick={() => handleApprove(detail)}
                   disabled={acting}
                   className="text-xs font-medium px-3 py-2 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 disabled:opacity-50"
                 >
-                  Approve
+                  {String(detail.approval_status || '').toLowerCase() === 'approved' ? 'Mark verified' : 'Approve'}
                 </button>
               )}
               {(String(detail.approval_status || '').toLowerCase() === 'pending' ||
