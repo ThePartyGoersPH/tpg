@@ -9,7 +9,6 @@ import Payouts from './pages/Payouts';
 import Bars from './pages/Bars';
 import Subscriptions from './pages/Subscriptions';
 import Users from './pages/Users';
-import CustomerApprovals from './pages/CustomerApprovals';
 import Banning from './pages/Banning';
 import AuditLogs from './pages/AuditLogs';
 import Registrations from './pages/Registrations';
@@ -54,7 +53,6 @@ function App() {
           <Route path="payouts" element={<Payouts />} />
           <Route path="subscriptions" element={<Subscriptions />} />
           <Route path="users" element={<Users />} />
-          <Route path="customer-approvals" element={<CustomerApprovals />} />
           <Route path="banning" element={<Banning />} />
           <Route path="feedback" element={<PlatformFeedback />} />
           <Route path="social" element={<SocialModeration />} />
