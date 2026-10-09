@@ -55,7 +55,7 @@ const Navbar = () => (
       <div className="customer-redirect-nav hidden md:flex items-center gap-2 mr-4">
         <span className="text-gray-500 text-xs">Are you a customer?</span>
         <a
-          href="https://thepartygoers.fun"
+          href="/"
           target="_blank"
           rel="noopener noreferrer"
           className="text-red-500 text-xs font-semibold text-decoration-none border border-red-500/40 px-3 py-1 rounded-full transition-all duration-150 hover:bg-red-500/10 hover:border-red-500"

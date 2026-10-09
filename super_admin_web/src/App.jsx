@@ -22,7 +22,7 @@ function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return (
-    <Router>
+    <Router basename="/admin">
       <Toaster position="top-right" />
       <Routes>
         <Route

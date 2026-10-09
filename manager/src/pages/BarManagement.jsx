@@ -703,7 +703,7 @@ const BarManagement = () => {
             <RefreshCw className="w-4 h-4 mr-2" /> Refresh & Retry
           </button>
           <button
-            onClick={() => window.location.href = '/bar-registration'}
+            onClick={() => window.location.href = '/manager/bar-registration'}
             className="btn-secondary flex-1"
           >
             Register New Bar
