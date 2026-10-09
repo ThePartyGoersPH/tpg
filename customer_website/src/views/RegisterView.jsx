@@ -214,7 +214,8 @@ function RegisterView() {
             </div>
             <p className="text-muted" style={{ fontSize: '0.9rem', maxWidth: 320 }}>
               We sent a confirmation to <strong style={{ color: '#fff' }}>{form.email}</strong>.
-              Please verify your email to activate your account.
+              Please verify your email — then an admin will review your
+              account before you can log in.
             </p>
             <div className="glass-card" style={{ width: '100%', padding: '1rem 1.25rem', background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', textAlign: 'left' }}>

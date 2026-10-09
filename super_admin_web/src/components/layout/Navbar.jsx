@@ -10,10 +10,11 @@ const notifIcon = (type) => {
   if (type === 'pending_payouts') return <DollarSign className="h-3.5 w-3.5 text-amber-400" />;
   if (type === 'flagged_content') return <Flag className="h-3.5 w-3.5 text-red-400" />;
   if (type === 'platform_feedback') return <Bell className="h-3.5 w-3.5 text-blue-400" />;
+  if (type === 'customer_approval') return <Bell className="h-3.5 w-3.5 text-emerald-400" />;
   return <AlertCircle className="h-3.5 w-3.5 text-white/40" />;
 };
 
-const actionableTypes = new Set(['business_registration', 'pending_payouts', 'flagged_content']);
+const actionableTypes = new Set(['business_registration', 'pending_payouts', 'flagged_content', 'customer_approval']);
 
 // Deep-link each notification type to its management page, carrying the
 // specific item id so the target page can open/filter/highlight it.
@@ -21,6 +22,7 @@ const destinationFor = (n) => {
   if (n?.type === 'business_registration' && n?.item_id) return `/registrations?open=${n.item_id}`;
   if (n?.type === 'platform_feedback' && n?.item_id) return `/feedback?review=${n.item_id}`;
   if (n?.type === 'pending_payouts') return '/payouts';
+  if (n?.type === 'customer_approval') return '/customer-approvals?status=pending';
   if (n?.type === 'flagged_content') {
     return n?.id === 'flagged-comments' ? '/social?tab=reported-comments' : '/social?tab=posts';
   }

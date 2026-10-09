@@ -69,6 +69,15 @@ export const usersAPI = {
   updatePermissions: (id, data) => api.patch(`/super-admin/users/${id}/permissions`, data),
 };
 
+// ─── CUSTOMER APPROVALS ──────────────────────────────────────────────
+export const customerApprovalsAPI = {
+  list: (params) => api.get('/super-admin/customer-approvals', { params }),
+  stats: () => api.get('/super-admin/customer-approvals/stats'),
+  approve: (id) => api.post(`/super-admin/customer-approvals/${id}/approve`),
+  reject: (id, data) => api.post(`/super-admin/customer-approvals/${id}/reject`, data),
+  bulk: (data) => api.post('/super-admin/customer-approvals/bulk', data),
+};
+
 // ─── CUSTOMER BANNING ────────────────────────────────────────────────
 export const banningAPI = {
   getGlobalBans: (params) => api.get('/super-admin/customer-bans/global', { params }),
