@@ -97,8 +97,11 @@ function detectInitialView() {
   if (path.startsWith('/register')) return { view: VIEWS.REGISTER, params: {} };
   if (path.startsWith('/map')) return { view: VIEWS.MAP, params: {} };
   if (path.startsWith('/verify-email')) {
+    // Two ways in: the emailed ?token= link, or a redirect from a blocked
+    // login that carries ?email= so the OTP form can be prefilled.
     const token = params.get('token');
-    return { view: VIEWS.VERIFY_EMAIL, params: { token } };
+    const email = params.get('email');
+    return { view: VIEWS.VERIFY_EMAIL, params: { token, email } };
   }
   if (path.startsWith('/reset-password')) {
     const token = params.get('token');

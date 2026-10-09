@@ -87,7 +87,7 @@ async function requireAuth(req, res, next) {
     // Fetch user with role info from database
     const pool = require("../config/database");
     const [rows] = await pool.query(
-      `SELECT u.id, u.email, u.role, u.role_id, u.bar_id, u.is_active,
+      `SELECT u.id, u.email, u.role, u.role_id, u.bar_id, u.is_active, u.is_verified,
               u.approval_status, u.approval_rejection_reason,
               r.name AS role_name
        FROM users u
@@ -109,6 +109,21 @@ async function requireAuth(req, res, next) {
       return res.status(403).json({
         success: false,
         message: "Account is deactivated. Contact your administrator.",
+      });
+    }
+
+    // SECURITY: Block stale tokens for customers whose email was never
+    // confirmed. Login already refuses unverified accounts, but a token can
+    // outlive the flag (e.g. a session minted before the guard existed), so
+    // the same rule is enforced on every request. Customer-only effect —
+    // staff/owners/admins are untouched, and their verification state is
+    // governed by onboarding instead.
+    if (String(rows[0].role || "").trim().toLowerCase() === "customer" && !Number(rows[0].is_verified || 0)) {
+      return res.status(403).json({
+        success: false,
+        code: "EMAIL_NOT_VERIFIED",
+        email: rows[0].email,
+        message: "Please verify your email before using the platform. Request a new verification code below to continue."
       });
     }
 

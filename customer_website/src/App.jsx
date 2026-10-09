@@ -479,8 +479,16 @@ function PreviewBlockedNotice() {
 }
 
 function ViewRenderer() {
-  const { currentView, transitioning } = useView();
-  const { user, isAuthenticated, loading, maintenance } = useAuth();
+  const { currentView, transitioning, navigate } = useView();
+  const { user, isAuthenticated, loading, maintenance, needsVerificationEmail } = useAuth();
+
+  // A customer whose email was never confirmed is refused by every platform
+  // endpoint, so send them to the verify screen instead of the landing page.
+  useEffect(() => {
+    if (!needsVerificationEmail || currentView === VIEWS.VERIFY_EMAIL) return;
+    // No `sent` flag: the block came from a session check, which never mails.
+    navigate(VIEWS.VERIFY_EMAIL, { email: needsVerificationEmail });
+  }, [needsVerificationEmail, currentView, navigate]);
 
   if (loading) {
     return (

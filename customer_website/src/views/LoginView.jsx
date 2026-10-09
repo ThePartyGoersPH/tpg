@@ -39,12 +39,6 @@ function LoginView() {
   const [submitting, setSubmitting] = useState(false);
   const [emailReadonly, setEmailReadonly] = useState(true);
   const [passwordReadonly, setPasswordReadonly] = useState(true);
-  const [unverifiedEmail, setUnverifiedEmail] = useState('');
-  const [resending, setResending] = useState(false);
-  const [resendMsg, setResendMsg] = useState('');
-  const [resendOk, setResendOk] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
-  const cooldownRef = useRef(null);
 
   // Google OAuth state
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
@@ -66,17 +60,6 @@ function LoginView() {
   const [barBanPopupOpen, setBarBanPopupOpen] = useState(false);
   const [barBanNotices, setBarBanNotices] = useState([]);
 
-  const startCooldown = (s) => {
-    setCooldown(s);
-    clearInterval(cooldownRef.current);
-    cooldownRef.current = setInterval(() => {
-      setCooldown(prev => {
-        if (prev <= 1) { clearInterval(cooldownRef.current); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
   const startForgotCooldown = (s) => {
     setForgotCooldown(s);
     clearInterval(forgotCooldownRef.current);
@@ -89,7 +72,6 @@ function LoginView() {
   };
 
   useEffect(() => () => {
-    clearInterval(cooldownRef.current);
     clearInterval(forgotCooldownRef.current);
   }, []);
 
@@ -176,8 +158,6 @@ function LoginView() {
     e.preventDefault();
     setSubmitting(true);
     setAuthError('');
-    setUnverifiedEmail('');
-    setResendMsg('');
     setPendingNotice('');
     setRejectedNotice('');
     try {
@@ -193,8 +173,10 @@ function LoginView() {
       const code = err?.code;
       const status = err?.status;
       if (code === 'EMAIL_NOT_VERIFIED') {
-        setUnverifiedEmail(err?.email || email);
-        setAuthError(err.message);
+        // Access is blocked until the email is confirmed. The backend re-sends
+        // the link + OTP on demand, so only claim "email sent" when it did.
+        navigate(VIEWS.VERIFY_EMAIL, { email: err?.email || email, sent: err?.verificationSent === true });
+        return;
       } else if (code === 'GOOGLE_ACCOUNT') {
         setAuthError(err.message);
       } else if (status === 401) {
@@ -214,30 +196,6 @@ function LoginView() {
       }
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleResend = async () => {
-    if (cooldown > 0 || resending) return;
-    setResending(true);
-    setResendMsg('');
-    try {
-      const res = await apiClient.post('/auth/resend-verification', { email: unverifiedEmail });
-      setResendMsg(res.data?.message || 'Verification email sent! Check your inbox.');
-      setResendOk(true);
-      startCooldown(60);
-    } catch (err) {
-      const data = err?.response?.data;
-      if (data?.code === 'RESEND_COOLDOWN' && data?.wait_seconds) {
-        startCooldown(data.wait_seconds);
-        setResendMsg(`Please wait ${data.wait_seconds}s before resending.`);
-        setResendOk(false);
-      } else {
-        setResendMsg(data?.message || 'Failed to resend. Please try again.');
-        setResendOk(false);
-      }
-    } finally {
-      setResending(false);
     }
   };
 
@@ -494,31 +452,6 @@ function LoginView() {
             {authError && (
               <div>
                 <p className="error-text">{authError}</p>
-                {unverifiedEmail && (
-                  <div style={{ marginTop: '0.6rem', background: 'var(--color-bg-elevated)', border: '1px solid rgba(204,0,0,0.2)', borderRadius: 8, padding: '0.75rem 1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                      <Mail size={14} color="#CC0000" />
-                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#fff' }}>Email not verified</span>
-                    </div>
-                    {resendMsg && (
-                      <p style={{ fontSize: '0.75rem', color: resendOk ? '#22c55e' : '#f87171', margin: '0 0 0.35rem' }}>{resendMsg}</p>
-                    )}
-                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: 0 }}>
-                      Didn't get it?{' '}
-                      <a
-                        href="#"
-                        onClick={e => { e.preventDefault(); handleResend(); }}
-                        style={{
-                          color: (cooldown > 0 || resending) ? 'var(--color-text-muted)' : 'var(--color-red-primary)',
-                          fontWeight: 600,
-                          pointerEvents: (cooldown > 0 || resending) ? 'none' : 'auto'
-                        }}
-                      >
-                        {resending ? 'Sending…' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend verification email'}
-                      </a>
-                    </p>
-                  </div>
-                )}
               </div>
             )}
 

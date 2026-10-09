@@ -309,12 +309,123 @@ function normalizeDateOfBirth(value, { required = false, minimumAge = null } = {
   return { value: raw, age };
 }
 
+// ─── EMAIL VERIFICATION HELPERS ───
+const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+
+function generateEmailOtp() {
+  // crypto.randomInt, not Math.random — the code must not be predictable.
+  return String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+}
+
+function timingSafeStringEqual(a, b) {
+  const bufA = Buffer.from(String(a || ""));
+  const bufB = Buffer.from(String(b || ""));
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+/**
+ * Make sure an unverified customer has a live verification token AND a 6-digit
+ * OTP, then email both.
+ *
+ * Whatever is already in play is reused while it is still valid, so logging in
+ * (or clicking resend) repeatedly never spams the inbox — a new code is only
+ * minted when the previous one is missing or expired.
+ *
+ * Returns { token, otp, sent, reused, alreadyVerified }.
+ */
+async function issueEmailVerification(email, { force = false } = {}) {
+  const [rows] = await pool.query(
+    `SELECT id, email, first_name, is_verified, email_verification_token,
+            email_verification_expires, email_verification_otp, email_otp_expires
+     FROM users WHERE email = ? LIMIT 1`,
+    [String(email || "").trim().toLowerCase()]
+  );
+
+  const user = rows[0];
+  if (!user) {
+    return { token: null, otp: null, sent: false, reused: false, alreadyVerified: false };
+  }
+  if (Number(user.is_verified || 0) === 1) {
+    return { token: null, otp: null, sent: false, reused: false, alreadyVerified: true };
+  }
+
+  const now = Date.now();
+  const tokenAlive =
+    !force &&
+    Boolean(user.email_verification_token) &&
+    Boolean(user.email_verification_expires) &&
+    new Date(user.email_verification_expires).getTime() > now;
+  const otpAlive =
+    !force &&
+    Boolean(user.email_verification_otp) &&
+    Boolean(user.email_otp_expires) &&
+    new Date(user.email_otp_expires).getTime() > now;
+
+  // Still valid and not forced: leave the row alone and send nothing, so
+  // logging in repeatedly never floods the inbox. Only a missing or expired
+  // code triggers a new one.
+  if (tokenAlive && otpAlive) {
+    return {
+      token: user.email_verification_token,
+      otp: user.email_verification_otp,
+      sent: false,
+      reused: true,
+      alreadyVerified: false,
+    };
+  }
+
+  const token = tokenAlive ? user.email_verification_token : crypto.randomBytes(32).toString("hex");
+  const otp = otpAlive ? user.email_verification_otp : generateEmailOtp();
+  const expiresAt = new Date(now + VERIFICATION_TTL_MS);
+
+  await pool.query(
+    `UPDATE users
+        SET email_verification_token = ?,
+            email_verification_expires = ?,
+            email_verification_otp = ?,
+            email_otp_expires = ?
+      WHERE id = ?`,
+    [token, expiresAt, otp, expiresAt, user.id]
+  );
+
+  let sent = false;
+  try {
+    await sendVerificationEmail(user.email, user.first_name || "there", token, otp);
+    sent = true;
+  } catch (err) {
+    console.error("EMAIL VERIFICATION SEND ERROR:", err?.message || err);
+  }
+
+  return { token, otp, sent, reused: tokenAlive && otpAlive, alreadyVerified: false };
+}
+
+/**
+ * Flip a customer account to verified. Shared by the link and OTP flows.
+ * The timestamp is passed in from Node because this pool runs in UTC
+ * (`timezone: 'Z'`) while MySQL's NOW() is server-local — mixing the two
+ * would stamp verification 8 hours off.
+ */
+async function markCustomerVerified(userId) {
+  await pool.query(
+    `UPDATE users
+        SET is_verified = 1,
+            email_verified_at = COALESCE(email_verified_at, ?),
+            email_verification_token = NULL,
+            email_verification_expires = NULL,
+            email_verification_otp = NULL,
+            email_otp_expires = NULL
+      WHERE id = ?`,
+    [new Date(), userId]
+  );
+}
+
 // Get current user profile
 router.get("/me", require("../middlewares/requireAuth"), async (req, res) => {
   try {
     const [rows] = await pool.query(
       `SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.is_active, u.is_verified,
-              u.bar_id, u.phone_number, u.date_of_birth, u.profile_picture,
+              u.email_verified_at, u.bar_id, u.phone_number, u.date_of_birth, u.profile_picture,
               b.name AS bar_name,
               bo.id AS bar_owner_id
        FROM users u
@@ -333,6 +444,12 @@ router.get("/me", require("../middlewares/requireAuth"), async (req, res) => {
 
     const user = rows[0];
     user.profile_url = safeProfileUrl(user.profile_picture);
+    // Normalise the verification flags so consumers can check either the raw
+    // boolean or the string form without caring how MySQL stored it.
+    user.is_verified = Number(user.is_verified || 0) === 1;
+    user.isVerified = user.is_verified;
+    user.verified = user.is_verified ? "VERIFIED" : "UNVERIFIED";
+    user.verifiedAt = user.email_verified_at || null;
 
     res.json({
       success: true,
@@ -508,13 +625,22 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // Block unverified customer accounts
+    // Block unverified customer accounts.
+    // Approval is a separate gate, so an admin may still approve an unverified
+    // sign-up — but nobody reaches the platform until the email is confirmed.
+    // A verification email (link + 6-digit OTP) is issued automatically when the
+    // old one expired or was never sent, so the customer always has a way forward.
     if (String(user.role || '').trim().toLowerCase() === 'customer' && !user.is_verified) {
+      const issued = await issueEmailVerification(user.email);
       return res.status(403).json({
         success: false,
         code: "EMAIL_NOT_VERIFIED",
-        message: "Please verify your email before logging in. Check your inbox for the confirmation link.",
-        email: user.email
+        message: issued.sent
+          ? "Please verify your email. We just sent you a verification link and a 6-digit code."
+          : "Please verify your email before logging in. Check your inbox for the confirmation link.",
+        email: user.email,
+        verification_sent: issued.sent,
+        verification_method: "link+otp"
       });
     }
 
@@ -712,7 +838,10 @@ router.post("/login", async (req, res) => {
           date_of_birth: user.date_of_birth,
           profile_picture: user.profile_picture,
           profile_url: safeProfileUrl(user.profile_picture),
-          is_active: user.is_active
+          is_active: user.is_active,
+          is_verified: Number(user.is_verified || 0) === 1,
+          isVerified: Number(user.is_verified || 0) === 1,
+          verified: Number(user.is_verified || 0) === 1 ? "VERIFIED" : "UNVERIFIED"
         },
         permissions: permissionCodes,
         bar_ban_notices: barBanNotices
@@ -819,9 +948,11 @@ router.post("/register", async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
 
-    // Generate email verification token
+    // Generate email verification token + 6-digit OTP: the recipient can use
+    // either the emailed link or the code on the verify screen.
     const verificationToken = crypto.randomBytes(32).toString('hex');
-    const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const verificationOtp = generateEmailOtp();
+    const tokenExpires = new Date(Date.now() + VERIFICATION_TTL_MS);
 
     // Create user as CUSTOMER (bar_id NULL) + role_id set + default avatar.
     // approval_status is set EXPLICITLY to 'pending' here (never rely on
@@ -829,8 +960,9 @@ router.post("/register", async (req, res) => {
     const [result] = await pool.query(
       `INSERT INTO users
        (first_name, last_name, email, password, phone_number, date_of_birth, role, role_id, is_verified, is_active, bar_id,
-        profile_picture, email_verification_token, email_verification_expires, approval_status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'customer', ?, 0, 1, NULL, ?, ?, ?, 'pending', NOW(), NOW())`,
+        profile_picture, email_verification_token, email_verification_expires, email_verification_otp, email_otp_expires,
+        approval_status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'customer', ?, 0, 1, NULL, ?, ?, ?, ?, ?, 'pending', NOW(), NOW())`,
       [
        firstNameValidation.value,
        lastNameValidation.value,
@@ -839,12 +971,12 @@ router.post("/register", async (req, res) => {
        phoneValidation.value,
        dobValidation.value,
        customerRoleId,
-       DEFAULT_AVATAR, verificationToken, tokenExpires]
+       DEFAULT_AVATAR, verificationToken, tokenExpires, verificationOtp, tokenExpires]
     );
 
     // Send verification email (non-blocking — don't fail registration if email fails)
     try {
-      await sendVerificationEmail(emailNorm, firstNameValidation.value, verificationToken);
+      await sendVerificationEmail(emailNorm, firstNameValidation.value, verificationToken, verificationOtp);
       console.log('Verification email sent to:', emailNorm);
     } catch (emailErr) {
       console.error('VERIFICATION EMAIL ERROR (full):', emailErr);
@@ -920,15 +1052,16 @@ router.get("/verify-email", async (req, res) => {
     }
 
     if (new Date() > new Date(user.email_verification_expires)) {
-      return res.status(410).json({ success: false, message: "Verification link has expired. Please request a new one." });
+      return res.status(410).json({ success: false, code: "LINK_EXPIRED", message: "Verification link has expired. Please request a new one." });
     }
 
-    await pool.query(
-      "UPDATE users SET is_verified = 1, email_verification_token = NULL, email_verification_expires = NULL WHERE id = ?",
-      [user.id]
-    );
+    await markCustomerVerified(user.id);
 
-    return res.json({ success: true, message: "Email verified successfully! Your account is now waiting for admin approval — you'll be able to log in once it's approved." });
+    return res.json({
+      success: true,
+      code: "VERIFIED",
+      message: "Email verified successfully! Your account is now waiting for admin approval — you'll be able to log in once it's approved."
+    });
   } catch (err) {
     console.error("VERIFY EMAIL ERROR:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -966,19 +1099,76 @@ router.post("/resend-verification", async (req, res) => {
       }
     }
 
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    // Mint a fresh token + OTP and email them. `force` retires whatever code
+    // was outstanding so an old OTP can no longer be replayed.
+    const issued = await issueEmailVerification(emailNorm, { force: true });
 
-    await pool.query(
-      "UPDATE users SET email_verification_token = ?, email_verification_expires = ? WHERE id = ?",
-      [verificationToken, tokenExpires, rows[0].id]
-    );
-
-    await sendVerificationEmail(emailNorm, rows[0].first_name, verificationToken);
-
-    return res.json({ success: true, message: "Verification email sent! Check your inbox." });
+    return res.json({
+      success: true,
+      verification_sent: issued.sent,
+      message: issued.sent
+        ? "Verification email sent! Check your inbox for the link and 6-digit code."
+        : "A new verification code was issued, but the email could not be delivered right now. Please try again shortly."
+    });
   } catch (err) {
     console.error("RESEND VERIFICATION ERROR:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ─── VERIFY EMAIL WITH 6-DIGIT OTP ───
+// Alternative to the emailed link: same verification state, code instead of token.
+router.post("/verify-otp", async (req, res) => {
+  try {
+    const emailNorm = String(req.body?.email || "").trim().toLowerCase();
+    const codeNorm = String(req.body?.code || "").trim();
+
+    if (!emailNorm || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+      return res.status(400).json({ success: false, message: "A valid email is required." });
+    }
+    if (!/^\d{6}$/.test(codeNorm)) {
+      return res.status(400).json({ success: false, message: "Enter the 6-digit code from your email." });
+    }
+
+    const [rows] = await pool.query(
+      `SELECT id, is_verified, email_verification_otp, email_otp_expires
+       FROM users WHERE email = ? LIMIT 1`,
+      [emailNorm]
+    );
+
+    const user = rows[0];
+    if (!user) {
+      return res.status(404).json({ success: false, message: "No account found for that email." });
+    }
+    if (Number(user.is_verified || 0) === 1) {
+      return res.json({ success: true, code: "VERIFIED", message: "Email already verified. You can log in." });
+    }
+
+    if (!user.email_verification_otp || !user.email_otp_expires || new Date(user.email_otp_expires).getTime() <= Date.now()) {
+      return res.status(410).json({
+        success: false,
+        code: "OTP_EXPIRED",
+        message: "That code has expired. Request a new verification email."
+      });
+    }
+
+    if (!timingSafeStringEqual(user.email_verification_otp, codeNorm)) {
+      return res.status(400).json({
+        success: false,
+        code: "OTP_INVALID",
+        message: "Incorrect code. Please try again."
+      });
+    }
+
+    await markCustomerVerified(user.id);
+
+    return res.json({
+      success: true,
+      code: "VERIFIED",
+      message: "Email verified successfully! Your account is now waiting for admin approval — you'll be able to log in once it's approved."
+    });
+  } catch (err) {
+    console.error("VERIFY OTP ERROR:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });

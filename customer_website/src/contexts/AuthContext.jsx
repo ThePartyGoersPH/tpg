@@ -12,6 +12,10 @@ export function AuthProvider({ children }) {
   const [authError, setAuthError] = useState('');
   const [accessDeniedMessage, setAccessDeniedMessage] = useState('');
   const [maintenance, setMaintenance] = useState({ active: false, message: '' });
+  // Set when a customer's token is refused because the email was never
+  // confirmed. The App shell watches this and routes them to the verify screen
+  // instead of dumping them on the landing page.
+  const [needsVerificationEmail, setNeedsVerificationEmail] = useState('');
 
   const clearAuth = useCallback(() => {
     localStorage.removeItem('token');
@@ -56,8 +60,18 @@ export function AuthProvider({ children }) {
       } else {
         setUser(me);
       }
-    } catch (_error) {
-      clearAuth();
+    } catch (error) {
+      const code = error?.response?.data?.code;
+      const email = error?.response?.data?.email || '';
+
+      // Unverified customers are refused platform access everywhere, so drop
+      // the session but remember the address for the verify screen.
+      if (code === 'EMAIL_NOT_VERIFIED') {
+        clearAuth();
+        setNeedsVerificationEmail(email);
+      } else {
+        clearAuth();
+      }
     } finally {
       setLoading(false);
     }
@@ -68,9 +82,12 @@ export function AuthProvider({ children }) {
     refreshUser();
   }, [checkMaintenance, refreshUser]);
 
+  const clearNeedsVerification = useCallback(() => setNeedsVerificationEmail(''), []);
+
   const login = useCallback(async (email, password) => {
     setAuthError('');
     setAccessDeniedMessage('');
+    setNeedsVerificationEmail('');
 
     const data = await authService.login({ email, password });
     localStorage.setItem('token', data.token);
@@ -118,6 +135,7 @@ export function AuthProvider({ children }) {
       authError,
       accessDeniedMessage,
       maintenance,
+      needsVerificationEmail,
       isAuthenticated: Boolean(token && user),
       login,
       register,
@@ -125,6 +143,7 @@ export function AuthProvider({ children }) {
       logout,
       refreshUser,
       checkMaintenance,
+      clearNeedsVerification,
       updateProfile,
       changePassword,
       uploadProfilePicture,

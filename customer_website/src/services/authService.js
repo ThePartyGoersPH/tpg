@@ -28,6 +28,9 @@ export const authService = {
       thrownError.code = error?.response?.data?.code || null;
       thrownError.status = error?.response?.status || null;
       thrownError.email = error?.response?.data?.email || null;
+      // True when the backend actually re-sent the verification email on this
+      // attempt (it stays quiet while the previous code is still valid).
+      thrownError.verificationSent = error?.response?.data?.verification_sent === true;
       throw thrownError;
     }
   },

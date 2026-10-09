@@ -40,9 +40,26 @@ async function _send(to, subject, html) {
   }
 }
 
-async function sendVerificationEmail(toEmail, firstName, token) {
+async function sendVerificationEmail(toEmail, firstName, token, otp) {
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   const verifyLink = `${frontendUrl}/verify-email?token=${token}`;
+
+  // The OTP is optional so older callers keep working; when present it is
+  // rendered as a large code block so the recipient can type it on the
+  // verify screen instead of opening the link.
+  const otpBlock = otp
+    ? `
+              <!-- OTP -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+                <tr>
+                  <td align="center" style="background:#161616;border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;">
+                    <p style="margin:0 0 10px;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#888888;">Or enter this code on the verify page</p>
+                    <p style="margin:0;font-size:2rem;font-weight:800;color:#ffffff;letter-spacing:8px;">${otp}</p>
+                    <p style="margin:10px 0 0;font-size:0.72rem;color:#555555;">Code expires in 24 hours.</p>
+                  </td>
+                </tr>
+              </table>`
+    : '';
 
   await _send(toEmail, 'Confirm your Party Goers account', `
 <!DOCTYPE html>
@@ -88,6 +105,7 @@ async function sendVerificationEmail(toEmail, firstName, token) {
                   </td>
                 </tr>
               </table>
+              ${otpBlock}
               <!-- Fallback link -->
               <p style="margin:0 0 24px;font-size:0.78rem;color:#555555;line-height:1.6;">
                 If the button doesn't work, copy and paste this link into your browser:<br/>

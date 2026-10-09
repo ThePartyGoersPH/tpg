@@ -1491,7 +1491,7 @@ async function applyCustomerDecision(conn, { customerId, action, reason, adminId
   const verifyColumns = normalizedAction === "approve"
     ? `,
          is_verified = 1,
-         email_verified_at = COALESCE(email_verified_at, NOW()),
+         email_verified_at = COALESCE(email_verified_at, ?),
          email_verification_token = NULL,
          email_verification_expires = NULL`
     : "";
@@ -1503,7 +1503,15 @@ async function applyCustomerDecision(conn, { customerId, action, reason, adminId
          approval_reviewed_at = NOW(),
          approval_rejection_reason = ?${verifyColumns}
      WHERE id = ?`,
-    [nextStatus, adminId, normalizedAction === "reject" ? cleanReason : null, customerId]
+    [
+      nextStatus,
+      adminId,
+      normalizedAction === "reject" ? cleanReason : null,
+      // Node sends UTC (pool runs with timezone: 'Z'); MySQL NOW() is
+      // server-local, so a JS Date keeps the stamped time consistent.
+      ...(normalizedAction === "approve" ? [new Date()] : []),
+      customerId,
+    ]
   );
 
   return { target, nextStatus, reason: cleanReason };
