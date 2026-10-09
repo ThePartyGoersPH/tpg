@@ -3,6 +3,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
 import { useView } from './hooks/useView';
 import { VIEWS } from './contexts/ViewContext';
+import { isOwnerPreview, isBarOwner, canOrderAtBar, filterNavItems, isCustomerOnlyView } from './utils/ownerPreview';
+import { managerPortalUrl } from './utils/managerLinks';
 import { socialService } from './services/socialService';
 import { authService } from './services/authService';
 import { formatDate } from './utils/dateHelpers';
@@ -331,6 +333,8 @@ function NavAvatar({ user }) {
 }
 
 function Sidebar({ currentView, navigate, sidebarOpen, onToggleSidebar }) {
+  const { user } = useAuth();
+  const visibleItems = filterNavItems(NAV_ITEMS, user);
   return (
     <>
       {/* Sidebar */}
@@ -339,7 +343,7 @@ function Sidebar({ currentView, navigate, sidebarOpen, onToggleSidebar }) {
           <span className="sidebar-title">Menu</span>
         </div>
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map((item) => (
+          {visibleItems.map((item) => (
             <button
               key={item.view}
               className={`sidebar-link ${currentView === item.view ? 'active' : ''}`}
@@ -432,7 +436,7 @@ function GlassNav({ onOpenNotif, unread, onToggleSidebar, sidebarOpen }) {
           <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>Appearance</span>
           <ThemeToggle showLabel />
         </div>
-        {NAV_ITEMS.map((item) => (
+        {filterNavItems(NAV_ITEMS, user).map((item) => (
           <button
             key={item.view}
             className={`nav-link ${currentView === item.view ? 'active' : ''}`}
@@ -460,9 +464,23 @@ function GlassNav({ onOpenNotif, unread, onToggleSidebar, sidebarOpen }) {
 const FULL_WIDTH_VIEWS = [VIEWS.LANDING, VIEWS.LOGIN, VIEWS.REGISTER, VIEWS.PAYMENT_SUCCESS, VIEWS.PAYMENT_FAILED, VIEWS.VERIFY_EMAIL, VIEWS.HOME, VIEWS.RESET_PASSWORD, VIEWS.MAP];
 const MAINTENANCE_EXEMPT = [VIEWS.LANDING, VIEWS.LOGIN, VIEWS.REGISTER, VIEWS.PAYMENT_SUCCESS, VIEWS.PAYMENT_FAILED, VIEWS.VERIFY_EMAIL, VIEWS.RESET_PASSWORD];
 
+function PreviewBlockedNotice() {
+  const { navigate } = useView();
+  return (
+    <div className="empty-state" style={{ minHeight: '60vh' }}>
+      <div className="empty-icon">👁️</div>
+      <h2 className="text-h2">Not available in owner preview</h2>
+      <p className="text-muted mt-sm">Reservations and payments are customer-only areas.</p>
+      <button className="btn btn-red" style={{ marginTop: '1rem' }} onClick={() => navigate(VIEWS.HOME)}>
+        Back to Home
+      </button>
+    </div>
+  );
+}
+
 function ViewRenderer() {
   const { currentView, transitioning } = useView();
-  const { isAuthenticated, loading, maintenance } = useAuth();
+  const { user, isAuthenticated, loading, maintenance } = useAuth();
 
   if (loading) {
     return (
@@ -479,6 +497,19 @@ function ViewRenderer() {
         <div className="empty-icon">🛠️</div>
         <h2 className="text-h2">Under Maintenance</h2>
         <p className="text-muted mt-sm">{maintenance.message}</p>
+      </div>
+    );
+  }
+
+  // Owner preview guard: non-customer roles can never render
+  // customer-only views, no matter how they navigate here
+  // (menu, deep-links, notifications, or restored sessions).
+  if (isAuthenticated && isOwnerPreview(user) && isCustomerOnlyView(currentView)) {
+    return (
+      <div className="view-container">
+        <div className="view active">
+          <PreviewBlockedNotice />
+        </div>
       </div>
     );
   }
@@ -571,9 +602,51 @@ function LiveNotificationToast({ notification, onOpen, onDismiss }) {
   );
 }
 
+function OwnerPreviewBanner() {
+  const { user } = useAuth();
+  const { currentView, viewParams } = useView();
+  // Owners see it on every page; staff see it while viewing their own bar
+  // (bar detail carries barId in the view params).
+  const showForOwnBar =
+    currentView === VIEWS.BAR_DETAIL &&
+    Number(viewParams?.barId) > 0 &&
+    !canOrderAtBar(user, { id: viewParams.barId });
+  if (!isBarOwner(user) && !showForOwnBar) return null;
+  return (
+    <div
+      className="owner-preview-banner"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '0.6rem',
+        flexWrap: 'wrap',
+        padding: '0.4rem 0.75rem',
+        paddingTop: 'calc(0.4rem + env(safe-area-inset-top, 0px))',
+        background: 'rgba(204, 0, 0, 0.14)',
+        borderBottom: '1px solid rgba(204, 0, 0, 0.4)',
+        color: '#fff',
+        fontSize: '0.8rem',
+        fontWeight: 600,
+        textAlign: 'center',
+        zIndex: 1100,
+      }}
+    >
+      <span>👁 View-only mode</span>
+      <button
+        className="btn btn-red btn-sm"
+        style={{ minHeight: '32px', padding: '0.15rem 0.7rem', fontSize: '0.75rem' }}
+        onClick={() => { window.location.href = managerPortalUrl(); }}
+      >
+        Back to Portal
+      </button>
+    </div>
+  );
+}
+
 function App() {
   const { currentView, navigate } = useView();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -702,6 +775,7 @@ function App() {
 
   return (
     <div className={`app-shell ${isAuthenticated ? 'with-sidebar' : ''} ${sidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
+      <OwnerPreviewBanner />
       <GlassNav 
         onOpenNotif={() => setNotifOpen(true)} 
         unread={unread} 

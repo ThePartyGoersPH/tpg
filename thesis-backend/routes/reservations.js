@@ -4,6 +4,7 @@ const router = express.Router();
 const pool = require("../config/database");
 const requireAuth = require("../middlewares/requireAuth");
 const requireRole = require("../middlewares/requireRole");
+const { requireBarOrderAccess } = require("../middlewares/requireBarOrder");
 const requirePermission = require("../middlewares/requirePermission");
 const { USER_ROLES } = require("../config/constants");
 const { logAudit, auditContext } = require("../utils/audit");
@@ -833,7 +834,7 @@ router.get("/bars/:id/available-tables", async (req, res) => {
 router.post(
   "/reservations",
   requireAuth,
-  requireRole([USER_ROLES.CUSTOMER]),
+  requireBarOrderAccess({ getBarId: (req) => req.body?.bar_id }),
   async (req, res) => {
     const conn = await pool.getConnection();
     try {
@@ -1900,7 +1901,17 @@ router.post(
 router.patch(
   "/reservations/:id/cancel",
   requireAuth,
-  requireRole([USER_ROLES.CUSTOMER]),
+  requireBarOrderAccess({
+    getBarId: async (req) => {
+      const id = Number(req.params.id);
+      if (!id) return NaN;
+      const [[row]] = await pool.query(
+        "SELECT bar_id FROM reservations WHERE id = ? LIMIT 1",
+        [id]
+      );
+      return row?.bar_id;
+    },
+  }),
   async (req, res) => {
     try {
       const customerId = req.user.id;

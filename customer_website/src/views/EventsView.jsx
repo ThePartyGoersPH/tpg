@@ -8,6 +8,7 @@ import { socialService } from '../services/socialService';
 import { reservationService } from '../services/reservationService';
 import { paymentService } from '../services/paymentService';
 import { imageUrl } from '../utils/imageUrl';
+import { canOrderAtBar, readOnlyMessage } from '../utils/ownerPreview';
 import { formatDate, formatTime, timeAgo } from '../utils/dateHelpers';
 import { Clock, Heart, MessageCircle, PartyPopper, Flag } from 'lucide-react';
 import { LeftSidebar, RightSidebar } from '../components/feed/FeedSidebar';
@@ -453,6 +454,7 @@ function CommentThread({ comments, eventId, postId, isEvent, depth = 0, rootPare
 // FEATURE 2: Event Table Reservation Section
 // ═══════════════════════════════════════════
 function EventTableReservation({ eventId, entryPrice }) {
+  const { user } = useAuth();
   const [tables, setTables] = useState([]);
   const [eventMeta, setEventMeta] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -502,6 +504,16 @@ function EventTableReservation({ eventId, entryPrice }) {
   if (loading) return <div className="loading-state" style={{ padding: '1rem 0' }}><div className="spinner" /><span>Loading tables...</span></div>;
   if (!eventMeta || tables.length === 0) return null;
 
+  // View-only roles see the event but cannot reserve, order, or pay.
+  const eventReadOnlyNote = readOnlyMessage(user, { id: eventMeta.bar_id });
+  if (eventReadOnlyNote) {
+    return (
+      <div style={{ marginTop: '1rem', padding: '1rem 1.15rem', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: '14px', fontSize: '0.9rem', fontWeight: 600, color: '#fbbf24', lineHeight: 1.5 }}>
+        {eventReadOnlyNote}
+      </div>
+    );
+  }
+
   const eventStatus = getEventLifecycleStatus(eventMeta);
   const reservationLocked = eventStatus !== 'upcoming';
   const reservationLockMsg = eventStatus === 'ongoing'
@@ -520,6 +532,11 @@ function EventTableReservation({ eventId, entryPrice }) {
 
   const handleReserve = async () => {
     if (!selectedTable) return;
+    if (!canOrderAtBar(user, { id: eventMeta?.bar_id })) {
+      setMsg(readOnlyMessage(user, { id: eventMeta?.bar_id }) || 'Reserving is disabled in preview mode.');
+      setMsgType('error');
+      return;
+    }
 
     if (reservationLocked) {
       setMsg(reservationLockMsg);
@@ -1092,8 +1109,8 @@ function EventPost({
             <MessageCircle size={15} />
             <span>Comment</span>
           </button>
-          {/* Feature 2: Reserve a Table button for events */}
-          {isEvent && (
+          {/* Feature 2: Reserve a Table button for events (hidden in view-only mode) */}
+          {isEvent && canOrderAtBar(user, { id: ev.bar_id }) && (
             <button
               className={`tweet-action-btn ${showReservation ? 'active' : ''}`}
               onClick={(e) => {

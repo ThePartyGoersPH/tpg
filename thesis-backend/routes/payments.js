@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../config/database");
 const requireAuth = require("../middlewares/requireAuth");
+const { requireBarOrderAccess } = require("../middlewares/requireBarOrder");
 const paymongoService = require("../services/paymongoService");
 const stripeService = require("../services/stripeService");
 const platformSettings = require("../services/platformSettingsService");
@@ -1067,7 +1068,32 @@ async function markPaymentFailed(conn, payment, reason) {
  * POST /payments/create — Create payment for order or reservation
  * Body: { payment_type, related_id, amount, payment_method, bar_id }
  */
-router.post("/create", requireAuth, async (req, res) => {
+router.post(
+  "/create",
+  requireAuth,
+  requireBarOrderAccess({
+    getBarId: async (req) => {
+      const type = String(req.body?.payment_type || "").toLowerCase();
+      const relatedId = Number(req.body?.related_id);
+      if (!relatedId) return NaN;
+      if (type === "reservation") {
+        const [[row]] = await pool.query(
+          "SELECT bar_id FROM reservations WHERE id = ? LIMIT 1",
+          [relatedId]
+        );
+        return row?.bar_id;
+      }
+      if (type === "order") {
+        const [[row]] = await pool.query(
+          "SELECT bar_id FROM pos_orders WHERE id = ? LIMIT 1",
+          [relatedId]
+        );
+        return row?.bar_id;
+      }
+      return NaN;
+    },
+  }),
+  async (req, res) => {
   const conn = await pool.getConnection();
   try {
     // Optional VAT snapshot from checkout (validated, stored on the

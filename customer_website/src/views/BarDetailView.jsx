@@ -13,7 +13,7 @@ import { packageService } from '../services/packageService';
 import { formatDate, formatTime } from '../utils/dateHelpers';
 import { imageUrl } from '../utils/imageUrl';
 import { getBarOpenStatus } from '../utils/barOpenStatus';
-import { BAR_OWNER_PREVIEW_ROLES } from '../utils/constants';
+import { canOrderAtBar, isOwnOrWorkBar, isBarOwner, readOnlyMessage } from '../utils/ownerPreview';
 import { managerPortalUrl } from '../utils/managerLinks';
 import { barApi } from '../api/barApi';
 import { Flame, MessageCircle, Utensils, Wine, Star, Phone, Mail, Globe, MapPin, CalendarDays, CreditCard, Smartphone, ShoppingCart, Heart, Music, Users, Mic, Shield, UtensilsCrossed, Package as PackageIcon, Search, Filter, Play, X, Video, Camera, ChevronLeft, ChevronRight, ThumbsUp, Send, Share2, Smile, LayoutGrid, Martini, Beer, GlassWater, CupSoda, Armchair } from 'lucide-react';
@@ -110,7 +110,7 @@ function PackageCard({ pkg, pkgQty, onAdd, onRemove, readOnly, disabled, disable
         <div className="pkg-card-actions">
           {readOnly ? (
             <span style={{ display: 'block', textAlign: 'center', fontSize: '0.72rem', color: 'var(--color-text-muted)', border: '1px dashed var(--color-border)', borderRadius: 8, padding: '0.45rem 0.5rem', lineHeight: 1.4 }}>
-              Owner preview — customers can add this once payments are set up
+              Ordering disabled in preview mode
             </span>
           ) : isUnavailable ? (
             <>
@@ -315,6 +315,39 @@ const isEventOngoingNow = (event, now = new Date()) => {
   return now >= window.start && now < window.end;
 };
 
+
+function ReadOnlyInfoCard({ note, showPortalLinks }) {
+  return (
+    <div
+      className="glass-card"
+      data-testid="read-only-info-card"
+      style={{ border: '1px solid rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.07)', borderRadius: '14px', padding: '1rem 1.15rem', marginBottom: '0.25rem' }}
+    >
+      <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
+        <Shield size={18} color="#d97706" style={{ marginTop: '0.15rem', flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontWeight: 700, color: '#fbbf24', fontFamily: "'Outfit', sans-serif", fontSize: '0.95rem' }}>
+            {note}
+          </p>
+          {showPortalLinks && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', marginTop: '0.7rem' }}>
+              <a
+                className="btn btn-red btn-sm"
+                style={{ fontWeight: 700, borderRadius: 8, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                href={managerPortalUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open in Owner Portal
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BarDetailView() {
   const { viewParams, navigate, goBack, canGoBack } = useView();
   const { isAuthenticated, user } = useAuth();
@@ -450,16 +483,14 @@ function BarDetailView() {
   // Bar Menu tab renders a plain empty state and no ordering/reservation UI.
   const paymentsReady = useMemo(() => Boolean(bar?.payments_ready), [bar]);
 
-  // Owner/manager of THIS bar only (role + strict bar_id match). They preview
-  // their public page instead of the payment-blocked empty state so they can
-  // add products and tables before payment setup is finished.
-  const isOwnerOfThisBar = useMemo(() => {
-    if (!bar) return false;
-    const role = String(user?.role || user?.role_name || '').trim().toLowerCase().replace(/\s+/g, '_');
-    if (!BAR_OWNER_PREVIEW_ROLES.includes(role)) return false;
-    const userBarId = Number(user?.bar_id);
-    return Number.isFinite(userBarId) && userBarId === Number(bar.id);
-  }, [user, bar]);
+  // View-only rule (shared helper): bar owners everywhere, staff/workers at
+  // their own bar(s). Everyone else (customers) can order normally.
+  // Read-only visitors still see the full menu + packages, minus all
+  // ordering/booking/payment controls, plus an info card instead.
+  const canOrder = useMemo(() => (bar ? canOrderAtBar(user, bar) : true), [user, bar]);
+  const readOnlyNote = useMemo(() => (bar ? readOnlyMessage(user, bar) : null), [user, bar]);
+  const hideFollow = useMemo(() => (bar ? isOwnOrWorkBar(user, bar) : false), [user, bar]);
+  const showPortalLinks = useMemo(() => isBarOwner(user), [user]);
 
   const menuTotal = cartItems.reduce((sum, i) => sum + i.price * i.qty, 0);
   // Table-inclusive packages bundle their assigned table into the package
@@ -1088,7 +1119,7 @@ function BarDetailView() {
   const step1Done = isTableBooking
     ? Boolean(resDate && resTime && partySize && cartTables.length > 0)
     : true;
-  const menuLocked = !isOwnerOfThisBar && !step1Done;
+  const menuLocked = canOrder && !step1Done;
   const menuLockReason = 'Please pick a table and reservation date first.';
 
   const autoAssignTableForPackage = useCallback(async (pkgId) => {
@@ -1257,6 +1288,11 @@ function BarDetailView() {
       setTimeout(() => {
         navigate(VIEWS.LOGIN, { returnTo: VIEWS.BAR_DETAIL, barId });
       }, 1500);
+      return;
+    }
+    // View-only roles can never check out, even if they reach this handler.
+    if (!canOrderAtBar(user, bar)) {
+      fail(readOnlyNote || 'Ordering is disabled in preview mode.');
       return;
     }
     if (tableRequired && !isTableBooking) { fail('This package requires a table reservation — switch back to Table Booking to check out.'); return; }
@@ -1474,9 +1510,11 @@ function BarDetailView() {
                 </p>
               </div>
             </div>
-            <button className={`btn ${following ? 'btn-ghost' : 'btn-red'}`} onClick={handleFollow} style={{ flexShrink: 0, padding: '0.65rem 1.4rem', fontWeight: 700, borderRadius: '10px', boxShadow: '0 4px 14px rgba(204,0,0,0.3)' }}>
-              {following ? 'Unfollow' : '+ Follow'}
-            </button>
+            {!hideFollow && (
+              <button className={`btn ${following ? 'btn-ghost' : 'btn-red'}`} onClick={handleFollow} style={{ flexShrink: 0, padding: '0.65rem 1.4rem', fontWeight: 700, borderRadius: '10px', boxShadow: '0 4px 14px rgba(204,0,0,0.3)' }}>
+                {following ? 'Unfollow' : '+ Follow'}
+              </button>
+            )}
           </div>
         </div>
         {bar.description && (
@@ -1947,7 +1985,7 @@ function BarDetailView() {
 
         // Payment setup not finished: the whole ordering/reservation surface
         // is replaced by a branded empty state. No technical detail is shown.
-        if (!paymentsReady && !isOwnerOfThisBar) {
+        if (!paymentsReady && canOrder) {
           return (
             <section style={{ marginBottom: '1.5rem' }}>
               <div className="flex flex-col gap-sm mb-lg">
@@ -1969,57 +2007,12 @@ function BarDetailView() {
         }
 
         return (
-          <section className="menu-cart-layout" style={isOwnerOfThisBar ? { gridTemplateColumns: '1fr' } : undefined}>
+          <section className="menu-cart-layout" style={!canOrder ? { gridTemplateColumns: '1fr' } : undefined}>
             {/* Owner/manager preview: payment setup unfinished, so customers
                 still see the blocked state while this bar's own staff can add
                 products and tables through the existing management screens. */}
-            {isOwnerOfThisBar && !paymentsReady && (
-              <div
-                className="glass-card"
-                data-testid="owner-preview-banner"
-                style={{ border: '1px solid rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.07)', borderRadius: '14px', padding: '1rem 1.15rem', marginBottom: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}
-              >
-                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
-                  <Shield size={18} color="#d97706" style={{ marginTop: '0.15rem', flexShrink: 0 }} />
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 700, color: '#fbbf24', fontFamily: "'Outfit', sans-serif", fontSize: '0.95rem' }}>
-                      Owner preview — customers can't see this yet
-                    </p>
-                    <p style={{ margin: '0.3rem 0 0', color: 'var(--color-text-muted)', fontSize: '0.85rem', lineHeight: 1.55 }}>
-                      Your menu and packages are hidden until payment setup is finished. You can still add products and tables now, then connect a payment method in Bar Management to go live.
-                    </p>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
-                  <a
-                    className="btn btn-red btn-sm"
-                    style={{ fontWeight: 700, borderRadius: 8, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-                    href={managerPortalUrl('/menu?action=new')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    + Add Product
-                  </a>
-                  <a
-                    className="btn btn-sm"
-                    style={{ borderRadius: 8, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.18)', color: 'var(--color-text-primary)' }}
-                    href={managerPortalUrl('/tables?action=new')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    + Add Table
-                  </a>
-                  <a
-                    className="btn btn-sm"
-                    style={{ borderRadius: 8, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)', color: '#fbbf24' }}
-                    href={managerPortalUrl('/bar-management')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <CreditCard size={15} /> Payouts &amp; Payment Setup
-                  </a>
-                </div>
-              </div>
+            {!canOrder && readOnlyNote && (
+              <ReadOnlyInfoCard note={readOnlyNote} showPortalLinks={showPortalLinks} />
             )}
 
             {/* Left: Menu */}
@@ -2122,7 +2115,7 @@ function BarDetailView() {
                           pkgQty={getItemQty(`pkg_${pkg.id}`)}
                           onAdd={(p) => handleAddPackage(p)}
                           onRemove={(p) => removeFromCart(`pkg_${p.id}`)}
-                          readOnly={isOwnerOfThisBar}
+                          readOnly={!canOrder}
                           disabled={menuLocked && !packageBundlesTable(pkg)}
                           disabledReason={menuLockReason}
                           bundled={packageBundlesTable(pkg)}
@@ -2192,9 +2185,12 @@ function BarDetailView() {
                           {desc && <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.35rem', lineHeight: 1.45, margin: '0.35rem 0 0' }}>{desc}</p>}
                           {category && <span style={{ marginTop: '0.5rem', display: 'inline-block', fontSize: '0.72rem', color: 'var(--color-text-muted)', background: 'var(--color-bg-card)', padding: '0.2rem 0.55rem', borderRadius: 4, border: '1px solid var(--color-border)', width: 'fit-content' }}>{category}</span>}
                           <div className="menu-item-actions" style={{ marginTop: '0.75rem' }}>
-                            {isOwnerOfThisBar ? (
-                              <span style={{ display: 'block', textAlign: 'center', fontSize: '0.72rem', color: 'var(--color-text-muted)', border: '1px dashed var(--color-border)', borderRadius: 8, padding: '0.45rem 0.5rem', lineHeight: 1.4 }}>
-                                Owner preview — customers can order once payments are set up
+                            {!canOrder ? (
+                              <span
+                                style={{ display: 'block', textAlign: 'center', fontSize: '0.72rem', color: 'var(--color-text-muted)', border: '1px dashed var(--color-border)', borderRadius: 8, padding: '0.45rem 0.5rem', lineHeight: 1.4 }}
+                                title="Not available in owner preview"
+                              >
+                                Ordering disabled in preview mode
                               </span>
                             ) : isOutOfStock ? (
                               <button className="btn btn-sm" disabled style={{ width: '100%', opacity: 0.5, cursor: 'not-allowed' }}>
@@ -2234,9 +2230,9 @@ function BarDetailView() {
             )}
             </div>
 
-            {/* Right: Cart Panel — customers only; the owner/manager preview
-                is read-only because ordering stays behind the payment gate. */}
-            {!isOwnerOfThisBar && (
+            {/* Right: Cart Panel — customers only; read-only roles get an
+                info card instead (ordering stays behind the payment gate). */}
+            {canOrder ? (
             <div
               className="cart-panel"
               id="cart-panel"
@@ -2788,10 +2784,14 @@ function BarDetailView() {
                 )}
               </div>
             </div>
+            ) : (
+              readOnlyNote && (
+                <ReadOnlyInfoCard note={readOnlyNote} showPortalLinks={showPortalLinks} />
+              )
             )}
 
             {/* Mobile floating cart bar: full-width menu on small screens */}
-            {!isOwnerOfThisBar && (cartItems.length > 0 || cartTables.length > 0) && (
+            {canOrder && (cartItems.length > 0 || cartTables.length > 0) && (
               <button
                 type="button"
                 className="cart-fab"
