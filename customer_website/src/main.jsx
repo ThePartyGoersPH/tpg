@@ -42,7 +42,6 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import './glass.css';
 import './styles/enhancements.css';
 import './styles/feedSidebar.css';
-import './styles/mobile.css';
 
 import { GOOGLE_CLIENT_ID } from './utils/googleAuth';
 

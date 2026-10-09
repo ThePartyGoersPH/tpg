@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   CalendarCheck, DollarSign, Users, TrendingUp,
@@ -199,9 +199,6 @@ const LeaveCalendar = ({ leaves, onMonthChange }) => {
     </div>
   );
 };
-
-// Need useMemo import
-const { useMemo } = React;
 
 const Dashboard = () => {
   const { user, hasPermission } = useAuthStore();
