@@ -1,8 +1,15 @@
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import FullScreenLoader from './common/FullScreenLoader';
 
 export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, status } = useAuthStore();
+
+  // While the saved session is being validated, show ONE loader and
+  // redirect NOWHERE — this is what stops the login/layout ping-pong.
+  if (status === 'loading') {
+    return <FullScreenLoader />;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

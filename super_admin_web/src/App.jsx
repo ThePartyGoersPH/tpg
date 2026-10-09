@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import ProtectedRoute from './components/ProtectedRoute';
+import FullScreenLoader from './components/common/FullScreenLoader';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -20,6 +21,14 @@ import { useAuthStore } from './stores/authStore';
 
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const status = useAuthStore((state) => state.status);
+
+  // Session still resolving: one loader, no routes, no redirects.
+  // Authenticated users also stay on their current URL — no forced
+  // bounce to the dashboard.
+  if (status === 'loading') {
+    return <FullScreenLoader />;
+  }
 
   return (
     <Router basename={import.meta.env.BASE_URL === '/' ? undefined : import.meta.env.BASE_URL.replace(/\/$/, '')}>

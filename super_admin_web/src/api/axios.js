@@ -25,18 +25,19 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // Basename-aware: never leave the portal root, and never redirect for
-      // auth-endpoint failures (a failed login must stay on the page).
-      const base = import.meta.env.BASE_URL || '/';
-      const appRoot = base === '/' ? '' : base.replace(/\/$/, '');
-      const onLoginPage = window.location.pathname.endsWith('/login');
-      const isAuthCall = String(error.config?.url || '').includes('/auth/');
-      if (!onLoginPage && !isAuthCall) {
-        window.location.href = `${appRoot}/login`;
+      // Hand session teardown to the store (single source of truth) instead
+      // of wiping storage + hard-reloading here — that combination caused
+      // full-page reload loops against the async persist rehydration.
+      // The route guard reacts to the store change with ONE React-side
+      // redirect to /login. Lazy import avoids a module cycle (the store
+      // imports the api layer for its session check).
+      try {
+        const { useAuthStore } = await import('../stores/authStore');
+        useAuthStore.getState().logout();
+      } catch {
+        // store unavailable — fall through; caller still gets the rejection
       }
     }
     return Promise.reject(error);

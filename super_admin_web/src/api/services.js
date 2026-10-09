@@ -1,5 +1,11 @@
 import api from './axios';
 
+// ─── SESSION ─────────────────────────────────────────────────────────
+// Single lightweight session check used once at app boot.
+export const authAPI = {
+  me: () => api.get('/super-admin/me'),
+};
+
 // ─── DASHBOARD ───────────────────────────────────────────────────────
 export const dashboardAPI = {
   getSummary: () => api.get('/super-admin/dashboard/summary'),

@@ -341,6 +341,28 @@ async function ensureSuperAdmin(req, res, next) {
 
 router.use(requireAuth, ensureSuperAdmin);
 
+// Session validation for app boot (token check + fresh role). Lightweight:
+// requireAuth above already verified the token, resolved the user row, and
+// enforced active/ban/maintenance gates, so just echo the identity back.
+router.get("/me", async (req, res) => {
+  try {
+    const u = req.user || {};
+    return res.json({
+      success: true,
+      data: {
+        id: u.id ?? null,
+        email: u.email ?? null,
+        role: u.role_name || u.role || null,
+        first_name: u.first_name ?? null,
+        last_name: u.last_name ?? null,
+      },
+    });
+  } catch (err) {
+    console.error("SA ME ERROR:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 // ─── SUPER ADMIN ACCOUNT MANAGEMENT ──────────────────────────────────
 router.get("/accounts", async (req, res) => {
   try {
