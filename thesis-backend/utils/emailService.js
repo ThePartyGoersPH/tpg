@@ -599,4 +599,64 @@ async function sendStaffOnboardingEmail(toEmail, opts = {}) {
   `.trim());
 }
 
-module.exports = { sendVerificationEmail, sendBarOwnerVerificationEmail, sendBarApprovalEmail, sendPasswordResetEmail, sendPurchaseOrderEmail, sendStaffOnboardingEmail };
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@thepartygoersph.com';
+
+async function sendCustomerApprovalEmail(toEmail, firstName) {
+  const safeName = String(firstName || 'there');
+  await _send(toEmail, 'Your Party Goers account is approved', `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Account approved</title></head>
+<body style="margin:0;padding:0;background:#0A0A0A;font-family:'DM Sans',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;padding:40px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#111111;border-radius:16px;border:1px solid rgba(255,255,255,0.06);max-width:560px;width:100%;">
+        <tr><td style="background:linear-gradient(135deg,#1a0000 0%,#111111 100%);padding:36px 40px 28px;border-bottom:1px solid rgba(204,0,0,0.2);">
+          <span style="font-size:1.4rem;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">Party<span style="color:#CC0000;">Goers</span> PH</span>
+        </td></tr>
+        <tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 8px;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#CC0000;">Account Approved</p>
+          <h1 style="margin:0 0 16px;font-size:1.6rem;font-weight:800;color:#ffffff;line-height:1.2;">Hey ${safeName}, you're in!</h1>
+          <p style="margin:0 0 28px;font-size:0.95rem;color:#888888;line-height:1.7;">
+            Your account has been approved. You can now log in and start discovering bars, booking tables, and joining events.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`);
+}
+
+async function sendCustomerRejectionEmail(toEmail, firstName, reason) {
+  const safeName = String(firstName || 'there');
+  const safeReason = String(reason || '').trim();
+  await _send(toEmail, 'Update on your Party Goers registration', `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Registration update</title></head>
+<body style="margin:0;padding:0;background:#0A0A0A;font-family:'DM Sans',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;padding:40px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#111111;border-radius:16px;border:1px solid rgba(255,255,255,0.06);max-width:560px;width:100%;">
+        <tr><td style="background:linear-gradient(135deg,#1a0000 0%,#111111 100%);padding:36px 40px 28px;border-bottom:1px solid rgba(204,0,0,0.2);">
+          <span style="font-size:1.4rem;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">Party<span style="color:#CC0000;">Goers</span> PH</span>
+        </td></tr>
+        <tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 8px;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#CC0000;">Registration Update</p>
+          <h1 style="margin:0 0 16px;font-size:1.6rem;font-weight:800;color:#ffffff;line-height:1.2;">Hey ${safeName}, an update on your registration</h1>
+          <p style="margin:0 0 16px;font-size:0.95rem;color:#888888;line-height:1.7;">
+            Your registration was not approved at this time${safeReason ? ` for the following reason: <strong style="color:#ffffff;">${safeReason}</strong>` : '.'}
+          </p>
+          <p style="margin:0;font-size:0.95rem;color:#888888;line-height:1.7;">
+            If you think this is a mistake, please contact our support team at ${SUPPORT_EMAIL}.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`);
+}
+
+module.exports = { sendVerificationEmail, sendBarOwnerVerificationEmail, sendBarApprovalEmail, sendPasswordResetEmail, sendPurchaseOrderEmail, sendStaffOnboardingEmail, sendCustomerApprovalEmail, sendCustomerRejectionEmail };

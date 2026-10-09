@@ -88,6 +88,7 @@ async function requireAuth(req, res, next) {
     const pool = require("../config/database");
     const [rows] = await pool.query(
       `SELECT u.id, u.email, u.role, u.role_id, u.bar_id, u.is_active,
+              u.approval_status, u.approval_rejection_reason,
               r.name AS role_name
        FROM users u
        LEFT JOIN roles r ON r.id = u.role_id
@@ -109,6 +110,20 @@ async function requireAuth(req, res, next) {
         success: false,
         message: "Account is deactivated. Contact your administrator.",
       });
+    }
+
+    // SECURITY: Block pending/rejected customers holding stale tokens.
+    // Customer-only effect (staff/owners/admins pass through untouched),
+    // and intentionally audit-free to avoid log spam.
+    try {
+      const { checkCustomerApproval } = require("../utils/customerApproval");
+      const approvalBlock = checkCustomerApproval(rows[0]);
+      if (approvalBlock) {
+        return res.status(403).json({ success: false, ...approvalBlock });
+      }
+    } catch (_) {
+      // Approval columns predate older schemas — fail open here so legacy
+      // databases keep working; login-time gates still enforce approval.
     }
 
     const roleName = String(rows[0].role_name || rows[0].role || "").toUpperCase();

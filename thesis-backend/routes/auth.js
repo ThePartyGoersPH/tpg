@@ -10,6 +10,7 @@ const { safeProfileUrl } = require("../utils/profileUrl");
 const { logAudit, auditContext } = require("../utils/audit");
 const { sendVerificationEmail, sendBarOwnerVerificationEmail, sendPasswordResetEmail } = require("../utils/emailService");
 const { DEFAULT_AVATAR } = require("../utils/profileUrl");
+const { checkCustomerApproval } = require("../utils/customerApproval");
 
 let hasGlobalBanColumnCache = null;
 let hasUserBanReasonColumnCache = null;
@@ -444,7 +445,8 @@ router.post("/login", async (req, res) => {
       `SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.role,
               u.role_id, r.name AS role_name,
               u.is_active, u.status, u.is_verified, u.bar_id, u.phone_number, u.date_of_birth,
-              u.profile_picture, b.name AS bar_name
+              u.profile_picture, b.name AS bar_name,
+              u.approval_status, u.approval_rejection_reason
        FROM users u
        LEFT JOIN roles r ON r.id = u.role_id
        LEFT JOIN bars b ON b.id = u.bar_id
@@ -663,6 +665,14 @@ router.post("/login", async (req, res) => {
       }
     }
 
+    // Customer approval gate: pending/rejected customers cannot log in.
+    // Runs after identity + portal checks, deliberately WITHOUT an audit
+    // entry so retrying users don't spam the login audit trail.
+    const approvalBlock = checkCustomerApproval(user);
+    if (approvalBlock) {
+      return res.status(403).json({ success: false, ...approvalBlock });
+    }
+
     // Generate token
     const token = signToken(user);
 
@@ -813,12 +823,14 @@ router.post("/register", async (req, res) => {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    // Create user as CUSTOMER (bar_id NULL) + role_id set + default avatar
+    // Create user as CUSTOMER (bar_id NULL) + role_id set + default avatar.
+    // approval_status is set EXPLICITLY to 'pending' here (never rely on
+    // the column default): every new customer sign-up needs admin approval.
     const [result] = await pool.query(
       `INSERT INTO users
        (first_name, last_name, email, password, phone_number, date_of_birth, role, role_id, is_verified, is_active, bar_id,
-        profile_picture, email_verification_token, email_verification_expires, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'customer', ?, 0, 1, NULL, ?, ?, ?, NOW(), NOW())`,
+        profile_picture, email_verification_token, email_verification_expires, approval_status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'customer', ?, 0, 1, NULL, ?, ?, ?, 'pending', NOW(), NOW())`,
       [
        firstNameValidation.value,
        lastNameValidation.value,
@@ -916,7 +928,7 @@ router.get("/verify-email", async (req, res) => {
       [user.id]
     );
 
-    return res.json({ success: true, message: "Email verified successfully! You can now log in." });
+    return res.json({ success: true, message: "Email verified successfully! Your account is now waiting for admin approval — you'll be able to log in once it's approved." });
   } catch (err) {
     console.error("VERIFY EMAIL ERROR:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -1179,7 +1191,8 @@ router.post("/google", async (req, res) => {
     const [rows] = await pool.query(
       `SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.role_id, r.name AS role_name,
               u.is_active, u.status, u.is_verified, u.bar_id, u.phone_number, u.date_of_birth,
-              u.profile_picture, b.name AS bar_name
+              u.profile_picture, b.name AS bar_name,
+              u.approval_status, u.approval_rejection_reason
        FROM users u
        LEFT JOIN roles r ON r.id = u.role_id
        LEFT JOIN bars b ON b.id = u.bar_id
@@ -1250,6 +1263,12 @@ router.post("/google", async (req, res) => {
       const effectiveProfileUrl = hasCustomStoredProfilePicture
         ? safeProfileUrl(user.profile_picture)
         : (payload.picture || safeProfileUrl(user.profile_picture));
+
+      // Customer approval gate (mirrors password login, incl. no audit spam).
+      const googleApprovalBlock = checkCustomerApproval(user);
+      if (googleApprovalBlock) {
+        return res.status(403).json({ success: false, ...googleApprovalBlock });
+      }
 
       const token = signToken(user);
       const permissionCodes = await getEffectivePermissionCodes(user.id);
@@ -1355,8 +1374,8 @@ router.post("/google/complete", async (req, res) => {
     const [result] = await pool.query(
       `INSERT INTO users
        (first_name, last_name, email, password, phone_number, date_of_birth, role, role_id,
-        is_verified, is_active, bar_id, profile_picture, created_at, updated_at)
-       VALUES (?, ?, ?, '', NULL, ?, 'customer', ?, 1, 1, NULL, ?, NOW(), NOW())`,
+        is_verified, is_active, bar_id, profile_picture, approval_status, created_at, updated_at)
+       VALUES (?, ?, ?, '', NULL, ?, 'customer', ?, 1, 1, NULL, ?, 'pending', NOW(), NOW())`,
       [firstName, lastName, emailNorm, dobValidation.value, customerRoleId, picture]
     );
 
