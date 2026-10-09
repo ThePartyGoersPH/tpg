@@ -1477,12 +1477,27 @@ async function applyCustomerDecision(conn, { customerId, action, reason, adminId
   }
 
   const nextStatus = normalizedAction === "approve" ? "approved" : "rejected";
+
+  // Approving is the final gate, so it also marks the account verified:
+  // a reviewed sign-up logs in immediately without a separate email click.
+  // COALESCE preserves an earlier self-service verification timestamp, and
+  // the stale token is cleared so the pending link can never be replayed.
+  // Rejection never touches is_verified — an admin decision to revoke
+  // approval must not silently un-verify an already confirmed email address.
+  const verifyColumns = normalizedAction === "approve"
+    ? `,
+         is_verified = 1,
+         email_verified_at = COALESCE(email_verified_at, NOW()),
+         email_verification_token = NULL,
+         email_verification_expires = NULL`
+    : "";
+
   await conn.query(
     `UPDATE users
      SET approval_status = ?,
          approval_reviewed_by = ?,
          approval_reviewed_at = NOW(),
-         approval_rejection_reason = ?
+         approval_rejection_reason = ?${verifyColumns}
      WHERE id = ?`,
     [nextStatus, adminId, normalizedAction === "reject" ? cleanReason : null, customerId]
   );
@@ -1501,7 +1516,7 @@ async function recordCustomerDecision({ conn, usePool, customer, nextStatus, rea
       adminId,
       auditAction,
       customer.id,
-      JSON.stringify({ email: customer.email, reason: reason || null }),
+      JSON.stringify({ email: customer.email, reason: reason || null, marked_verified: nextStatus === "approved" }),
       req?.ip || null,
       req?.get ? req.get("user-agent") || null : null,
     ]
@@ -1622,7 +1637,7 @@ router.post("/customer-approvals/:id/approve", async (req, res) => {
       console.error("APPROVE CUSTOMER EMAIL ERROR:", emailErr?.message || emailErr);
     }
 
-    return res.json({ success: true, message: "Customer approved. They can now log in." });
+    return res.json({ success: true, message: "Customer approved and marked as verified. They can now log in." });
   } catch (err) {
     try { await conn.rollback(); } catch (_) {}
     if (err.statusCode) return res.status(err.statusCode).json({ success: false, message: err.message });
