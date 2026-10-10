@@ -952,6 +952,15 @@ router.post(
           if (!deliveryName || !deliveryPhone || !deliveryAddress) {
             return res.status(400).json({ success: false, message: "Delivery name, phone, and address are required" });
           }
+          const { normalizeCustomerPhone } = require("../utils/phonePolicy");
+          const deliveryPhoneCheck = normalizeCustomerPhone(deliveryPhone, {
+            required: true,
+            fieldLabel: "Delivery phone",
+          });
+          if (deliveryPhoneCheck.error) {
+            return res.status(400).json({ success: false, message: deliveryPhoneCheck.error });
+          }
+          deliveryPhone = deliveryPhoneCheck.value;
           deliveryFee = barFf ? Math.max(0, Number(barFf.delivery_fee) || 0) : 0;
         }
         // Alcohol is restricted to table bookings: check menu items by

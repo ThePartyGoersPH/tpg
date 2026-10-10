@@ -1,4 +1,5 @@
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const router = express.Router();
 const pool = require("../config/database");
 const bcrypt = require("bcrypt");
@@ -10,6 +11,8 @@ const { safeProfileUrl } = require("../utils/profileUrl");
 const { logAudit, auditContext } = require("../utils/audit");
 const { sendVerificationEmail, sendBarOwnerVerificationEmail, sendPasswordResetEmail } = require("../utils/emailService");
 const { DEFAULT_AVATAR } = require("../utils/profileUrl");
+const { validatePasswordStrength } = require("../utils/passwordPolicy");
+const { normalizeCustomerPhone } = require("../utils/phonePolicy");
 const { checkCustomerApproval } = require("../utils/customerApproval");
 const {
   policy: loginPolicy,
@@ -1018,7 +1021,20 @@ router.post("/register", ipRouteLimit("register"), async (req, res) => {
       return res.status(400).json({ success: false, message: "Password must be 128 characters or less" });
     }
 
-    const phoneValidation = normalizePhoneNumber(phone_number, {
+    const passwordCheck = validatePasswordStrength(password, {
+      name: `${firstNameValidation.value} ${lastNameValidation.value}`,
+      email,
+    });
+    if (!passwordCheck.ok) {
+      return res.status(400).json({
+        success: false,
+        code: "WEAK_PASSWORD",
+        failedRule: passwordCheck.failedRule,
+        message: passwordCheck.message,
+      });
+    }
+
+    const phoneValidation = normalizeCustomerPhone(phone_number, {
       required: false,
       fieldLabel: "Phone number",
     });
@@ -1041,9 +1057,7 @@ router.post("/register", ipRouteLimit("register"), async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid email format" });
     }
 
-    if (String(password).length < 6) {
-      return res.status(400).json({ success: false, message: "Password must be at least 6 characters" });
-    }
+    // (Password strength is enforced above via validatePasswordStrength.)
 
     // Ensure CUSTOMER role exists and get role_id
     const [roleRows] = await pool.query(
@@ -1129,6 +1143,16 @@ router.post("/register", ipRouteLimit("register"), async (req, res) => {
     });
   } catch (err) {
     console.error("CUSTOMER REGISTER ERROR:", err);
+    // Race guard: the pre-check above can lose to a concurrent insert, and
+    // the UNIQUE indexes are the final authority either way.
+    if (err && (err.code === "ER_DUP_ENTRY" || /duplicate entry/i.test(err.sqlMessage || ""))) {
+      const dupField = String(err.sqlMessage || "").includes("phone") ? "phone" : "email";
+      return res.status(409).json({
+        success: false,
+        code: dupField === "phone" ? "PHONE_TAKEN" : "EMAIL_TAKEN",
+        message: dupField === "phone" ? "Phone number already in use" : "Email already registered",
+      });
+    }
     return res.status(500).json({
       success: false,
       message: err.sqlMessage || err.message || "Server error"
@@ -1139,6 +1163,41 @@ router.post("/register", ipRouteLimit("register"), async (req, res) => {
 
 
 // ─── CHECK EMAIL AVAILABILITY ───
+// GET variant for the register form's live check (debounced client-side).
+// Rate-limited so the endpoint can't be abused to scan registered emails.
+const checkEmailLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, code: "RATE_LIMITED", message: "Too many checks. Please wait a minute and try again." },
+});
+
+router.get("/check-email", checkEmailLimiter, async (req, res) => {
+  try {
+    const emailNorm = String(req.query.email || "").trim().toLowerCase();
+    if (!emailNorm || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+      return res.status(400).json({ success: false, message: "Invalid email format" });
+    }
+    const [rows] = await pool.query(
+      "SELECT id, is_verified FROM users WHERE email = ? LIMIT 1",
+      [emailNorm]
+    );
+    if (!rows.length) {
+      return res.json({ success: true, available: true, status: "available" });
+    }
+    const verified = Number(rows[0].is_verified || 0) === 1;
+    return res.json({
+      success: true,
+      available: false,
+      status: verified ? "verified" : "unverified",
+    });
+  } catch (err) {
+    console.error("CHECK EMAIL ERROR:", err);
+    return res.status(500).json({ success: false, message: "Failed to check email" });
+  }
+});
+
 router.post("/check-email", async (req, res) => {
   try {
     const { email } = req.body || {};
@@ -1363,7 +1422,7 @@ router.patch("/me/profile", require("../middlewares/requireAuth"), async (req, r
     }
 
     if (phone_number !== undefined) {
-      const phoneValidation = normalizePhoneNumber(phone_number, {
+      const phoneValidation = normalizeCustomerPhone(phone_number, {
         required: false,
         fieldLabel: "Phone number",
       });
@@ -1447,6 +1506,15 @@ router.post("/me/change-password", require("../middlewares/requireAuth"), async 
 
     if (String(new_password).length < 6) {
       return res.status(400).json({ success: false, message: "New password must be at least 6 characters" });
+    }
+    const changeCheck = validatePasswordStrength(new_password, {});
+    if (!changeCheck.ok) {
+      return res.status(400).json({
+        success: false,
+        code: "WEAK_PASSWORD",
+        failedRule: changeCheck.failedRule,
+        message: changeCheck.message,
+      });
     }
     if (String(current_password).length > 128 || String(new_password).length > 128) {
       return res.status(400).json({ success: false, message: "Password must be 128 characters or less" });
@@ -1786,8 +1854,14 @@ router.post("/reset-password", async (req, res) => {
     if (!token || !new_password) {
       return res.status(400).json({ success: false, message: "Token and new_password are required" });
     }
-    if (String(new_password).length < 6) {
-      return res.status(400).json({ success: false, message: "Password must be at least 6 characters" });
+    const resetCheck = validatePasswordStrength(new_password, {});
+    if (!resetCheck.ok) {
+      return res.status(400).json({
+        success: false,
+        code: "WEAK_PASSWORD",
+        failedRule: resetCheck.failedRule,
+        message: resetCheck.message,
+      });
     }
 
     const [rows] = await pool.query(

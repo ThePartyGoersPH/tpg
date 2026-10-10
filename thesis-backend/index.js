@@ -96,6 +96,12 @@ const INSECURE_PROD_HTTP_ORIGINS = [
 ];
 
 const allowInsecureHttpOrigins = String(process.env.ALLOW_INSECURE_HTTP_ORIGINS || '').toLowerCase() === 'true';
+// Explicit allowlist from env (comma-separated, trimmed). This is the knob
+// for new domains: CORS_ORIGINS=https://thepartygoers.partygoers.online
+const envOrigins = String(process.env.CORS_ORIGINS || process.env.CORS_EXTRA_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 const extraOrigins = String(process.env.CORS_EXTRA_ORIGINS || '')
   .split(',')
   .map((origin) => origin.trim())
@@ -105,19 +111,36 @@ const corsOriginList = [
   ...BASE_PROD_ORIGINS,
   ...LOCAL_DEV_ORIGINS,
   ...(allowInsecureHttpOrigins ? INSECURE_PROD_HTTP_ORIGINS : []),
-  ...extraOrigins,
+  ...envOrigins,
+  ...extraOrigins.filter((o) => !envOrigins.includes(o)),
 ];
 
 const socketOriginList = [
   ...BASE_PROD_ORIGINS,
   ...LOCAL_DEV_ORIGINS,
   ...(allowInsecureHttpOrigins ? INSECURE_PROD_HTTP_ORIGINS : []),
-  ...extraOrigins,
+  ...envOrigins,
+  ...extraOrigins.filter((o) => !envOrigins.includes(o)),
 ];
 
-// Behind Nginx/Cloudflare in production: trust first proxy so rate limiting
-// and req.ip use X-Forwarded-For correctly.
-app.set("trust proxy", Number(process.env.TRUST_PROXY || 1));
+// Behind nginx/Cloudflare in production, the first proxy must be trusted so
+// rate limiting and req.ip use X-Forwarded-For. TRUST_PROXY=false (or 0)
+// disables it for direct local runs; anything else (including unset) keeps
+// the historical default of trusting one hop.
+const trustProxyRaw = String(process.env.TRUST_PROXY ?? '1').trim().toLowerCase();
+const trustProxyOn = !['false', '0', 'no', 'off', ''].includes(trustProxyRaw);
+if (trustProxyOn) {
+  app.set("trust proxy", Number.isFinite(Number(trustProxyRaw)) && Number(trustProxyRaw) > 1 ? Number(trustProxyRaw) : 1);
+}
+
+// Startup line: environment at a glance, values only — never secrets.
+console.log(
+  `[ENV] NODE_ENV=${process.env.NODE_ENV || 'development'} ` +
+  `APP_URL=${process.env.APP_URL || '(default production)'} ` +
+  `CORS_ORIGINS=${corsOriginList.length ? corsOriginList.join(',') : '(none)'} ` +
+  `TRUST_PROXY=${trustProxyOn ? 'on' : 'off'} ` +
+  `MAIL=${String(process.env.MAIL_ENABLED || '').toLowerCase() === 'true' ? 'enabled' : 'console-only'}`
+);
 
 // ── Security headers (helmet) ──────────────────────────────────────────────
 app.use(helmet({
