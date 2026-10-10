@@ -122,6 +122,9 @@ app.set("trust proxy", Number(process.env.TRUST_PROXY || 1));
 // ── Security headers (helmet) ──────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow serving uploads cross-origin
+  // GIS (Google button / One Tap) renders cross-origin popups and iframes:
+  // disowning them with same-origin breaks the handshake, so allow popups.
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -130,9 +133,13 @@ app.use(helmet({
       fontSrc: ["'self'", 'https:', 'data:'],
       formAction: ["'self'", 'https:'],
       frameAncestors: ["'none'"],
+      // Google Identity Services hosts (button iframe + script). These matter
+      // when Express itself serves the SPA (local dev); nginx-served static
+      // files carry no CSP header anyway.
+      frameSrc: ["'self'", 'https://accounts.google.com'],
       imgSrc: ["'self'", 'https:', 'data:'],
       objectSrc: ["'none'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", 'https://accounts.google.com'],
       scriptSrcAttr: ["'none'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https:'],
       upgradeInsecureRequests: [],
