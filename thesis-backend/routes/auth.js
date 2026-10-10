@@ -1740,6 +1740,10 @@ router.post("/forgot-password", ipRouteLimit("forgot-password"), async (req, res
       [resetToken, tokenExpires, user.id]
     );
 
+    // Unknown addresses still get the generic success (no enumeration), but
+    // a REAL account whose mail fails gets an honest 500 instead of a false
+    // "Reset link sent" screen — the failure is logged server-side.
+    let mailOk = true;
     try {
       const isManagerPortal = req.get('x-login-portal') === 'bar_management';
       await sendPasswordResetEmail(emailNorm, user.first_name, resetToken, isManagerPortal ? 'manager' : 'customer');
@@ -1748,9 +1752,13 @@ router.post("/forgot-password", ipRouteLimit("forgot-password"), async (req, res
         await auditEmail(user.id, emailNorm, "password_reset_requested", "Reset your Party Goers password");
       } catch (_) {}
     } catch (emailErr) {
-      console.error("PASSWORD RESET EMAIL ERROR:", emailErr);
+      console.error("PASSWORD RESET EMAIL ERROR:", emailErr?.code || "", emailErr?.message || emailErr);
+      mailOk = false;
     }
 
+    if (!mailOk) {
+      return res.status(500).json({ success: false, message: "We couldn't send the email, please try again." });
+    }
     return res.json({ success: true, message: "If an account exists with that email, a reset link has been sent." });
   } catch (err) {
     console.error("FORGOT PASSWORD ERROR:", err);

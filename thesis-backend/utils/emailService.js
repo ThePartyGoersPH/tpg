@@ -7,12 +7,21 @@ const _mailPort = parseInt(process.env.MAIL_PORT || process.env.SMTP_PORT || '58
 const _mailUser = process.env.MAIL_USER || process.env.SMTP_USER;
 const _mailPass = process.env.MAIL_PASS || process.env.SMTP_PASSWORD;
 const _fromName = 'The Party Goers PH';
+// resend.com / Brevo HTTPS APIs (port 443 — never blocked on clouds).
+const _provider = String(process.env.MAIL_PROVIDER || 'smtp').trim().toLowerCase();
+const _resendKey = process.env.RESEND_API_KEY;
+const _brevoKey = process.env.BREVO_API_KEY;
 
 function mailFrom() {
   const raw = String(process.env.MAIL_FROM || _mailUser || 'noreply@thepartygoersph.com').trim();
   // Accept either a bare address or a full "Name <addr>" mailbox.
   if (/<.+@.+>/.test(raw)) return raw;
   return `"${_fromName}" <${raw}>`;
+}
+
+function mailFromAddress() {
+  const m = String(mailFrom()).match(/<(.+@.+)>/);
+  return m ? m[1] : String(process.env.MAIL_FROM || _mailUser || 'noreply@thepartygoersph.com').trim();
 }
 
 // Public links inside emails are ALWAYS built from APP_URL — never
@@ -24,16 +33,17 @@ function appUrl() {
   return raw || 'https://thepartygoers.partygoers.online';
 }
 
-// Real mail only goes out in production. Everywhere else the content is
-// printed to the backend console so flows stay testable without spamming
-// real inboxes (and without needing SMTP credentials locally).
-function isMailDev() {
-  return String(process.env.NODE_ENV || 'development').toLowerCase() !== 'production';
+// Explicit switch — never inferred from NODE_ENV. MAIL_ENABLED=true sends
+// real mail anywhere (production AND local testing); anything else prints
+// to the backend console instead.
+function isMailEnabled() {
+  return String(process.env.MAIL_ENABLED || '').trim().toLowerCase() === 'true';
 }
 
 let transporter = null;
-
-if (_mailHost && _mailUser && _mailPass) {
+function smtpTransporter() {
+  if (transporter) return transporter;
+  if (!_mailHost || !_mailUser || !_mailPass) return null;
   // Port 465 = implicit TLS; 587 = STARTTLS. Port 25 is never used (cloud
   // providers routinely block it outbound).
   const secure = _mailPort === 465;
@@ -43,39 +53,125 @@ if (_mailHost && _mailUser && _mailPass) {
     secure,
     ...(secure ? {} : { requireTLS: true }),
     auth: { user: _mailUser, pass: _mailPass },
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
   });
-  console.log('✅ SMTP email service initialized');
-} else {
-  console.warn('⚠️  SMTP credentials not set — emails will be logged to console only.');
+  return transporter;
 }
 
-// sendMail wrapper: dev prints + succeeds, production sends, failures log
-// the real error (code + message; never credentials) and throw so callers
-// can return a clear API error instead of silently dropping the mail.
-async function _send(to, subject, html) {
-  if (isMailDev()) {
-    console.log(`📧 [DEV EMAIL] To: ${to} | Subject: ${subject}`);
+function providerReady() {
+  if (_provider === 'resend') return Boolean(_resendKey);
+  if (_provider === 'brevo') return Boolean(_brevoKey);
+  return Boolean(_mailHost && _mailUser && _mailPass);
+}
+
+async function sendViaHttpApi(to, subject, html) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    if (_provider === 'resend') {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${_resendKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: mailFrom(), to, subject, html }),
+        signal: controller.signal,
+      });
+      const body = await res.text();
+      if (!res.ok) {
+        const err = new Error(`Resend API ${res.status}: ${body.slice(0, 300)}`);
+        err.code = `RESEND_${res.status}`;
+        throw err;
+      }
+      return;
+    }
+    // brevo
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': _brevoKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender: { email: mailFromAddress(), name: _fromName },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+      }),
+      signal: controller.signal,
+    });
+    const body = await res.text();
+    if (!res.ok) {
+      const err = new Error(`Brevo API ${res.status}: ${body.slice(0, 300)}`);
+      err.code = `BREVO_${res.status}`;
+      throw err;
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// THE shared mail wrapper — every email in the app flows through here.
+// Disabled -> print + succeed (dev fallback). Enabled -> send via the
+// configured provider. Failures log the real error (code + response +
+// message; never credentials) and throw so callers return a clear API
+// error instead of silently dropping the mail.
+async function sendMail(to, subject, html) {
+  if (!isMailEnabled()) {
+    console.log(`📧 [MAIL DISABLED] To: ${to} | Subject: ${subject}`);
     console.log(html);
     return { ok: true, dev: true };
   }
-  if (!transporter) {
-    const err = new Error('Email service is not configured (SMTP credentials missing)');
+  if (!providerReady()) {
+    const err = new Error(
+      'Email service is not configured (MAIL_ENABLED=true but no provider credentials: SMTP host/user/pass or RESEND_API_KEY/BREVO_API_KEY)'
+    );
     err.code = 'MAIL_NOT_CONFIGURED';
     throw err;
   }
 
   try {
-    await transporter.sendMail({ from: mailFrom(), to, subject, html });
+    if (_provider === 'smtp') {
+      const tx = smtpTransporter();
+      await tx.sendMail({ from: mailFrom(), to, subject, html });
+    } else {
+      await sendViaHttpApi(to, subject, html);
+    }
     console.log(`✅ Email sent to ${to}: ${subject}`);
     return { ok: true, dev: false };
   } catch (error) {
-    // Log the real reason (SMTP reply/message). Nodemailer errors carry the
-    // host/username at most — never the password — and we print code+message
-    // only.
     console.error(`❌ Email failed to ${to} [${error.code || 'no-code'}]: ${error.message}`);
     throw error;
   }
 }
+
+// Startup diagnostics: one line stating exactly what will happen, plus an
+// async handshake so a bad config shows up immediately in pm2 logs.
+(function mailBootCheck() {
+  const from = mailFromAddress();
+  if (!isMailEnabled()) {
+    console.log('📧 Mail: DISABLED (MAIL_ENABLED is not "true") — emails print to console only.');
+    return;
+  }
+  if (_provider === 'smtp') {
+    console.log(
+      `📧 Mail: ENABLED via smtp host=${_mailHost || '(missing)'} port=${_mailPort} from=${from}`
+    );
+    const tx = smtpTransporter();
+    if (!tx) {
+      console.error('❌ Mail misconfigured: MAIL_HOST/MAIL_USER/MAIL_PASS (or SMTP_*) are incomplete.');
+      return;
+    }
+    tx.verify()
+      .then(() => console.log('✅ Mail: SMTP handshake OK (server accepted the credentials).'))
+      .catch((err) =>
+        console.error(`❌ Mail: SMTP handshake failed [${err.code || 'no-code'}]: ${err.message}`)
+      );
+  } else if (_provider === 'resend' || _provider === 'brevo') {
+    console.log(
+      `📧 Mail: ENABLED via ${_provider} API from=${from} ` +
+        `(${_provider === 'resend' ? (_resendKey ? 'key present' : 'KEY MISSING') : _brevoKey ? 'key present' : 'KEY MISSING'})`
+    );
+  } else {
+    console.error(`❌ Mail: unknown MAIL_PROVIDER='${_provider}' (want smtp|resend|brevo).`);
+  }
+})();
 
 async function sendVerificationEmail(toEmail, firstName, token, otp) {
   const verifyLink = `${appUrl()}/verify-email?token=${token}`;
@@ -97,7 +193,7 @@ async function sendVerificationEmail(toEmail, firstName, token, otp) {
               </table>`
     : '';
 
-  await _send(toEmail, 'Confirm your Party Goers account', `
+  await sendMail(toEmail, 'Confirm your Party Goers account', `
 <!DOCTYPE html>
 <html>
 <head>
@@ -181,7 +277,7 @@ async function sendBarOwnerVerificationEmail(toEmail, firstName, token) {
   const frontendUrl = (process.env.BAR_OWNER_APP_URL || process.env.FRONTEND_URL || 'https://thepartygoers.partygoers.online').replace(/\/$/, '');
   const verifyLink = `${frontendUrl}/verify-bar-owner-email?token=${token}`;
 
-  await _send(toEmail, 'Verify your business registration email', `
+  await sendMail(toEmail, 'Verify your business registration email', `
 <!DOCTYPE html>
 <html>
 <head>
@@ -250,7 +346,7 @@ async function sendBarOwnerVerificationEmail(toEmail, firstName, token) {
 async function sendBarApprovalEmail(toEmail, ownerName, businessName) {
   const loginUrl = process.env.BAR_OWNER_URL || 'https://barowner.thepartygoersph.com/login';
 
-  await _send(toEmail, '🎉 Your Business Registration is Approved!', `
+  await sendMail(toEmail, '🎉 Your Business Registration is Approved!', `
 <!DOCTYPE html>
 <html>
 <head>
@@ -478,12 +574,7 @@ async function sendPurchaseOrderEmail(toEmail, opts = {}) {
 </body>
 </html>`.trim();
 
-  await transporter.sendMail({
-    from: `"${barName} via ${_fromName}" <${_fromEmail}>`,
-    to: toEmail,
-    subject: `Purchase Order #${po.id ?? ''} from ${barName}`,
-    html,
-  });
+  await sendMail(toEmail, `Purchase Order #${po.id ?? ''} from ${barName}`, html);
   console.log(`✅ PO email sent to ${toEmail} (PO #${po.id ?? '?'})`);
   return { sent: true };
 }
@@ -494,7 +585,7 @@ async function sendPasswordResetEmail(toEmail, firstName, token, portal = 'custo
     : (process.env.FRONTEND_URL || 'https://thepartygoers.partygoers.online');
   const resetLink = `${frontendUrl}/reset-password?token=${token}`;
 
-  await _send(toEmail, 'Reset your Party Goers password', `
+  await sendMail(toEmail, 'Reset your Party Goers password', `
 <!DOCTYPE html>
 <html>
 <head>
@@ -570,7 +661,7 @@ async function sendPasswordResetEmail(toEmail, firstName, token, portal = 'custo
 /**
  * Staff onboarding email with login credentials.
  * opts: { firstName, barName, role, email, defaultPassword, isDefaultPassword }
- * Never throws — delivery failures are logged inside _send so callers can
+ * Never throws — delivery failures are logged inside sendMail so callers can
  * fire-and-forget without risking the staff-creation request.
  */
 async function sendStaffOnboardingEmail(toEmail, opts = {}) {
@@ -582,7 +673,7 @@ async function sendStaffOnboardingEmail(toEmail, opts = {}) {
   const portalUrl = (process.env.BAR_OWNER_APP_URL || 'https://thepartygoers.partygoers.online/manager').replace(/\/$/, '');
   const passwordLabel = opts.isDefaultPassword === false ? 'Temporary Password' : 'Default Password';
 
-  await _send(toEmail, `Welcome to ${barName} - Your Staff Account Credentials`, `
+  await sendMail(toEmail, `Welcome to ${barName} - Your Staff Account Credentials`, `
 <!DOCTYPE html>
 <html>
 <head>
@@ -659,7 +750,7 @@ async function sendAccountLockedEmail(toEmail, firstName, { minutes, app } = {})
   const safeName = String(firstName || 'there');
   const safeMinutes = Number(minutes) > 0 ? Number(minutes) : 5;
   const where = app ? ` on ${String(app)}` : '';
-  await _send(toEmail, 'Your Party Goers account was temporarily locked', `
+  await sendMail(toEmail, 'Your Party Goers account was temporarily locked', `
 <!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Account locked</title></head>
@@ -687,5 +778,5 @@ async function sendAccountLockedEmail(toEmail, firstName, { minutes, app } = {})
 </html>`);
 }
 
-module.exports = { sendVerificationEmail, sendBarOwnerVerificationEmail, sendBarApprovalEmail, sendPasswordResetEmail, sendPurchaseOrderEmail, sendStaffOnboardingEmail, sendAccountLockedEmail, sendMail: _send, appUrl, isMailDev };
+module.exports = { sendVerificationEmail, sendBarOwnerVerificationEmail, sendBarApprovalEmail, sendPasswordResetEmail, sendPurchaseOrderEmail, sendStaffOnboardingEmail, sendAccountLockedEmail, sendMail, appUrl, isMailEnabled };
 
