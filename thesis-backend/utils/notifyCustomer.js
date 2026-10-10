@@ -13,7 +13,26 @@
 //   so support can see exactly what went out.
 
 const pool = require("../config/database");
-const { sendMail, appUrl } = require("./emailService");
+const emailService = require("./emailService");
+const { appUrl } = emailService;
+
+function supportEmail() {
+  return String(process.env.SUPPORT_EMAIL || "support@thepartygoersph.com").trim();
+}
+
+function stripHtml(html) {
+  return String(html || "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|h1|tr)>/gi, "\n")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n+/g, "\n")
+    .trim();
+}
 
 function shell({ eyebrow, title, greeting, bodyHtml, note }) {
   const safeGreeting = String(greeting || "there");
@@ -148,6 +167,49 @@ const EVENTS = {
         when ? ` (${esc(when)})` : ""
       } is now <strong style="color:#ffffff;">${esc(String(status || "updated"))}</strong>.</p>`,
   }),
+  // ── Customer-approval decisions (admin page) ──
+  customer_approved: ({ note } = {}) => ({
+    subject: "Your Party Goers account has been approved",
+    eyebrow: "Account Approved",
+    title: "you're in! 🎉",
+    body: () =>
+      `<p style="margin:0 0 16px;">Your account has been approved. You can now log in and start discovering bars, booking tables, and joining events.${
+        note ? ` Note from the review team: <strong style="color:#ffffff;">${esc(note)}</strong>` : ""
+      }</p>
+       <p style="margin:0;"><a href="${appUrl()}/login" style="display:inline-block;padding:12px 32px;background:#CC0000;color:#ffffff;text-decoration:none;border-radius:100px;font-size:0.9rem;font-weight:700;">Log in</a></p>`,
+    text: (d = {}) =>
+      `Your Party Goers account has been approved. You can now log in: ${appUrl()}/login${
+        d.note ? ` Note from the review team: ${d.note}` : ""
+      }`,
+  }),
+  customer_revoked: ({ reason } = {}) => ({
+    subject: "Your Party Goers account access has been revoked",
+    eyebrow: "Access Revoked",
+    title: "access revoked.",
+    body: () =>
+      `<p style="margin:0;">Your account access has been revoked${
+        reason ? ` for the following reason: <strong style="color:#ffffff;">${esc(reason)}</strong>` : ""
+      }. This means you cannot log in or make reservations right now.</p>
+       <p style="margin:16px 0 0;">If you think this is a mistake, please contact our support team at <a href="mailto:${supportEmail()}" style="color:#CC0000;">${supportEmail()}</a>.</p>`,
+    text: (d = {}) =>
+      `Your Party Goers account access has been revoked${
+        d.reason ? ` for the following reason: ${d.reason}` : ""
+      }. You cannot log in or make reservations right now. If this is a mistake, contact support at ${supportEmail()}.`,
+  }),
+  customer_rejected: ({ reason } = {}) => ({
+    subject: "Update on your Party Goers registration",
+    eyebrow: "Registration Update",
+    title: "registration update.",
+    body: () =>
+      `<p style="margin:0;">Your registration was not approved${
+        reason ? ` for the following reason: <strong style="color:#ffffff;">${esc(reason)}</strong>` : ""
+      }. This means you cannot log in or make reservations with this account.</p>
+       <p style="margin:16px 0 0;">If you think this is a mistake, please contact our support team at <a href="mailto:${supportEmail()}" style="color:#CC0000;">${supportEmail()}</a>.</p>`,
+    text: (d = {}) =>
+      `Your Party Goers registration was not approved${
+        d.reason ? ` for the following reason: ${d.reason}` : ""
+      }. If this is a mistake, contact support at ${supportEmail()}.`,
+  }),
 };
 
 // Lightweight audit row so support can see every customer email in Audit Logs.
@@ -157,7 +219,7 @@ async function auditEmail(userId, email, event, subject, extra = {}) {
     await pool.query(
       `INSERT INTO platform_audit_logs
        (actor_user_id, action, entity, entity_id, target_bar_id, details, ip_address, user_agent)
-       VALUES (?, 'EMAIL_SENT', 'user', ?, NULL, ?, NULL, 'notifyCustomer')`,
+       VALUES (?, 'EMAIL_SENT', 'customer', ?, NULL, ?, NULL, 'notifyCustomer')`,
       [userId, userId, JSON.stringify({ email, event, subject, ...extra })]
     );
   } catch (_) {
@@ -197,18 +259,40 @@ async function resolveUser(userRef) {
 }
 
 async function notifyCustomer(userRef, eventType, data = {}) {
+  let user = null;
+  let subject = "";
   try {
     const build = EVENTS[eventType];
     if (!build) return { ok: false, reason: "unknown-event" };
-    const user = await resolveUser(userRef);
+    user = await resolveUser(userRef);
     if (!user || !user.email) return { ok: false, reason: "no-email" };
-    const { subject, eyebrow, title, body } = build(data);
-    const html = shell({ eyebrow, title, greeting: user.first_name || "there", bodyHtml: body() });
-    const result = await sendMail(user.email, subject, html);
-    await auditEmail(user.id, user.email, eventType, subject, { dev: Boolean(result && result.dev) });
+    const built = build(data);
+    subject = built.subject;
+    const html = shell({
+      eyebrow: built.eyebrow,
+      title: built.title,
+      greeting: user.first_name || "there",
+      bodyHtml: built.body(),
+    });
+    const text = typeof built.text === "function" ? built.text(data) : stripHtml(built.body());
+    // Namespace access (not destructured) so tests can stub the send.
+    const result = await emailService.sendMail(user.email, subject, html, text);
+    await auditEmail(user.id, user.email, eventType, subject, {
+      dev: Boolean(result && result.dev),
+      success: true,
+    });
     return { ok: Boolean(result && result.ok), dev: Boolean(result && result.dev) };
   } catch (err) {
     console.error(`NOTIFY CUSTOMER ERROR [${eventType}]:`, err?.code || "", err?.message || err);
+    // Failures are audited too — a missing email must be visible, not silent.
+    try {
+      if (user && user.id) {
+        await auditEmail(user.id, user.email, eventType, subject || eventType, {
+          success: false,
+          error: `${err?.code || "no-code"}: ${err?.message || err}`.slice(0, 300),
+        });
+      }
+    } catch (_) {}
     return { ok: false, reason: "send-failed" };
   }
 }

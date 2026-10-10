@@ -65,7 +65,7 @@ function providerReady() {
   return Boolean(_mailHost && _mailUser && _mailPass);
 }
 
-async function sendViaHttpApi(to, subject, html) {
+async function sendViaHttpApi(to, subject, html, text) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 20000);
   try {
@@ -73,7 +73,7 @@ async function sendViaHttpApi(to, subject, html) {
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${_resendKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: mailFrom(), to, subject, html }),
+        body: JSON.stringify({ from: mailFrom(), to, subject, html, text }),
         signal: controller.signal,
       });
       const body = await res.text();
@@ -93,6 +93,7 @@ async function sendViaHttpApi(to, subject, html) {
         to: [{ email: to }],
         subject,
         htmlContent: html,
+        textContent: text,
       }),
       signal: controller.signal,
     });
@@ -112,7 +113,7 @@ async function sendViaHttpApi(to, subject, html) {
 // configured provider. Failures log the real error (code + response +
 // message; never credentials) and throw so callers return a clear API
 // error instead of silently dropping the mail.
-async function sendMail(to, subject, html) {
+async function sendMail(to, subject, html, text) {
   if (!isMailEnabled()) {
     console.log(`📧 [MAIL DISABLED] To: ${to} | Subject: ${subject}`);
     console.log(html);
@@ -126,12 +127,15 @@ async function sendMail(to, subject, html) {
     throw err;
   }
 
+  // Plain-text fallback keeps the message readable where HTML is stripped.
+  const fallbackText = text || String(html || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
   try {
     if (_provider === 'smtp') {
       const tx = smtpTransporter();
-      await tx.sendMail({ from: mailFrom(), to, subject, html });
+      await tx.sendMail({ from: mailFrom(), to, subject, text: fallbackText, html });
     } else {
-      await sendViaHttpApi(to, subject, html);
+      await sendViaHttpApi(to, subject, html, fallbackText);
     }
     console.log(`✅ Email sent to ${to}: ${subject}`);
     return { ok: true, dev: false };
@@ -778,63 +782,7 @@ async function sendAccountLockedEmail(toEmail, firstName, { minutes, app } = {})
 </html>`);
 }
 
-async function sendCustomerApprovalEmail(toEmail, firstName) {
-  const safeName = String(firstName || 'there');
-  await sendMail(toEmail, 'Your Party Goers account is approved', `
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Account approved</title></head>
-<body style="margin:0;padding:0;background:#0A0A0A;font-family:'DM Sans',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;padding:40px 0;">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#111111;border-radius:16px;border:1px solid rgba(255,255,255,0.06);max-width:560px;width:100%;">
-        <tr><td style="background:linear-gradient(135deg,#1a0000 0%,#111111 100%);padding:36px 40px 28px;border-bottom:1px solid rgba(204,0,0,0.2);">
-          <span style="font-size:1.4rem;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">Party<span style="color:#CC0000;">Goers</span> PH</span>
-        </td></tr>
-        <tr><td style="padding:36px 40px;">
-          <p style="margin:0 0 8px;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#CC0000;">Account Approved</p>
-          <h1 style="margin:0 0 16px;font-size:1.6rem;font-weight:800;color:#ffffff;line-height:1.2;">Hey ${safeName}, you're in!</h1>
-          <p style="margin:0 0 28px;font-size:0.95rem;color:#888888;line-height:1.7;">
-            Your account has been approved. You can now log in and start discovering bars, booking tables, and joining events.
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`);
-}
 
-module.exports = { sendVerificationEmail, sendBarOwnerVerificationEmail, sendBarApprovalEmail, sendPasswordResetEmail, sendPurchaseOrderEmail, sendStaffOnboardingEmail, sendAccountLockedEmail, sendCustomerApprovalEmail, sendCustomerRejectionEmail, sendMail, appUrl, isMailEnabled };
+module.exports = { sendVerificationEmail, sendBarOwnerVerificationEmail, sendBarApprovalEmail, sendPasswordResetEmail, sendPurchaseOrderEmail, sendStaffOnboardingEmail, sendAccountLockedEmail, sendMail, appUrl, isMailEnabled };
 
 
-async function sendCustomerRejectionEmail(toEmail, firstName, reason) {
-  const safeName = String(firstName || 'there');
-  const safeReason = String(reason || '').trim();
-  await sendMail(toEmail, 'Update on your Party Goers registration', `
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Registration update</title></head>
-<body style="margin:0;padding:0;background:#0A0A0A;font-family:'DM Sans',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;padding:40px 0;">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#111111;border-radius:16px;border:1px solid rgba(255,255,255,0.06);max-width:560px;width:100%;">
-        <tr><td style="background:linear-gradient(135deg,#1a0000 0%,#111111 100%);padding:36px 40px 28px;border-bottom:1px solid rgba(204,0,0,0.2);">
-          <span style="font-size:1.4rem;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">Party<span style="color:#CC0000;">Goers</span> PH</span>
-        </td></tr>
-        <tr><td style="padding:36px 40px;">
-          <p style="margin:0 0 8px;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#CC0000;">Registration Update</p>
-          <h1 style="margin:0 0 16px;font-size:1.6rem;font-weight:800;color:#ffffff;line-height:1.2;">Hey ${safeName}, an update on your registration</h1>
-          <p style="margin:0 0 16px;font-size:0.95rem;color:#888888;line-height:1.7;">
-            Your registration was not approved at this time${safeReason ? ` for the following reason: <strong style="color:#ffffff;">${safeReason}</strong>` : '.'}
-          </p>
-          <p style="margin:0;font-size:0.95rem;color:#888888;line-height:1.7;">
-            If you think this is a mistake, please contact our support team at ${SUPPORT_EMAIL}.
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`);
-}

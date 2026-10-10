@@ -1445,11 +1445,15 @@ async function applyCustomerDecision(conn, { customerId, action, reason, adminId
   let cleanReason = "";
   if (normalizedAction === "reject") {
     cleanReason = String(reason || "").trim();
-    if (cleanReason.length < 5 || cleanReason.length > 500) {
-      const err = new Error("A rejection reason between 5 and 500 characters is required.");
+    if (cleanReason.length < 5 || cleanReason.length > 300) {
+      const err = new Error("A reason between 5 and 300 characters is required.");
       err.statusCode = 400;
       throw err;
     }
+  } else {
+    // Approve carries an optional note (shown in the email + audit only —
+    // the stored reason column stays reserved for reject/revoke reasons).
+    cleanReason = String(reason || "").trim().slice(0, 300);
   }
 
   const [rows] = await conn.query(
@@ -1481,6 +1485,10 @@ async function applyCustomerDecision(conn, { customerId, action, reason, adminId
   }
 
   const nextStatus = normalizedAction === "approve" ? "approved" : "rejected";
+  // Rejecting an already-approved account is a Revoke (access taken away);
+  // rejecting a pending one is a plain Reject. The email kind follows.
+  const kind =
+    nextStatus === "approved" ? "approved" : current === "approved" ? "revoked" : "rejected";
 
   // Approving is the final gate, so it also marks the account verified:
   // a reviewed sign-up logs in immediately without a separate email click.
@@ -1514,10 +1522,31 @@ async function applyCustomerDecision(conn, { customerId, action, reason, adminId
     ]
   );
 
-  return { target, nextStatus, reason: cleanReason };
+  return { target, nextStatus, reason: cleanReason, prevStatus: current, kind };
 }
 
-async function recordCustomerDecision({ conn, usePool, customer, nextStatus, reason, adminId, req }) {
+// One email per decision, sent AFTER the status commit — never inside it.
+// Returns { sent } so callers report honestly; a failure here must never
+// roll back or block the admin action.
+async function sendCustomerDecisionEmail({ id, email, firstName, kind, reason, note }) {
+  try {
+    const { notifyCustomer } = require("../utils/notifyCustomer");
+    const event =
+      kind === "approved" ? "customer_approved" : kind === "revoked" ? "customer_revoked" : "customer_rejected";
+    // The id keeps the EMAIL_SENT audit row attached to the customer.
+    const result = await notifyCustomer(
+      { id, email, first_name: firstName },
+      event,
+      kind === "approved" ? { note: note || null } : { reason: reason || null }
+    );
+    return { sent: Boolean(result && result.ok) };
+  } catch (err) {
+    console.error("CUSTOMER DECISION EMAIL ERROR:", err?.code || "", err?.message || err);
+    return { sent: false };
+  }
+}
+
+async function recordCustomerDecision({ conn, usePool, customer, nextStatus, kind, reason, adminId, req }) {
   const db = conn || pool;
   const auditAction = nextStatus === "approved" ? "APPROVE_CUSTOMER" : "REJECT_CUSTOMER";
   await db.query(
@@ -1528,7 +1557,12 @@ async function recordCustomerDecision({ conn, usePool, customer, nextStatus, rea
       adminId,
       auditAction,
       customer.id,
-      JSON.stringify({ email: customer.email, reason: reason || null, marked_verified: nextStatus === "approved" }),
+      JSON.stringify({
+        email: customer.email,
+        kind: kind || nextStatus,
+        reason: reason || null,
+        marked_verified: nextStatus === "approved",
+      }),
       req?.ip || null,
       req?.get ? req.get("user-agent") || null : null,
     ]
@@ -1636,20 +1670,23 @@ router.post("/customer-approvals/:id/approve", async (req, res) => {
     if (!customerId) return res.status(400).json({ success: false, message: "Invalid customer id" });
 
     await conn.beginTransaction();
-    const { target, nextStatus } = await applyCustomerDecision(conn, {
-      customerId, action: "approve", adminId: req.user.id,
+    const { target, nextStatus, reason, kind } = await applyCustomerDecision(conn, {
+      customerId, action: "approve", reason: req.body?.note ?? req.body?.reason, adminId: req.user.id,
     });
-    await recordCustomerDecision({ conn, customer: target, nextStatus, adminId: req.user.id, req });
+    await recordCustomerDecision({ conn, customer: target, nextStatus, kind, reason, adminId: req.user.id, req });
     await conn.commit();
 
-    try {
-      const { sendCustomerApprovalEmail } = require("../utils/emailService");
-      await sendCustomerApprovalEmail(target.email, target.first_name);
-    } catch (emailErr) {
-      console.error("APPROVE CUSTOMER EMAIL ERROR:", emailErr?.message || emailErr);
-    }
-
-    return res.json({ success: true, message: "Customer approved and marked as verified. They can now log in." });
+    // Status is committed; the email must never undo it.
+    const email = await sendCustomerDecisionEmail({
+      id: target.id, email: target.email, firstName: target.first_name, kind, reason,
+    });
+    return res.json({
+      success: true,
+      emailSent: email.sent,
+      message: email.sent
+        ? "Customer approved and email sent."
+        : "Customer approved, but the email could not be sent.",
+    });
   } catch (err) {
     try { await conn.rollback(); } catch (_) {}
     if (err.statusCode) return res.status(err.statusCode).json({ success: false, message: err.message });
@@ -1667,20 +1704,23 @@ router.post("/customer-approvals/:id/reject", async (req, res) => {
     if (!customerId) return res.status(400).json({ success: false, message: "Invalid customer id" });
 
     await conn.beginTransaction();
-    const { target, nextStatus, reason } = await applyCustomerDecision(conn, {
+    const { target, nextStatus, reason, kind } = await applyCustomerDecision(conn, {
       customerId, action: "reject", reason: req.body?.reason, adminId: req.user.id,
     });
-    await recordCustomerDecision({ conn, customer: target, nextStatus, reason, adminId: req.user.id, req });
+    await recordCustomerDecision({ conn, customer: target, nextStatus, kind, reason, adminId: req.user.id, req });
     await conn.commit();
 
-    try {
-      const { sendCustomerRejectionEmail } = require("../utils/emailService");
-      await sendCustomerRejectionEmail(target.email, target.first_name, reason);
-    } catch (emailErr) {
-      console.error("REJECT CUSTOMER EMAIL ERROR:", emailErr?.message || emailErr);
-    }
-
-    return res.json({ success: true, message: "Customer rejected." });
+    const email = await sendCustomerDecisionEmail({
+      id: target.id, email: target.email, firstName: target.first_name, kind, reason,
+    });
+    const verb = kind === "revoked" ? "revoked" : "rejected";
+    return res.json({
+      success: true,
+      emailSent: email.sent,
+      message: email.sent
+        ? `Customer ${verb} and email sent.`
+        : `Customer ${verb}, but the email could not be sent.`,
+    });
   } catch (err) {
     try { await conn.rollback(); } catch (_) {}
     if (err.statusCode) return res.status(err.statusCode).json({ success: false, message: err.message });
@@ -1701,45 +1741,76 @@ router.post("/customer-approvals/bulk", async (req, res) => {
     return res.status(400).json({ success: false, message: "Provide at least one customer id." });
   }
 
-  const conn = await pool.getConnection();
   const results = [];
-  try {
-    await conn.beginTransaction();
-    for (const customerId of list) {
-      const decided = await applyCustomerDecision(conn, {
+  // Each customer gets its own transaction: one bad id or validation error
+  // records a per-item error instead of rolling back everyone else, and each
+  // email goes out on its own so one mail failure never blocks the others.
+  for (const customerId of list) {
+    const itemConn = await pool.getConnection();
+    try {
+      await itemConn.beginTransaction();
+      const decided = await applyCustomerDecision(itemConn, {
         customerId, action, reason, adminId: req.user.id,
       });
       await recordCustomerDecision({
-        conn, customer: decided.target, nextStatus: decided.nextStatus,
-        reason: decided.reason, adminId: req.user.id, req,
+        conn: itemConn, customer: decided.target, nextStatus: decided.nextStatus,
+        kind: decided.kind, reason: decided.reason, adminId: req.user.id, req,
       });
-      results.push({ id: customerId, status: decided.nextStatus });
-    }
-    await conn.commit();
-  } catch (err) {
-    try { await conn.rollback(); } catch (_) {}
-    if (err.statusCode) return res.status(err.statusCode).json({ success: false, message: err.message });
-    console.error("SA BULK CUSTOMER DECISION ERROR:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  } finally {
-    conn.release();
-  }
-
-  // Emails go out after commit, best-effort, never failing the decision.
-  const { sendCustomerApprovalEmail, sendCustomerRejectionEmail } = require("../utils/emailService");
-  for (const r of results) {
-    try {
-      const [[row]] = await pool.query("SELECT email, first_name FROM users WHERE id = ? LIMIT 1", [r.id]);
-      if (!row) continue;
-      if (r.status === "approved") await sendCustomerApprovalEmail(row.email, row.first_name);
-      else await sendCustomerRejectionEmail(row.email, row.first_name, reason);
-    } catch (emailErr) {
-      console.error("BULK CUSTOMER EMAIL ERROR:", emailErr?.message || emailErr);
+      await itemConn.commit();
+      const email = await sendCustomerDecisionEmail({
+        id: decided.target.id, email: decided.target.email, firstName: decided.target.first_name,
+        kind: decided.kind, reason: decided.reason,
+      });
+      results.push({ id: customerId, status: decided.nextStatus, kind: decided.kind, emailSent: email.sent });
+    } catch (err) {
+      try { await itemConn.rollback(); } catch (_) {}
+      results.push({ id: customerId, error: err.statusCode ? err.message : "Server error" });
+    } finally {
+      itemConn.release();
     }
   }
 
+  const done = results.filter((r) => !r.error);
   const verb = String(action).trim().toLowerCase() === "approve" ? "approved" : "rejected";
-  return res.json({ success: true, message: `${results.length} customer(s) ${verb}.`, data: results });
+  const emailed = done.filter((r) => r.emailSent).length;
+  return res.json({
+    success: true,
+    message: `${done.length} of ${list.length} customer(s) ${verb} (${emailed} email(s) sent).`,
+    data: results,
+  });
+});
+
+// Resend the last status email for one customer (uses the stored decision).
+router.post("/customer-approvals/:id/resend-email", async (req, res) => {
+  try {
+    const customerId = Number(req.params.id);
+    if (!customerId) return res.status(400).json({ success: false, message: "Invalid customer id" });
+
+    const [[u]] = await pool.query(
+      `SELECT id, email, first_name, role, approval_status, approval_rejection_reason
+       FROM users WHERE id = ? LIMIT 1`,
+      [customerId]
+    );
+    if (!u || String(u.role || "").trim().toLowerCase() !== "customer") {
+      return res.status(404).json({ success: false, message: "Customer not found." });
+    }
+    const status = String(u.approval_status || "approved").trim().toLowerCase();
+    if (status === "pending") {
+      return res.status(400).json({ success: false, message: "No decision email to resend yet — this customer is still pending." });
+    }
+    const kind = status === "approved" ? "approved" : "rejected";
+    const email = await sendCustomerDecisionEmail({
+      id: u.id, email: u.email, firstName: u.first_name, kind, reason: u.approval_rejection_reason,
+    });
+    return res.json({
+      success: true,
+      emailSent: email.sent,
+      message: email.sent ? "Status email resent." : "The email could not be sent.",
+    });
+  } catch (err) {
+    console.error("SA RESEND CUSTOMER EMAIL ERROR:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
 });
 
 router.get("/platform/maintenance", async (_req, res) => {
