@@ -322,11 +322,19 @@ function normalizeDateOfBirth(value, { required = false, minimumAge = null } = {
 }
 
 // ─── EMAIL VERIFICATION HELPERS ───
-const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000; // emailed link lifetime
+const OTP_TTL_MS = 10 * 60 * 1000; // 6-digit code lifetime
+const OTP_MAX_ATTEMPTS = 5; // wrong guesses per code before a fresh one is needed
 
 function generateEmailOtp() {
   // crypto.randomInt, not Math.random — the code must not be predictable.
   return String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+}
+
+// Only the digest is ever stored. The plaintext code lives transiently in
+// the minting request (emailed / console-logged once) and is never persisted.
+function hashEmailOtp(code) {
+  return crypto.createHash("sha256").update(String(code || ""), "utf8").digest("hex");
 }
 
 function timingSafeStringEqual(a, b) {
@@ -338,11 +346,12 @@ function timingSafeStringEqual(a, b) {
 
 /**
  * Make sure an unverified customer has a live verification token AND a 6-digit
- * OTP, then email both.
+ * code, then email both.
  *
  * Whatever is already in play is reused while it is still valid, so logging in
  * (or clicking resend) repeatedly never spams the inbox — a new code is only
- * minted when the previous one is missing or expired.
+ * minted when the previous one is missing or expired. Only the code's hash is
+ * stored; the plaintext is returned solely so this request can deliver it.
  *
  * Returns { token, otp, sent, reused, alreadyVerified }.
  */
@@ -380,7 +389,7 @@ async function issueEmailVerification(email, { force = false } = {}) {
   if (tokenAlive && otpAlive) {
     return {
       token: user.email_verification_token,
-      otp: user.email_verification_otp,
+      otp: null,
       sent: false,
       reused: true,
       alreadyVerified: false,
@@ -388,17 +397,23 @@ async function issueEmailVerification(email, { force = false } = {}) {
   }
 
   const token = tokenAlive ? user.email_verification_token : crypto.randomBytes(32).toString("hex");
-  const otp = otpAlive ? user.email_verification_otp : generateEmailOtp();
-  const expiresAt = new Date(now + VERIFICATION_TTL_MS);
+  const tokenExpiresAt = new Date(
+    tokenAlive && user.email_verification_expires
+      ? new Date(user.email_verification_expires).getTime()
+      : now + VERIFICATION_TTL_MS
+  );
+  const otp = generateEmailOtp();
+  const otpExpiresAt = new Date(now + OTP_TTL_MS);
 
   await pool.query(
     `UPDATE users
         SET email_verification_token = ?,
             email_verification_expires = ?,
             email_verification_otp = ?,
-            email_otp_expires = ?
+            email_otp_expires = ?,
+            email_otp_attempts = 0
       WHERE id = ?`,
-    [token, expiresAt, otp, expiresAt, user.id]
+    [token, tokenExpiresAt, hashEmailOtp(otp), otpExpiresAt, user.id]
   );
 
   let sent = false;
@@ -406,10 +421,10 @@ async function issueEmailVerification(email, { force = false } = {}) {
     await sendVerificationEmail(user.email, user.first_name || "there", token, otp);
     sent = true;
   } catch (err) {
-    console.error("EMAIL VERIFICATION SEND ERROR:", err?.message || err);
+    console.error("EMAIL VERIFICATION SEND ERROR:", err?.code || "", err?.message || err);
   }
 
-  return { token, otp, sent, reused: tokenAlive && otpAlive, alreadyVerified: false };
+  return { token, otp, sent, reused: false, alreadyVerified: false };
 }
 
 /**
@@ -426,7 +441,8 @@ async function markCustomerVerified(userId) {
             email_verification_token = NULL,
             email_verification_expires = NULL,
             email_verification_otp = NULL,
-            email_otp_expires = NULL
+            email_otp_expires = NULL,
+            email_otp_attempts = 0
       WHERE id = ?`,
     [new Date(), userId]
   );
@@ -855,19 +871,17 @@ router.post("/login", async (req, res) => {
       return res.status(403).json({ success: false, ...approvalBlock });
     }
 
-    // Limited session for unverified customers: the password above is already
-    // proven, so mint-or-reuse a link + OTP and mail it only when the previous
-    // one expired or was never sent. The session flags below drive the banner;
-    // requireAuth enforces the read-only part of the bargain.
-    const emailUnverified =
-      String(user.role || "").trim().toLowerCase() === "customer" && !Number(user.is_verified || 0);
-    let verificationSent = false;
-    if (emailUnverified) {
-      try {
-        verificationSent = (await issueEmailVerification(user.email)).sent === true;
-      } catch (_) {
-        verificationSent = false;
-      }
+    // Email verification gate: unverified customers cannot log in, even with
+    // the right password. No code is auto-sent here (that would let anyone
+    // trigger mail to the address); the client offers the resend endpoint,
+    // which carries its own cooldown, and routes to the code screen.
+    if (String(user.role || "").trim().toLowerCase() === "customer" && !Number(user.is_verified || 0)) {
+      return res.status(403).json({
+        success: false,
+        code: "EMAIL_NOT_VERIFIED",
+        message: "Please verify your email before logging in. Enter the verification code we sent you, or request a new one.",
+        email: user.email,
+      });
     }
 
     // A correct password wipes the slate: counter and lock level reset. When
@@ -925,7 +939,6 @@ router.post("/login", async (req, res) => {
           email_verified: Number(user.is_verified || 0) === 1,
           verified: Number(user.is_verified || 0) === 1 ? "VERIFIED" : "UNVERIFIED"
         },
-        ...(emailUnverified ? { verification_sent: verificationSent, verification_method: "link+otp" } : {}),
         permissions: permissionCodes,
         bar_ban_notices: barBanNotices
       }
@@ -1031,11 +1044,13 @@ router.post("/register", ipRouteLimit("register"), async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
 
-    // Generate email verification token + 6-digit OTP: the recipient can use
-    // either the emailed link or the code on the verify screen.
+    // Generate email verification token (link, 24h) + 6-digit code (10 min):
+    // the recipient can use either the emailed link or the code on the verify
+    // screen. Only the code's hash is stored — never the plaintext.
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const verificationOtp = generateEmailOtp();
     const tokenExpires = new Date(Date.now() + VERIFICATION_TTL_MS);
+    const otpExpires = new Date(Date.now() + OTP_TTL_MS);
 
     // Create user as CUSTOMER (bar_id NULL) + role_id set + default avatar.
     // approval_status is set EXPLICITLY to 'pending' here (never rely on
@@ -1054,7 +1069,7 @@ router.post("/register", ipRouteLimit("register"), async (req, res) => {
        phoneValidation.value,
        dobValidation.value,
        customerRoleId,
-       DEFAULT_AVATAR, verificationToken, tokenExpires, verificationOtp, tokenExpires]
+       DEFAULT_AVATAR, verificationToken, tokenExpires, hashEmailOtp(verificationOtp), otpExpires]
     );
 
     // Send verification email (non-blocking — don't fail registration if email fails)
@@ -1199,8 +1214,10 @@ router.post("/resend-verification", async (req, res) => {
   }
 });
 
-// ─── VERIFY EMAIL WITH 6-DIGIT OTP ───
-// Alternative to the emailed link: same verification state, code instead of token.
+// ─── VERIFY EMAIL WITH 6-DIGIT CODE ───
+// Alternative to the emailed link: same verification state, code instead of
+// token. Only the code's SHA-256 hash is stored; at most OTP_MAX_ATTEMPTS
+// wrong guesses are allowed per code, then a fresh one must be requested.
 router.post("/verify-otp", async (req, res) => {
   try {
     const emailNorm = String(req.body?.email || "").trim().toLowerCase();
@@ -1214,7 +1231,7 @@ router.post("/verify-otp", async (req, res) => {
     }
 
     const [rows] = await pool.query(
-      `SELECT id, is_verified, email_verification_otp, email_otp_expires
+      `SELECT id, is_verified, email_verification_otp, email_otp_expires, email_otp_attempts
        FROM users WHERE email = ? LIMIT 1`,
       [emailNorm]
     );
@@ -1235,7 +1252,24 @@ router.post("/verify-otp", async (req, res) => {
       });
     }
 
-    if (!timingSafeStringEqual(user.email_verification_otp, codeNorm)) {
+    if (Number(user.email_otp_attempts || 0) >= OTP_MAX_ATTEMPTS) {
+      return res.status(403).json({
+        success: false,
+        code: "OTP_ATTEMPTS_EXCEEDED",
+        message: "Too many wrong codes. Request a new verification email to get a fresh code."
+      });
+    }
+
+    if (!timingSafeStringEqual(user.email_verification_otp, hashEmailOtp(codeNorm))) {
+      const attempts = Number(user.email_otp_attempts || 0) + 1;
+      await pool.query("UPDATE users SET email_otp_attempts = ? WHERE id = ?", [attempts, user.id]);
+      if (attempts >= OTP_MAX_ATTEMPTS) {
+        return res.status(403).json({
+          success: false,
+          code: "OTP_ATTEMPTS_EXCEEDED",
+          message: "Too many wrong codes. Request a new verification email to get a fresh code."
+        });
+      }
       return res.status(400).json({
         success: false,
         code: "OTP_INVALID",
@@ -1248,7 +1282,7 @@ router.post("/verify-otp", async (req, res) => {
     return res.json({
       success: true,
       code: "VERIFIED",
-      message: "Email verified successfully! Your account is now waiting for admin approval — you'll be able to log in once it's approved."
+      message: "Email verified successfully! You can now log in."
     });
   } catch (err) {
     console.error("VERIFY OTP ERROR:", err);
@@ -1464,6 +1498,16 @@ router.post("/google", async (req, res) => {
     const emailNorm = String(payload.email || "").trim().toLowerCase();
     if (!emailNorm) return res.status(400).json({ success: false, message: "Google account has no email." });
 
+    // Only Google-confirmed addresses are trusted. Anything else cannot be
+    // linked to an account.
+    if (payload.email_verified !== true) {
+      return res.status(401).json({ success: false, message: "Google could not confirm this email address. Please try again." });
+    }
+
+    const profileName = String(
+      payload.name || [payload.given_name, payload.family_name].filter(Boolean).join(" ") || ""
+    ).trim();
+
     // Check maintenance mode
     const { maintenanceMode, maintenanceMessage } = await getMaintenanceState();
     if (maintenanceMode) {
@@ -1586,140 +1630,18 @@ router.post("/google", async (req, res) => {
       });
     }
 
-    // New user — return Google profile for age verification step
-    return res.json({
-      success: true,
-      new_user: true,
-      google_profile: {
-        email: emailNorm,
-        first_name: payload.given_name || payload.name?.split(' ')[0] || '',
-        last_name: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '',
-        picture: payload.picture || null,
-        credential
-      }
+    // No account for this address: never auto-create on sign-in. The client
+    // routes the user to registration with the verified details prefilled.
+    return res.status(404).json({
+      success: false,
+      code: "ACCOUNT_NOT_FOUND",
+      message: "This Google account is not registered yet. Please create an account first.",
+      email: emailNorm,
+      name: profileName,
     });
   } catch (err) {
     console.error("GOOGLE AUTH ERROR:", err);
     return res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-// POST /auth/google/complete — create new user after age verification
-router.post("/google/complete", async (req, res) => {
-  try {
-    const { credential, date_of_birth } = req.body || {};
-    if (!credential) return res.status(400).json({ success: false, message: "Google credential is required" });
-
-    const dobValidation = normalizeDateOfBirth(date_of_birth, {
-      required: true,
-      minimumAge: 18,
-    });
-    if (dobValidation.error && dobValidation.tooYoung) {
-      return res.status(403).json({
-        success: false,
-        code: "UNDERAGE",
-        message: `You must be at least 18 years old to register. (You are ${dobValidation.age ?? 'unknown'} years old)`
-      });
-    }
-    if (dobValidation.error) {
-      return res.status(400).json({ success: false, message: dobValidation.error });
-    }
-
-    // Re-verify Google credential
-    const googleAudiences = getGoogleAudiences();
-    if (!googleAudiences.length) return res.status(500).json({ success: false, message: "Google sign-in is temporarily unavailable. Please try again later." });
-
-    const client = getGoogleClient();
-    let payload;
-    try {
-      const ticket = await client.verifyIdToken({
-        idToken: credential,
-        audience: googleAudiences.length === 1 ? googleAudiences[0] : googleAudiences,
-      });
-      payload = ticket.getPayload();
-    } catch (e) {
-      console.error("GOOGLE VERIFY ERROR:", e?.message || e);
-      try {
-        const { recordGoogleFailure } = require("../utils/loginAttempts");
-        const limited = await recordGoogleFailure(clientIp(req));
-        if (limited) return lockedResponse(res, limited);
-      } catch (_) {}
-      return res.status(401).json({ success: false, message: "Google session expired. Please try again." });
-    }
-
-    const emailNorm = String(payload.email || "").trim().toLowerCase();
-    if (!emailNorm) return res.status(400).json({ success: false, message: "Google account has no email." });
-
-    // Check again in case user registered while filling form
-    const [existing] = await pool.query("SELECT id FROM users WHERE email = ? LIMIT 1", [emailNorm]);
-    if (existing.length) {
-      return res.status(409).json({ success: false, message: "An account with this email already exists. Please log in." });
-    }
-
-    const [roleRows] = await pool.query("SELECT id FROM roles WHERE name IN ('CUSTOMER','customer') LIMIT 1");
-    if (!roleRows.length) return res.status(500).json({ success: false, message: "CUSTOMER role not found" });
-    const customerRoleId = roleRows[0].id;
-
-    const firstName = payload.given_name || payload.name?.split(' ')[0] || '';
-    const lastName = payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '';
-    const picture = payload.picture || DEFAULT_AVATAR;
-
-    // Google asserts the address itself: a token with email_verified=false is
-    // vanishingly rare, but when it happens the account starts unverified
-    // (limited session + banner) instead of being stamped verified.
-    const googleEmailVerified = payload.email_verified !== false;
-
-    const [result] = await pool.query(
-      `INSERT INTO users
-       (first_name, last_name, email, password, phone_number, date_of_birth, role, role_id,
-        is_verified, is_active, bar_id, profile_picture, approval_status, created_at, updated_at)
-       VALUES (?, ?, ?, '', NULL, ?, 'customer', ?, ?, 1, NULL, ?, 'pending', NOW(), NOW())`,
-      [firstName, lastName, emailNorm, dobValidation.value, customerRoleId, googleEmailVerified ? 1 : 0, picture]
-    );
-
-    const [newUserRows] = await pool.query(
-      `SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.role_id, r.name AS role_name,
-              u.is_active, u.is_verified, u.bar_id, u.phone_number, u.date_of_birth, u.profile_picture
-       FROM users u
-       LEFT JOIN roles r ON r.id = u.role_id
-       WHERE u.id = ? LIMIT 1`,
-      [result.insertId]
-    );
-
-    const user = newUserRows[0];
-    const token = signToken(user);
-    const permissionCodes = await getEffectivePermissionCodes(user.id);
-
-    return res.json({
-      success: true,
-      new_user: false,
-      data: {
-        token,
-        user: {
-          id: user.id,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          email: user.email,
-          role: user.role,
-          bar_id: null,
-          bar_name: null,
-          phone_number: null,
-          date_of_birth: user.date_of_birth,
-          profile_picture: picture,
-          profile_url: picture,
-          is_active: 1,
-          is_verified: googleEmailVerified,
-          isVerified: googleEmailVerified,
-          email_verified: googleEmailVerified,
-          verified: googleEmailVerified ? "VERIFIED" : "UNVERIFIED"
-        },
-        permissions: permissionCodes,
-        bar_ban_notices: []
-      }
-    });
-  } catch (err) {
-    console.error("GOOGLE COMPLETE ERROR:", err);
-    return res.status(500).json({ success: false, message: err.sqlMessage || "Server error" });
   }
 });
 

@@ -3,7 +3,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../hooks/useAuth';
 import { useView } from '../hooks/useView';
 import { VIEWS } from '../contexts/ViewContext';
-import { Mail, ArrowLeft, KeyRound, Calendar, ShieldCheck, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Mail, ArrowLeft, KeyRound, ShieldCheck, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import apiClient from '../api/client';
 import { isGoogleConfigured, googleSignInErrorText } from '../utils/googleAuth';
 import {
@@ -22,19 +22,9 @@ function GoogleIcon() {
   );
 }
 
-function calculateAge(dob) {
-  if (!dob) return 0;
-  const today = new Date();
-  const birth = new Date(dob);
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
-
 function LoginView() {
   const { login, authError, setAuthError, loginWithGoogle } = useAuth();
-  const { navigate, viewParams } = useView();
+  const { navigate } = useView();
 
   // Login state
   const [email, setEmail] = useState('');
@@ -47,12 +37,17 @@ function LoginView() {
   // Google OAuth state
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [googleError, setGoogleError] = useState('');
-  const [googleProfile, setGoogleProfile] = useState(null); // set when new google user needs age verification
-  const [googleDob, setGoogleDob] = useState('');
-  const [googleAgeConfirmed, setGoogleAgeConfirmed] = useState(false);
-  const [googleCompleting, setGoogleCompleting] = useState(false);
+  const [googleNotice, setGoogleNotice] = useState('');
   const [pendingNotice, setPendingNotice] = useState('');
   const [rejectedNotice, setRejectedNotice] = useState('');
+
+  // Unverified-block state: notice + resend-code action on the login form.
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendMsg, setResendMsg] = useState('');
+  const [resendOk, setResendOk] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const resendCooldownRef = useRef(null);
 
   // Forgot password state
   const [step, setStep] = useState(1); // 1=login, 2=forgot form, 3=sent, 4=google age verify
@@ -85,6 +80,17 @@ function LoginView() {
     return () => clearInterval(iv);
   }, [lockInfo?.lockedUntil]);
 
+  const startResendCooldown = (s) => {
+    setResendCooldown(s);
+    clearInterval(resendCooldownRef.current);
+    resendCooldownRef.current = setInterval(() => {
+      setResendCooldown(prev => {
+        if (prev <= 1) { clearInterval(resendCooldownRef.current); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
   const startForgotCooldown = (s) => {
     setForgotCooldown(s);
     clearInterval(forgotCooldownRef.current);
@@ -98,44 +104,45 @@ function LoginView() {
 
   useEffect(() => () => {
     clearInterval(forgotCooldownRef.current);
+    clearInterval(resendCooldownRef.current);
   }, []);
 
-  // If navigated here from RegisterView with a googleProfile, jump to age verification
-  useEffect(() => {
-    if (viewParams?.googleProfile) {
-      setGoogleProfile(viewParams.googleProfile);
-      setStep(4);
-    }
-  }, [viewParams?.googleProfile]);
-
-  const googleAge = calculateAge(googleDob);
-  const googleDobError = googleDob && googleAge < 18 ? `You must be at least 18 years old. (You are ${googleAge})` : '';
-  const googleCanComplete = googleAgeConfirmed && googleDob && !googleDobError && !googleCompleting;
+  // Registration prefill is handled by RegisterView reading its own view params.
   const hasActiveBarBans = barBanNotices.length > 0;
 
   const handleGoogleSuccess = async (credential) => {
     setGoogleError('');
+    setGoogleNotice('');
     setGoogleSubmitting(true);
     try {
       const res = await apiClient.post('/auth/google', { credential });
       const data = res.data;
-      if (data.new_user) {
-        setGoogleProfile(data.google_profile);
-        setStep(4);
+      loginWithGoogle(data.data);
+      const notices = Array.isArray(data?.data?.bar_ban_notices) ? data.data.bar_ban_notices : [];
+      if (notices.length > 0) {
+        setBarBanNotices(notices);
+        setBarBanPopupOpen(true);
       } else {
-        loginWithGoogle(data.data);
-        const notices = Array.isArray(data?.data?.bar_ban_notices) ? data.data.bar_ban_notices : [];
-        if (notices.length > 0) {
-          setBarBanNotices(notices);
-          setBarBanPopupOpen(true);
-        } else {
-          navigate(VIEWS.HOME);
-        }
+        navigate(VIEWS.HOME);
       }
     } catch (err) {
-      const code = err?.response?.data?.code;
-      const msg = err?.response?.data?.message || 'Google sign-in failed. Please try again.';
-      if (code === 'ACCOUNT_LOCKED' && err?.response?.data?.lockedUntil) {
+      const data = err?.response?.data || {};
+      const code = data.code;
+      const msg = data.message || 'Google sign-in failed. Please try again.';
+      if (code === 'ACCOUNT_NOT_FOUND') {
+        // Unregistered Google address: no account is created here. Show the
+        // notice, then hand off to registration with the verified details.
+        setGoogleNotice(msg);
+        setGoogleError('');
+        setTimeout(() => {
+          navigate(VIEWS.REGISTER, {
+            email: data.email || '',
+            first_name: String(data.name || '').split(' ')[0] || '',
+            last_name: String(data.name || '').split(' ').slice(1).join(' ') || '',
+            fromGoogle: true,
+          });
+        }, 1500);
+      } else if (code === 'ACCOUNT_LOCKED' && data.lockedUntil) {
         // IP-level brake on junk Google credentials: surface the same panel.
         const info = { email: '', lockedUntil: err.response.data.lockedUntil };
         setLockInfo(info);
@@ -159,29 +166,6 @@ function LoginView() {
     }
   };
 
-  const handleGoogleComplete = async (e) => {
-    e.preventDefault();
-    if (!googleCanComplete) return;
-    setGoogleCompleting(true);
-    setGoogleError('');
-    try {
-      const res = await apiClient.post('/auth/google/complete', {
-        credential: googleProfile.credential,
-        date_of_birth: googleDob
-      });
-      loginWithGoogle(res.data.data);
-      navigate(VIEWS.HOME);
-    } catch (err) {
-      const data = err?.response?.data;
-      setGoogleError(data?.message || 'Registration failed. Please try again.');
-      if (data?.code === 'UNDERAGE') {
-        setGoogleAgeConfirmed(false);
-      }
-    } finally {
-      setGoogleCompleting(false);
-    }
-  };
-
   const onGoogleSuccess = (credentialResponse) => handleGoogleSuccess(credentialResponse.credential);
   const onGoogleError = () => setGoogleError(googleSignInErrorText());
 
@@ -196,6 +180,8 @@ function LoginView() {
     setAuthError('');
     setPendingNotice('');
     setRejectedNotice('');
+    setUnverifiedEmail('');
+    setResendMsg('');
     try {
       const loginData = await login(email, password);
       clearPersistedLock();
@@ -216,10 +202,10 @@ function LoginView() {
         persistLock(info);
         setAuthError('');
       } else if (code === 'EMAIL_NOT_VERIFIED') {
-        // Access is blocked until the email is confirmed. The backend re-sends
-        // the link + OTP on demand, so only claim "email sent" when it did.
-        navigate(VIEWS.VERIFY_EMAIL, { email: err?.email || email, sent: err?.verificationSent === true });
-        return;
+        // Login stays blocked until the email is confirmed. Show the notice
+        // with a resend-code action instead of whisking the user away.
+        setUnverifiedEmail(err?.email || email);
+        setAuthError('');
       } else if (code === 'GOOGLE_ACCOUNT') {
         setAuthError(err.message);
       } else if (status === 401) {
@@ -239,6 +225,31 @@ function LoginView() {
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Resend a fresh code from the login form (cooldown-protected server-side).
+  const handleResendCode = async () => {
+    if (resending || resendCooldown > 0 || !unverifiedEmail) return;
+    setResending(true);
+    setResendMsg('');
+    try {
+      const res = await apiClient.post('/auth/resend-verification', { email: unverifiedEmail });
+      setResendMsg(res.data?.message || 'Verification code sent! Check your inbox or the backend console.');
+      setResendOk(true);
+      startResendCooldown(60);
+    } catch (err) {
+      const data = err?.response?.data;
+      if (data?.code === 'RESEND_COOLDOWN' && data?.wait_seconds) {
+        startResendCooldown(data.wait_seconds);
+        setResendMsg(`Please wait ${data.wait_seconds}s before resending.`);
+        setResendOk(false);
+      } else {
+        setResendMsg(data?.message || 'Failed to resend. Please try again.');
+        setResendOk(false);
+      }
+    } finally {
+      setResending(false);
     }
   };
 
@@ -262,83 +273,6 @@ function LoginView() {
       setForgotSubmitting(false);
     }
   };
-
-  // ── Step 4: Google age verification (new Google user) ──
-  if (step === 4 && googleProfile) {
-    return (
-      <div className="auth-view">
-        <form className="glass-card auth-card" onSubmit={handleGoogleComplete} autoComplete="off">
-          <div className="glass-card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <button
-              type="button"
-              onClick={() => { setStep(1); setGoogleProfile(null); setGoogleDob(''); setGoogleAgeConfirmed(false); setGoogleError(''); }}
-              style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', padding: 0, alignSelf: 'flex-start' }}
-            >
-              <ArrowLeft size={14} /> Back
-            </button>
-
-            {googleProfile.picture && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--color-bg-elevated)', borderRadius: 10, border: '1px solid var(--color-border)' }}>
-                <img src={googleProfile.picture} alt="" style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0 }} />
-                <div>
-                  <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: '#fff' }}>{googleProfile.first_name} {googleProfile.last_name}</p>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{googleProfile.email}</p>
-                </div>
-              </div>
-            )}
-
-            <div>
-              <div className="land-live-badge" style={{ marginBottom: '0.25rem', alignSelf: 'flex-start' }}>
-                <span className="land-live-dot" />
-                <span>ONE MORE STEP</span>
-              </div>
-              <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 'clamp(1.3rem, 3vw, 1.7rem)', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>VERIFY <span style={{ color: 'var(--color-red-primary)' }}>YOUR AGE</span></h1>
-            </div>
-            <p className="text-muted" style={{ fontSize: '0.88rem' }}>You must be <strong style={{ color: '#fff' }}>18 or older</strong> to use PartyGoers PH. Please enter your date of birth.</p>
-
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.4rem' }}>
-                <Calendar size={13} /> Date of Birth
-              </label>
-              <input
-                className="glass-input"
-                type="date"
-                value={googleDob}
-                onChange={e => { setGoogleDob(e.target.value); setGoogleAgeConfirmed(false); }}
-                max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
-                required
-                autoComplete="off"
-              />
-              {googleDobError && <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem' }}>{googleDobError}</p>}
-              {googleDob && !googleDobError && <p style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: '0.3rem' }}>Age confirmed: {googleAge} years old.</p>}
-            </div>
-
-            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
-              <input
-                type="checkbox"
-                checked={googleAgeConfirmed}
-                onChange={e => setGoogleAgeConfirmed(e.target.checked)}
-                disabled={Boolean(googleDobError) || !googleDob}
-                style={{ marginTop: '0.1rem', flexShrink: 0, accentColor: '#CC0000' }}
-              />
-              I confirm I am 18 years old or older and agree to the terms.
-            </label>
-
-            {googleError && <p className="error-text">{googleError}</p>}
-
-            <button
-              className="btn btn-red w-full"
-              type="submit"
-              disabled={!googleCanComplete}
-              style={{ opacity: googleCanComplete ? 1 : 0.45, cursor: googleCanComplete ? 'pointer' : 'not-allowed', transition: 'opacity 0.2s' }}
-            >
-              {googleCompleting ? 'Creating account…' : 'Continue with Google'}
-            </button>
-          </div>
-        </form>
-      </div>
-    );
-  }
 
   // ── Step 3: Email sent confirmation ──
   if (step === 3) {
@@ -499,6 +433,32 @@ function LoginView() {
                 <p className="error-text">{authError}</p>
               </div>
             )}
+            {unverifiedEmail && (
+              <div style={{ marginTop: '0.6rem', background: 'var(--color-bg-elevated)', border: '1px solid rgba(204,0,0,0.2)', borderRadius: 8, padding: '0.75rem 1rem', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', margin: '0 0 0.3rem' }}>Please verify your email before logging in.</p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: '0 0 0.6rem' }}>Enter the 6-digit code we sent to {unverifiedEmail}.</p>
+                {resendMsg && (
+                  <p style={{ fontSize: '0.75rem', color: resendOk ? '#22c55e' : '#f87171', margin: '0 0 0.5rem' }}>{resendMsg}</p>
+                )}
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn-red btn-sm"
+                    onClick={() => navigate(VIEWS.VERIFY_EMAIL, { email: unverifiedEmail })}
+                  >
+                    Enter verification code
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={handleResendCode}
+                    disabled={resending || resendCooldown > 0}
+                  >
+                    {resending ? 'Sending…' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
+                  </button>
+                </div>
+              </div>
+            )}
             {lockActive && (
               <div style={{ marginTop: '0.6rem', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '0.75rem 1rem', textAlign: 'center' }}>
                 <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f87171', margin: '0 0 0.3rem' }}>Too many failed attempts. Try again in {formatCountdown(lockInfo.lockedUntil)}.</p>
@@ -519,6 +479,7 @@ function LoginView() {
             </div>
 
             {googleError && !authError && <p className="error-text" style={{ marginTop: '-0.25rem' }}>{googleError}</p>}
+            {googleNotice && <p style={{ fontSize: '0.82rem', color: '#22c55e', marginTop: '-0.25rem' }}>{googleNotice} Redirecting to registration…</p>}
 
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               {isGoogleConfigured() ? (

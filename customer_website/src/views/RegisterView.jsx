@@ -113,24 +113,36 @@ function sanitizePhoneInput(value) {
 
 function RegisterView() {
   const { register, loginWithGoogle } = useAuth();
-  const { navigate } = useView();
+  const { navigate, viewParams } = useView();
   const [googleError, setGoogleError] = useState('');
+  const [googleNotice, setGoogleNotice] = useState('');
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
 
   const handleGoogleSuccess = async (credentialResponse) => {
     setGoogleError('');
+    setGoogleNotice('');
     setGoogleSubmitting(true);
     try {
       const res = await apiClient.post('/auth/google', { credential: credentialResponse.credential });
       const data = res.data;
-      if (data.new_user) {
-        navigate(VIEWS.LOGIN, { googleProfile: data.google_profile });
-      } else {
-        loginWithGoogle(data.data);
-        navigate(VIEWS.HOME);
-      }
+      loginWithGoogle(data.data);
+      navigate(VIEWS.HOME);
     } catch (err) {
-      setGoogleError(err?.response?.data?.message || 'Google sign-in failed. Please try again.');
+      const data = err?.response?.data || {};
+      if (data.code === 'ACCOUNT_NOT_FOUND') {
+        // Already on the register page: prefill the verified details so the
+        // user just completes the form instead of retyping.
+        if (data.email) onChange('email', data.email);
+        if (data.name) {
+          const parts = String(data.name).split(' ');
+          if (!form.first_name) onChange('first_name', parts[0] || '');
+          if (!form.last_name) onChange('last_name', parts.slice(1).join(' ') || '');
+        }
+        setGoogleNotice(data.message || 'Account does not exist. Please create an account.');
+        setGoogleError('');
+      } else {
+        setGoogleError(data.message || 'Google sign-in failed. Please try again.');
+      }
     } finally {
       setGoogleSubmitting(false);
     }
@@ -153,6 +165,20 @@ function RegisterView() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const onChange = (key, val) => setForm(p => ({ ...p, [key]: val }));
+
+  // Arriving from a Google ACCOUNT_NOT_FOUND redirect: prefill the verified
+  // details so only the remaining fields need filling in.
+  useEffect(() => {
+    if (!viewParams?.fromGoogle) return;
+    setForm((p) => ({
+      ...p,
+      email: viewParams.email || p.email,
+      first_name: viewParams.first_name || p.first_name,
+      last_name: viewParams.last_name || p.last_name,
+    }));
+    setGoogleNotice('Account does not exist. Please create an account below.');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewParams?.fromGoogle]);
 
   const age = calculateAge(form.date_of_birth);
   const dobError = form.date_of_birth && age < 18
@@ -419,6 +445,7 @@ function RegisterView() {
           </div>
 
           {googleError && <p className="error-text">{googleError}</p>}
+          {googleNotice && <p style={{ fontSize: '0.82rem', color: '#22c55e' }}>{googleNotice}</p>}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             {isGoogleConfigured() ? (
               <GoogleLogin

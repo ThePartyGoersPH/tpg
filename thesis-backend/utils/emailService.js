@@ -1,48 +1,84 @@
 const nodemailer = require('nodemailer');
 
-const _fromEmail = process.env.SMTP_USER || 'noreply@thepartygoersph.com';
+// Mail identity: MAIL_* wins, SMTP_* stays as a fallback so existing
+// production env files keep working with zero changes.
+const _mailHost = process.env.MAIL_HOST || process.env.SMTP_HOST;
+const _mailPort = parseInt(process.env.MAIL_PORT || process.env.SMTP_PORT || '587', 10);
+const _mailUser = process.env.MAIL_USER || process.env.SMTP_USER;
+const _mailPass = process.env.MAIL_PASS || process.env.SMTP_PASSWORD;
 const _fromName = 'The Party Goers PH';
+
+function mailFrom() {
+  const raw = String(process.env.MAIL_FROM || _mailUser || 'noreply@thepartygoersph.com').trim();
+  // Accept either a bare address or a full "Name <addr>" mailbox.
+  if (/<.+@.+>/.test(raw)) return raw;
+  return `"${_fromName}" <${raw}>`;
+}
+
+// Public links inside emails are ALWAYS built from APP_URL — never
+// localhost. Chain kept for older env files; the last resort is production.
+function appUrl() {
+  const raw = String(
+    process.env.APP_URL || process.env.FRONTEND_URL || 'https://thepartygoers.partygoers.online'
+  ).trim().replace(/\/$/, '');
+  return raw || 'https://thepartygoers.partygoers.online';
+}
+
+// Real mail only goes out in production. Everywhere else the content is
+// printed to the backend console so flows stay testable without spamming
+// real inboxes (and without needing SMTP credentials locally).
+function isMailDev() {
+  return String(process.env.NODE_ENV || 'development').toLowerCase() !== 'production';
+}
 
 let transporter = null;
 
-if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD) {
+if (_mailHost && _mailUser && _mailPass) {
+  // Port 465 = implicit TLS; 587 = STARTTLS. Port 25 is never used (cloud
+  // providers routinely block it outbound).
+  const secure = _mailPort === 465;
   transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD,
-    },
+    host: _mailHost,
+    port: _mailPort,
+    secure,
+    ...(secure ? {} : { requireTLS: true }),
+    auth: { user: _mailUser, pass: _mailPass },
   });
   console.log('✅ SMTP email service initialized');
 } else {
   console.warn('⚠️  SMTP credentials not set — emails will be logged to console only.');
 }
 
+// sendMail wrapper: dev prints + succeeds, production sends, failures log
+// the real error (code + message; never credentials) and throw so callers
+// can return a clear API error instead of silently dropping the mail.
 async function _send(to, subject, html) {
-  if (!transporter) {
-    console.log(`📧 [EMAIL SKIPPED] To: ${to} | Subject: ${subject}`);
-    return;
+  if (isMailDev()) {
+    console.log(`📧 [DEV EMAIL] To: ${to} | Subject: ${subject}`);
+    console.log(html);
+    return { ok: true, dev: true };
   }
-  
+  if (!transporter) {
+    const err = new Error('Email service is not configured (SMTP credentials missing)');
+    err.code = 'MAIL_NOT_CONFIGURED';
+    throw err;
+  }
+
   try {
-    await transporter.sendMail({
-      from: `"${_fromName}" <${_fromEmail}>`,
-      to,
-      subject,
-      html,
-    });
+    await transporter.sendMail({ from: mailFrom(), to, subject, html });
     console.log(`✅ Email sent to ${to}: ${subject}`);
+    return { ok: true, dev: false };
   } catch (error) {
-    console.warn(`⚠️  Failed to send email to ${to}: ${error.message}`);
-    console.log(`📧 [EMAIL SKIPPED] To: ${to} | Subject: ${subject}`);
+    // Log the real reason (SMTP reply/message). Nodemailer errors carry the
+    // host/username at most — never the password — and we print code+message
+    // only.
+    console.error(`❌ Email failed to ${to} [${error.code || 'no-code'}]: ${error.message}`);
+    throw error;
   }
 }
 
 async function sendVerificationEmail(toEmail, firstName, token, otp) {
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-  const verifyLink = `${frontendUrl}/verify-email?token=${token}`;
+  const verifyLink = `${appUrl()}/verify-email?token=${token}`;
 
   // The OTP is optional so older callers keep working; when present it is
   // rendered as a large code block so the recipient can type it on the
@@ -55,7 +91,7 @@ async function sendVerificationEmail(toEmail, firstName, token, otp) {
                   <td align="center" style="background:#161616;border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;">
                     <p style="margin:0 0 10px;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#888888;">Or enter this code on the verify page</p>
                     <p style="margin:0;font-size:2rem;font-weight:800;color:#ffffff;letter-spacing:8px;">${otp}</p>
-                    <p style="margin:10px 0 0;font-size:0.72rem;color:#555555;">Code expires in 24 hours.</p>
+                    <p style="margin:10px 0 0;font-size:0.72rem;color:#555555;">Code expires in 10 minutes.</p>
                   </td>
                 </tr>
               </table>`
@@ -142,7 +178,7 @@ async function sendVerificationEmail(toEmail, firstName, token, otp) {
 }
 
 async function sendBarOwnerVerificationEmail(toEmail, firstName, token) {
-  const frontendUrl = process.env.BAR_OWNER_APP_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = (process.env.BAR_OWNER_APP_URL || process.env.FRONTEND_URL || 'https://thepartygoers.partygoers.online').replace(/\/$/, '');
   const verifyLink = `${frontendUrl}/verify-bar-owner-email?token=${token}`;
 
   await _send(toEmail, 'Verify your business registration email', `
@@ -324,7 +360,7 @@ function absoluteUploadUrl(path) {
   const trimmed = String(path).trim();
   if (!trimmed) return null;
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  const base = (process.env.BACKEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+  const base = (process.env.BACKEND_URL || process.env.APP_URL || 'https://thepartygoers.partygoers.online/api').replace(/\/$/, '');
   return `${base}/${trimmed.replace(/^\//, '')}`;
 }
 
@@ -454,8 +490,8 @@ async function sendPurchaseOrderEmail(toEmail, opts = {}) {
 
 async function sendPasswordResetEmail(toEmail, firstName, token, portal = 'customer') {
   const frontendUrl = portal === 'manager'
-    ? (process.env.BAR_OWNER_APP_URL || (process.env.NODE_ENV === 'production' ? 'https://baroperations.thepartygoers.fun' : 'http://localhost:5174'))
-    : (process.env.FRONTEND_URL || 'http://localhost:5173');
+    ? (process.env.BAR_OWNER_APP_URL || 'https://baroperations.thepartygoers.fun')
+    : (process.env.FRONTEND_URL || 'https://thepartygoers.partygoers.online');
   const resetLink = `${frontendUrl}/reset-password?token=${token}`;
 
   await _send(toEmail, 'Reset your Party Goers password', `
@@ -543,7 +579,7 @@ async function sendStaffOnboardingEmail(toEmail, opts = {}) {
   const roleRaw = String(opts.role || 'staff').toLowerCase();
   const roleLabels = { staff: 'Staff', hr: 'HR', finance: 'Finance', cashier: 'Cashier', manager: 'Manager' };
   const roleLabel = roleLabels[roleRaw] || 'Staff';
-  const portalUrl = (process.env.BAR_OWNER_APP_URL || 'http://localhost:5174').replace(/\/$/, '');
+  const portalUrl = (process.env.BAR_OWNER_APP_URL || 'https://thepartygoers.partygoers.online/manager').replace(/\/$/, '');
   const passwordLabel = opts.isDefaultPassword === false ? 'Temporary Password' : 'Default Password';
 
   await _send(toEmail, `Welcome to ${barName} - Your Staff Account Credentials`, `
