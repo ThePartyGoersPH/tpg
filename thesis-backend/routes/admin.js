@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const requireAuth = require("../middlewares/requireAuth");
 const requireRole = require("../middlewares/requireRole");
+const { requirePortalAccess } = require("../middlewares/requirePortal");
 const requirePermission = require("../middlewares/requirePermission");
 const { USER_ROLES } = require("../config/constants");
 const adminController = require("../controllers/adminController");
@@ -11,6 +12,7 @@ const { logPlatformAudit, auditContext } = require("../utils/audit");
 router.post(
   "/bars",
   requireAuth,
+  requirePortalAccess("admin"),
   requireRole([USER_ROLES.ADMIN]),
   adminController.createBarWithOwner
 );
@@ -19,6 +21,7 @@ router.post(
 router.post(
   "/reset-admin",
   requireAuth,
+  requirePortalAccess("admin"),
   requireRole([USER_ROLES.SUPER_ADMIN]),
   async (req, res) => {
     try {

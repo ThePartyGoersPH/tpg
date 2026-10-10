@@ -11,6 +11,7 @@ const { safeProfileUrl } = require("../utils/profileUrl");
 const { logAudit, auditContext } = require("../utils/audit");
 const { sendVerificationEmail, sendBarOwnerVerificationEmail, sendPasswordResetEmail } = require("../utils/emailService");
 const { DEFAULT_AVATAR } = require("../utils/profileUrl");
+const { portalForApp, roleAllowedForPortal } = require("../config/portalAccess");
 const { validatePasswordStrength } = require("../utils/passwordPolicy");
 const { normalizeCustomerPhone } = require("../utils/phonePolicy");
 const { checkCustomerApproval } = require("../utils/customerApproval");
@@ -774,15 +775,28 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // ROLE RESTRICTION by portal
-    // - Default behavior remains Bar Management login restrictions
-    // - Customer website sends x-login-portal: customer to allow customer accounts
-    // - BAR_OWNER/MANAGER are additionally allowed on the customer website so
-    //   they can preview their own public bar page (and add products/tables)
-    //   before payment setup is finished. Their session stays bar-scoped.
+    // PORTAL ACCESS — one shared matrix (config/portalAccess.js). Each app
+    // sends X-App (admin|manager|pos|customer); the role must belong to that
+    // portal or NO token is issued. Callers without the header (older clients)
+    // keep the previous portal behavior below.
     const roleName = String(user.role_name || user.role || "").toUpperCase();
+    const appName = String(req.headers["x-app"] || "").trim().toLowerCase();
+    const appPortal = portalForApp(appName);
 
-    if (loginPortal === "customer") {
+    if (appPortal) {
+      if (!roleAllowedForPortal(roleName, appPortal)) {
+        const expectedLogin =
+          appPortal === "admin" ? "admin"
+          : appPortal === "manager" ? "bar owner"
+          : appPortal === "pos" ? "POS"
+          : "customer";
+        return res.status(403).json({
+          success: false,
+          code: "WRONG_PORTAL",
+          message: `Wrong portal. Please use the ${expectedLogin} login.`,
+        });
+      }
+    } else if (loginPortal === "customer") {
       const customerPortalRoles = ["CUSTOMER", "BAR_OWNER", "MANAGER"];
       if (!customerPortalRoles.includes(roleName)) {
         return res.status(403).json({

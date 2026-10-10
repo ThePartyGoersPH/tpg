@@ -6,13 +6,13 @@ function getBarId(req) {
   return req.user ? req.user.bar_id : undefined;
 }
 
-// Returns the bar_id or throws a normalized error object (so handlers can 400).
+// Returns the bar_id or throws a normalized error object (so handlers can 403).
 function assertBarId(req) {
   const barId = getBarId(req);
   if (barId === null || barId === undefined) {
-    const err = new Error("No bar_id on account");
-    err.statusCode = 400;
-    err.code = "NO_BAR_SCOPE";
+    const err = new Error("This account is not linked to a bar.");
+    err.statusCode = 403;
+    err.code = "NO_BAR_LINKED";
     throw err;
   }
   return barId;

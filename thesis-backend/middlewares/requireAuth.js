@@ -104,6 +104,40 @@ async function requireAuth(req, res, next) {
       });
     }
 
+    // PORTAL SEPARATION (config/portalAccess.js is the source of truth).
+    // Mount-switched hard gates so no role can use another portal's API, no
+    // matter which app issued the token. Mixed-audience routers (/auth,
+    // /social, /public, /reservations, …) are intentionally NOT listed here —
+    // their endpoints enforce their own role rules.
+    try {
+      const { norm: normRole, MANAGER_PORTAL_ROLES } = require("../config/portalAccess");
+      const mount = String(req.baseUrl || "");
+      const role = normRole(rows[0].role || rows[0].role_name);
+      const isManagerMount =
+        mount === "/admin"
+          ? false
+          : ["/owner", "/branches", "/pos", "/api"].some(
+              (p) => mount === p || mount.startsWith(`${p}/`)
+            );
+      if (mount === "/admin" && role !== "super_admin" && role !== "admin") {
+        return res.status(403).json({
+          success: false,
+          code: "FORBIDDEN_PORTAL",
+          message: "Your account cannot access this portal.",
+        });
+      }
+      if (isManagerMount && !MANAGER_PORTAL_ROLES.includes(role)) {
+        return res.status(403).json({
+          success: false,
+          code: "FORBIDDEN_PORTAL",
+          message: "Your account cannot access this portal.",
+        });
+      }
+    } catch (_) {
+      // Portal config unavailable — fail open so a config load error can
+      // never take down authentication; endpoint RBAC still applies.
+    }
+
     // SECURITY: Block inactive/deactivated users from all API access
     if (!rows[0].is_active) {
       return res.status(403).json({
@@ -197,18 +231,9 @@ async function requireAuth(req, res, next) {
             req.user.bar_id = requestedBarId;
           }
         }
-      } else if (role === "super_admin" && Number.isFinite(requestedBarId)) {
-        // Oversight mode: super admins carry no bar of their own, so they
-        // pick any existing bar to view in the owner portal. Existence only —
-        // no ownership check, and users.bar_id stays NULL (never written).
-        const [barRows] = await pool.query(
-          "SELECT id FROM bars WHERE id = ? LIMIT 1",
-          [requestedBarId]
-        );
-        if (barRows.length) {
-          req.user.bar_id = requestedBarId;
-        }
       }
+      // NOTE: super admins are intentionally NOT honored here — they may not
+      // use the bar owner portal at all (see config/portalAccess.js).
     }
 
     // Enforce bar-side bans/suspensions (applies to bar-side roles, including active sessions)

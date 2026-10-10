@@ -328,7 +328,11 @@ async function ensureSuperAdmin(req, res, next) {
 
     const roleName = rows[0]?.role_name;
     if (String(roleName || '').trim().toUpperCase() !== "SUPER_ADMIN") {
-      return res.status(403).json({ success: false, message: "Forbidden" });
+      return res.status(403).json({
+        success: false,
+        code: "FORBIDDEN_PORTAL",
+        message: "Your account cannot access this portal.",
+      });
     }
 
     req.user.role_name = roleName;
