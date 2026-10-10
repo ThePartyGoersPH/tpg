@@ -358,11 +358,10 @@ function RegisterView() {
               required
             />
           </div>
-          {(firstNameError || lastNameError) && (
-            <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '-0.4rem' }}>
-              {firstNameError || lastNameError}
-            </p>
-          )}
+          {/* Reserved slot: showing/hiding this line must not move the fields below. */}
+          <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '-0.4rem', minHeight: '1.1rem', marginBottom: 0, visibility: (firstNameError || lastNameError) ? 'visible' : 'hidden' }}>
+            {firstNameError || lastNameError || ' '}
+          </p>
           <input
             className="glass-input"
             type="email"
@@ -422,7 +421,8 @@ function RegisterView() {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          {form.password && (
+          {/* Always rendered (even empty) so the checklist never pushes fields down. */}
+          {(
             <div style={{ marginTop: '0.4rem' }} aria-live="polite">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
@@ -481,11 +481,10 @@ function RegisterView() {
                 {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {passwordMismatch && (
-              <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem' }}>Passwords do not match.</p>
-            )}
-            {confirmPassword && !passwordMismatch && form.password && (
-              <p style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: '0.3rem' }}>Passwords match.</p>
+            {passwordMismatch ? (
+              <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem', minHeight: '1.1rem', marginBottom: 0 }}>Passwords do not match.</p>
+            ) : (
+              <p style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: '0.3rem', minHeight: '1.1rem', marginBottom: 0, visibility: (confirmPassword && form.password) ? 'visible' : 'hidden' }}>Passwords match.</p>
             )}
           </div>
           <input
@@ -523,9 +522,9 @@ function RegisterView() {
               max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
               required
             />
-            {dobError && (
-              <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem' }}>{dobError}</p>
-            )}
+            {dobError
+              ? <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem', minHeight: '1.1rem', marginBottom: 0 }}>{dobError}</p>
+              : <p style={{ minHeight: '1.1rem', margin: 0, visibility: 'hidden' }}> </p>}
           </div>
 
           {/* 18+ notice + checkbox */}
