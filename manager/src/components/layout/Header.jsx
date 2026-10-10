@@ -92,6 +92,10 @@ const Header = () => {
   const [announcements, setAnnouncements] = useState([]);
   const dropdownRef = useRef(null);
   const isOwner = user?.role === 'bar_owner';
+  // Oversight mode: super admins own no bar, so they get the same branch
+  // picker (populated with every bar) instead of an empty, broken portal.
+  const isSuperAdmin = String(user?.role || '').toLowerCase() === 'super_admin';
+  const canPickBranch = isOwner || isSuperAdmin;
 
   // Fetch notifications
   const fetchNotifications = async () => {
@@ -143,7 +147,7 @@ const Header = () => {
   };
 
   useEffect(() => {
-    if (isOwner && branches.length === 0) {
+    if (canPickBranch && branches.length === 0) {
       fetchBranches();
     }
     if (user) {
@@ -156,7 +160,7 @@ const Header = () => {
       }, 30000);
       return () => clearInterval(interval);
     }
-  }, [isOwner, user]);
+  }, [canPickBranch, user]);
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -198,7 +202,7 @@ const Header = () => {
           {typeof pageTitle === 'function' ? pageTitle() : pageTitle}
         </h2>
 
-        {isOwner && branches.length > 1 && (
+        {canPickBranch && branches.length > 1 && (
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setBranchOpen((v) => !v)}

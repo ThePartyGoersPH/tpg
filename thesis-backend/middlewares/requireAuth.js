@@ -197,6 +197,17 @@ async function requireAuth(req, res, next) {
             req.user.bar_id = requestedBarId;
           }
         }
+      } else if (role === "super_admin" && Number.isFinite(requestedBarId)) {
+        // Oversight mode: super admins carry no bar of their own, so they
+        // pick any existing bar to view in the owner portal. Existence only —
+        // no ownership check, and users.bar_id stays NULL (never written).
+        const [barRows] = await pool.query(
+          "SELECT id FROM bars WHERE id = ? LIMIT 1",
+          [requestedBarId]
+        );
+        if (barRows.length) {
+          req.user.bar_id = requestedBarId;
+        }
       }
     }
 

@@ -15,6 +15,18 @@ router.get("/my", requireAuth, async (req, res) => {
 
     let ownerUserId = userId;
 
+    // Oversight mode: super admins own no bar, so the picker lists every bar.
+    // (Their users.bar_id stays NULL; the portal sends the pick per request
+    // via X-Bar-Id, which requireAuth honors for SUPER_ADMIN.)
+    if (role === "super_admin") {
+      const [bars] = await pool.query(
+        `SELECT id, name, address, city, status, latitude, longitude, image_path, logo_path,
+                is_locked, created_at
+         FROM bars ORDER BY name ASC`
+      );
+      return res.json({ success: true, data: bars });
+    }
+
     // If staff/HR, find the owner of their bar to show branches
     if (role !== "bar_owner") {
       if (!req.user.bar_id) {
@@ -184,6 +196,24 @@ router.post("/switch", requireAuth, async (req, res) => {
     }
 
     const role = String(req.user.role || "").toLowerCase();
+
+    // Oversight mode: super admins may view any bar without owning it. Their
+    // users.bar_id stays NULL — the portal keeps the pick in localStorage and
+    // sends it per request via X-Bar-Id.
+    if (role === "super_admin") {
+      const [bars] = await pool.query(
+        "SELECT id, name FROM bars WHERE id = ? LIMIT 1",
+        [bar_id]
+      );
+      if (!bars.length) {
+        return res.status(404).json({ success: false, message: "Bar not found." });
+      }
+      return res.json({
+        success: true,
+        message: `Viewing ${bars[0].name} (oversight mode — your account keeps no bar_id)`,
+        data: { bar_id: bars[0].id, bar_name: bars[0].name },
+      });
+    }
 
     // Verify ownership
     if (role === "bar_owner") {
