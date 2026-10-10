@@ -1,7 +1,7 @@
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { authService } from '../services/authService';
 import { setUnauthorizedHandler } from '../api/client';
-import { CUSTOMER_ROLE_BLOCK_MESSAGE, isCustomerPortalUser } from '../utils/constants';
+import { CUSTOMER_ROLE_BLOCK_MESSAGE } from '../utils/constants';
 
 export const AuthContext = createContext(null);
 
@@ -54,7 +54,11 @@ export function AuthProvider({ children }) {
 
     try {
       const me = await authService.me();
-      if (!isCustomerPortalUser(me)) {
+      // Strict portal separation: only the customer role may hold a
+      // customer-website session. (Bar-owner preview was removed; owners use
+      // the manager portal, admins the admin portal.)
+      const role = String(me?.role || me?.role_name || '').trim().toLowerCase().replace(/\s+/g, '_');
+      if (role !== 'customer') {
         clearAuth();
         setAccessDeniedMessage(CUSTOMER_ROLE_BLOCK_MESSAGE);
       } else {
@@ -81,6 +85,22 @@ export function AuthProvider({ children }) {
     checkMaintenance();
     refreshUser();
   }, [checkMaintenance, refreshUser]);
+
+  // Multi-tab sync: another tab logging in (possibly as a different role),
+  // logging out, or clearing a stale session immediately reflects here, so
+  // no tab is ever left in a broken half-authenticated state.
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key !== 'token') return;
+      if (!e.newValue) {
+        clearAuth();
+      } else {
+        refreshUser();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [clearAuth, refreshUser]);
 
   const clearNeedsVerification = useCallback(() => setNeedsVerificationEmail(''), []);
 

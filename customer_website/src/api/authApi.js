@@ -4,7 +4,7 @@ export const authApi = {
   register: (payload) => apiClient.post('/auth/register', payload),
   login: (payload) =>
     apiClient.post('/auth/login', payload, {
-      headers: { 'x-login-portal': 'customer' },
+      headers: { 'x-login-portal': 'customer', 'X-App': 'customer' },
     }),
   me: () => apiClient.get('/auth/me'),
   updateProfile: (payload) => apiClient.patch('/auth/me/profile', payload),

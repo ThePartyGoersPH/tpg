@@ -1,5 +1,6 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { absoluteHomeForRole } from '../utils/portalAccess';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.thepartygoers.fun';
 
@@ -23,9 +24,25 @@ api.interceptors.request.use(
   }
 );
 
+function roleFromStoredToken() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return '';
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return payload?.role || '';
+  } catch {
+    return '';
+  }
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    if (error.response?.status === 403 && error.response?.data?.code === 'FORBIDDEN_PORTAL') {
+      toast.error("You don't have access to that portal", { id: 'portal-redirect' });
+      window.location.href = absoluteHomeForRole(roleFromStoredToken());
+      return Promise.reject(error);
+    }
     if (error.response?.status === 401) {
       // Hand session teardown to the store (single source of truth) instead
       // of wiping storage + hard-reloading here — that combination caused

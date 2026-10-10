@@ -5,7 +5,7 @@ export const authApi = {
     apiClient.post(
       '/auth/login',
       { email, password },
-      { headers: { 'x-login-portal': 'bar_management' } }
+      { headers: { 'x-login-portal': 'bar_management', 'X-App': 'pos' } }
     ),
   getMe: () => apiClient.get('/auth/me'),
   getPermissions: () => apiClient.get('/auth/me/permissions'),

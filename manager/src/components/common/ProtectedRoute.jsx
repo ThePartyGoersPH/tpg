@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import useAuthStore from '../../stores/authStore';
+import { MANAGER_PORTAL_ROLES, roleAllowed, absoluteHomeForRole } from '../../utils/portalAccess';
 import LoadingSpinner from './LoadingSpinner';
 
 const ProtectedRoute = ({ children, permissions = [], ownerOnly = false }) => {
@@ -12,6 +14,16 @@ const ProtectedRoute = ({ children, permissions = [], ownerOnly = false }) => {
     }
   }, [hasInitialized, initialize]);
 
+  // Portal gate FIRST: wrong-role sessions never render the page and never
+  // fire its API calls. Redirects to the role's own home with a toast.
+  const portalOk = !user || roleAllowed(MANAGER_PORTAL_ROLES, user?.role || user?.role_name);
+  useEffect(() => {
+    if (isAuthenticated && user && !portalOk) {
+      toast.error("You don't have access to that portal");
+      window.location.href = absoluteHomeForRole(user?.role || user?.role_name);
+    }
+  }, [isAuthenticated, user, portalOk]);
+
   if (isLoading || !hasInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -22,6 +34,14 @@ const ProtectedRoute = ({ children, permissions = [], ownerOnly = false }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (!portalOk) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <LoadingSpinner size="lg" text="Redirecting..." />
+      </div>
+    );
   }
 
   if (ownerOnly && user?.role !== 'bar_owner') {

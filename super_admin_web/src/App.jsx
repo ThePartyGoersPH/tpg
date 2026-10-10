@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import ProtectedRoute from './components/ProtectedRoute';
 import FullScreenLoader from './components/common/FullScreenLoader';
@@ -20,6 +21,22 @@ import SocialModeration from './pages/SocialModeration';
 import PermitMonitoring from './pages/PermitMonitoring';
 import { useAuthStore } from './stores/authStore';
 
+// Multi-tab sync: a login, logout, or role change in another tab immediately
+// reflects here instead of leaving this tab in a broken session state.
+function StorageSync() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key !== 'token') return;
+      useAuthStore.getState().logout();
+      navigate('/login', { replace: true });
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [navigate]);
+  return null;
+}
+
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const status = useAuthStore((state) => state.status);
@@ -34,6 +51,7 @@ function App() {
   return (
     <Router basename={import.meta.env.BASE_URL === '/' ? undefined : import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <Toaster position="top-right" />
+      <StorageSync />
       <Routes>
         <Route
           path="/login"

@@ -3,7 +3,7 @@ import apiClient from './apiClient';
 export const authApi = {
   login: (email, password) =>
     apiClient.post('/auth/login', { email, password }, {
-      headers: { 'x-login-portal': 'bar_management' },
+      headers: { 'x-login-portal': 'bar_management', 'X-App': 'manager' },
       // The Login screen renders its own inline error + lock panel; letting
       // the interceptor toast too would show every failure twice.
       silentError: true,

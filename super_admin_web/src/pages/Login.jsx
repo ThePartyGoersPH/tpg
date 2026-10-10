@@ -78,7 +78,7 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post('/auth/login', { email, password }, { headers: { 'X-App': 'admin' } });
       if (response.data.success) {
         const { user, token } = response.data.data;
         const userRole = String(user.role || '').toUpperCase();

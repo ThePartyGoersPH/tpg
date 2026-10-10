@@ -1,5 +1,6 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { absoluteHomeForRole } from '../utils/portalAccess';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.thepartygoers.fun';
 
@@ -43,6 +44,17 @@ function toastOnce(message) {
   toast.error(message);
 }
 
+function roleFromStoredToken() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return '';
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return payload?.role || '';
+  } catch {
+    return '';
+  }
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -65,7 +77,7 @@ apiClient.interceptors.response.use(
     } else if (status === 402) {
       // Subscription plan limit reached — show server message
       toastOnce(message);
-    } else if (!silentError && status === 403) {
+    } else if (!silentError && status === 403 && error.response?.data?.code !== 'FORBIDDEN_PORTAL') {
       // Only surface the alarming permission toast for explicit user actions
       // (mutations like Save). Background/auto GET 403s are silenced so pages
       // can degrade gracefully (hide/disable that section) without alarming the user.
@@ -75,6 +87,13 @@ apiClient.interceptors.response.use(
       }
     } else if (!silentError && status !== 409) {
       toastOnce(message);
+    }
+
+    // Wrong-portal sessions are bounced to the role's own home with a toast.
+    // The backend is the enforcer; this just saves the user from dead screens.
+    if (status === 403 && error.response?.data?.code === 'FORBIDDEN_PORTAL') {
+      toastOnce("You don't have access to that portal");
+      window.location.href = absoluteHomeForRole(roleFromStoredToken());
     }
 
     return Promise.reject(error);

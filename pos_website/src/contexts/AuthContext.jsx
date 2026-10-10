@@ -127,6 +127,17 @@ export function AuthProvider({ children }) {
     setPermissions([]);
   }, []);
 
+  // Multi-tab sync: a login, logout, or role change in another tab logs this
+  // tab out instead of leaving it in a broken session state.
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key !== 'pos_token') return;
+      logout();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [logout]);
+
   const can = useCallback(
     (required) => {
       const role = String(user?.role || user?.role_name || '').toUpperCase();

@@ -1,5 +1,6 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import useAuthStore from './stores/authStore';
 import DashboardLayout from './components/layout/DashboardLayout';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import LandingPage from './pages/LandingPage';
@@ -48,8 +49,26 @@ import QRCheckin from './pages/QRCheckin';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentFailed from './pages/PaymentFailed';
 
+// Multi-tab sync: a login, logout, or role change in another tab immediately
+// reflects here instead of leaving this tab in a broken session state.
+function StorageSync() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key !== 'token') return;
+      useAuthStore.getState().logout();
+      navigate('/login', { replace: true });
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [navigate]);
+  return null;
+}
+
 const App = () => {
   return (
+    <>
+    <StorageSync />
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
@@ -110,6 +129,7 @@ const App = () => {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 };
 

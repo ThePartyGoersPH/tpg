@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import LoginPage from './pages/LoginPage';
 import DashboardTab from './pages/DashboardTab';
+import { MANAGER_PORTAL_ROLES, roleAllowed, absoluteHomeForRole } from './utils/portalAccess';
 import NewOrderTab from './pages/NewOrderTab';
 import ActivityPage from './pages/ActivityPage';
 import { useAuth } from './contexts/useAuth';
@@ -48,6 +49,12 @@ export default function App() {
       document.removeEventListener('webkitfullscreenchange', updateFullscreenState);
     };
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && user && !roleAllowed(MANAGER_PORTAL_ROLES, user?.role || user?.role_name)) {
+      window.location.href = absoluteHomeForRole(user?.role || user?.role_name);
+    }
+  }, [isAuthenticated, user]);
 
   const toggleFullscreen = async () => {
     try {
@@ -89,6 +96,13 @@ export default function App() {
 
   if (!isAuthenticated) {
     return <LoginPage />;
+  }
+
+  // Portal gate: sessions from other portals never enter the POS shell.
+  // Redirects to the role's own home (same domain, known subpaths).
+  if (user && !roleAllowed(MANAGER_PORTAL_ROLES, user?.role || user?.role_name)) {
+    window.location.href = absoluteHomeForRole(user?.role || user?.role_name);
+    return <LoadingScreen />;
   }
 
   const canManage = can('reservation_manage');
