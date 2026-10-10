@@ -150,7 +150,6 @@ function RegisterView() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [pwFocused, setPwFocused] = useState(false);
 
   // Live email availability: idle | invalid | checking | available | taken | taken-unverified | error
   const [emailCheck, setEmailCheck] = useState({ status: 'idle' });
@@ -359,10 +358,11 @@ function RegisterView() {
               required
             />
           </div>
-          {/* Reserved slot: showing/hiding this line must not move the fields below. */}
-          <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '-0.4rem', minHeight: '1.1rem', marginBottom: 0, visibility: (firstNameError || lastNameError) ? 'visible' : 'hidden' }}>
-            {firstNameError || lastNameError || ' '}
-          </p>
+          {(firstNameError || lastNameError) && (
+            <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '-0.4rem', marginBottom: 0 }}>
+              {firstNameError || lastNameError}
+            </p>
+          )}
           <input
             className="glass-input"
             type="email"
@@ -375,29 +375,29 @@ function RegisterView() {
             autoComplete="off"
             required
           />
-          <div aria-live="polite" style={{ marginTop: '-0.4rem', minHeight: '1.1rem' }}>
+          <div aria-live="polite">
             {showEmailError && emailCheck.status === 'checking' && (
-              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Checking…</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '-0.4rem', marginBottom: 0 }}>Checking…</p>
             )}
             {showEmailError && emailCheck.status === 'available' && form.email.trim() && (
-              <p style={{ fontSize: '0.75rem', color: '#22c55e' }}>Email is available</p>
+              <p style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: '-0.4rem', marginBottom: 0 }}>Email is available</p>
             )}
             {showEmailError && emailCheck.status === 'taken' && (
-              <p style={{ fontSize: '0.75rem', color: '#ef4444' }}>
+              <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '-0.4rem', marginBottom: 0 }}>
                 This email is already registered. <a href="#" onClick={e => { e.preventDefault(); navigate(VIEWS.LOGIN); }} style={{ color: 'var(--color-red-primary)', fontWeight: 600 }}>Log in instead</a>
               </p>
             )}
             {showEmailError && emailCheck.status === 'taken-unverified' && (
-              <p style={{ fontSize: '0.75rem', color: '#f59e0b' }}>
+              <p style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '-0.4rem', marginBottom: 0 }}>
                 This email is waiting for verification.{' '}
                 <a href="#" onClick={e => { e.preventDefault(); navigate(VIEWS.VERIFY_EMAIL, { email: form.email.trim() }); }} style={{ color: 'var(--color-red-primary)', fontWeight: 600 }}>Resend code</a>
               </p>
             )}
             {showEmailError && emailCheck.status === 'error' && (
-              <p style={{ fontSize: '0.75rem', color: '#f59e0b' }}>Couldn't check email, try again</p>
+              <p style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '-0.4rem', marginBottom: 0 }}>Couldn't check email, try again</p>
             )}
             {showEmailError && emailCheck.status === 'invalid' && (
-              <p style={{ fontSize: '0.75rem', color: '#ef4444' }}>Enter a valid email address</p>
+              <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '-0.4rem', marginBottom: 0 }}>Enter a valid email address</p>
             )}
           </div>
           <div className="password-input-wrapper">
@@ -407,8 +407,8 @@ function RegisterView() {
               placeholder="Password (min 8 chars)"
               value={form.password}
               onChange={e => onChange('password', e.target.value)}
-              onFocus={() => { setFieldsReadonly(p => ({ ...p, password: false })); setPwFocused(true); }}
-              onBlur={() => { markTouched('password'); setPwFocused(false); }}
+              onFocus={() => setFieldsReadonly(p => ({ ...p, password: false }))}
+              onBlur={() => markTouched('password')}
               readOnly={fieldsReadonly.password}
               autoComplete="new-password"
               required
@@ -422,9 +422,9 @@ function RegisterView() {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          {/* Bar always visible (one slim line); the checklist expands only
-              while interacting, so the empty form stays tight. */}
-          {(
+          {/* Rendered only while there is a password to grade — the form stays
+              compact and grows naturally as guidance appears. */}
+          {form.password && (
             <div style={{ marginTop: '0.4rem' }} aria-live="polite">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
@@ -440,7 +440,7 @@ function RegisterView() {
                   {form.password ? pwCheck.label : ''}
                 </span>
               </div>
-              {(form.password || pwFocused) && (
+              {(form.password) && (
               <ul style={{ listStyle: 'none', margin: '0.45rem 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                 {[
                   ['At least 8 characters (12+ is stronger)', pwCheck.checks.length],
@@ -528,9 +528,9 @@ function RegisterView() {
               max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
               required
             />
-            {dobError
-              ? <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem', minHeight: '1.1rem', marginBottom: 0 }}>{dobError}</p>
-              : <p style={{ minHeight: '1.1rem', margin: 0, visibility: 'hidden' }}> </p>}
+            {dobError && (
+              <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem', marginBottom: 0 }}>{dobError}</p>
+            )}
           </div>
 
           {/* 18+ notice + checkbox */}
