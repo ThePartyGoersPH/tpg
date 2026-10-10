@@ -150,6 +150,7 @@ function RegisterView() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [pwFocused, setPwFocused] = useState(false);
 
   // Live email availability: idle | invalid | checking | available | taken | taken-unverified | error
   const [emailCheck, setEmailCheck] = useState({ status: 'idle' });
@@ -406,8 +407,8 @@ function RegisterView() {
               placeholder="Password (min 8 chars)"
               value={form.password}
               onChange={e => onChange('password', e.target.value)}
-              onFocus={() => setFieldsReadonly(p => ({ ...p, password: false }))}
-              onBlur={() => markTouched('password')}
+              onFocus={() => { setFieldsReadonly(p => ({ ...p, password: false })); setPwFocused(true); }}
+              onBlur={() => { markTouched('password'); setPwFocused(false); }}
               readOnly={fieldsReadonly.password}
               autoComplete="new-password"
               required
@@ -421,7 +422,8 @@ function RegisterView() {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          {/* Always rendered (even empty) so the checklist never pushes fields down. */}
+          {/* Bar always visible (one slim line); the checklist expands only
+              while interacting, so the empty form stays tight. */}
           {(
             <div style={{ marginTop: '0.4rem' }} aria-live="polite">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -434,10 +436,11 @@ function RegisterView() {
                     transition: 'width 0.2s',
                   }} />
                 </div>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: STRENGTH_COLORS[pwCheck.label], minWidth: 44, textAlign: 'right' }}>
-                  {pwCheck.label}
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: form.password ? STRENGTH_COLORS[pwCheck.label] : 'var(--color-text-muted)', minWidth: 44, textAlign: 'right' }}>
+                  {form.password ? pwCheck.label : ''}
                 </span>
               </div>
+              {(form.password || pwFocused) && (
               <ul style={{ listStyle: 'none', margin: '0.45rem 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                 {[
                   ['At least 8 characters (12+ is stronger)', pwCheck.checks.length],
@@ -453,6 +456,7 @@ function RegisterView() {
                   </li>
                 ))}
               </ul>
+              )}
               {showPasswordError && !pwCheck.ok && (
                 <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem' }}>{pwCheck.message}</p>
               )}
@@ -481,11 +485,13 @@ function RegisterView() {
                 {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {passwordMismatch ? (
-              <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem', minHeight: '1.1rem', marginBottom: 0 }}>Passwords do not match.</p>
-            ) : (
-              <p style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: '0.3rem', minHeight: '1.1rem', marginBottom: 0, visibility: (confirmPassword && form.password) ? 'visible' : 'hidden' }}>Passwords match.</p>
-            )}
+            {confirmPassword ? (
+              passwordMismatch ? (
+                <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem', marginBottom: 0 }}>Passwords do not match.</p>
+              ) : (
+                <p style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: '0.3rem', marginBottom: 0 }}>Passwords match.</p>
+              )
+            ) : null}
           </div>
           <input
             className="glass-input"
