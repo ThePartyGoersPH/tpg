@@ -22,6 +22,7 @@ const destinationFor = (n) => {
   if (n?.type === 'business_registration' && n?.item_id) return `/registrations?open=${n.item_id}`;
   if (n?.type === 'platform_feedback' && n?.item_id) return `/feedback?review=${n.item_id}`;
   if (n?.type === 'pending_payouts') return '/payouts';
+  if (n?.type === 'customer_approval') return '/customer-approvals?status=pending';
   if (n?.type === 'flagged_content') {
     return n?.id === 'flagged-comments' ? '/social?tab=reported-comments' : '/social?tab=posts';
   }

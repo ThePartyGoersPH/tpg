@@ -88,6 +88,7 @@ async function requireAuth(req, res, next) {
     const pool = require("../config/database");
     const [rows] = await pool.query(
       `SELECT u.id, u.email, u.role, u.role_id, u.bar_id, u.is_active, u.is_verified,
+              u.approval_status, u.approval_rejection_reason,
               r.name AS role_name
        FROM users u
        LEFT JOIN roles r ON r.id = u.role_id
@@ -111,11 +112,24 @@ async function requireAuth(req, res, next) {
       });
     }
 
+    // SECURITY: Block pending/rejected customers holding stale tokens.
+    // Customer-only effect (staff/owners/admins pass through untouched),
+    // and intentionally audit-free to avoid log spam.
+    try {
+      const { checkCustomerApproval } = require("../utils/customerApproval");
+      const approvalBlock = checkCustomerApproval(rows[0]);
+      if (approvalBlock) {
+        return res.status(403).json({ success: false, ...approvalBlock });
+      }
+    } catch (_) {
+      // Approval columns predate older schemas — fail open here so legacy
+      // databases keep working; login-time gates still enforce approval.
+    }
+
     // Email verification gate: customers whose email was never confirmed get
     // NO platform access on any method — login already refuses them, and any
     // stale token dies here. Customer-only effect; staff/owners/admins are
-    // untouched. (No approval gate: registration is auto-approved. Bans below
-    // still block outright.)
+    // untouched. (Bans below still block outright.)
     if (String(rows[0].role || "").trim().toLowerCase() === "customer" && !Number(rows[0].is_verified || 0)) {
       return res.status(403).json({
         success: false,
