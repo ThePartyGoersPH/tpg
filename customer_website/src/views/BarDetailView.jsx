@@ -10,6 +10,7 @@ import { socialService } from '../services/socialService';
 import { eventService } from '../services/eventService';
 import { paymentService } from '../services/paymentService';
 import { packageService } from '../services/packageService';
+import { normalizeCustomerPhone, sanitizePhoneInput } from '../utils/phonePolicy';
 import { formatDate, formatTime } from '../utils/dateHelpers';
 import { imageUrl } from '../utils/imageUrl';
 import { getBarOpenStatus } from '../utils/barOpenStatus';
@@ -1308,6 +1309,11 @@ function BarDetailView() {
         fail('Please enter your name, phone number, and delivery address.');
         return;
       }
+      if (ff === 'delivery') {
+        const phoneCheck = normalizeCustomerPhone(deliveryPhone, { required: true, fieldLabel: 'Delivery phone' });
+        if (phoneCheck.error) { fail(phoneCheck.error); return; }
+        setDeliveryPhone(phoneCheck.value);
+      }
       if (ff !== fulfillment) setFulfillment(ff);
     }
     if (!resDate || !resTime) { fail('Please select a date and time for your reservation.'); return; }
@@ -2327,8 +2333,9 @@ function BarDetailView() {
                             className="glass-input"
                             placeholder="Contact / phone number *"
                             value={deliveryPhone}
-                            onChange={(e) => setDeliveryPhone(e.target.value)}
-                            inputMode="tel"
+                            onChange={(e) => setDeliveryPhone(sanitizePhoneInput(e.target.value))}
+                            inputMode="numeric"
+                            maxLength={11}
                             autoComplete="tel"
                           />
                           <textarea

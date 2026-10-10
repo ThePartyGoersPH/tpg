@@ -5,6 +5,8 @@ import { useView } from '../hooks/useView';
 import { VIEWS } from '../contexts/ViewContext';
 import apiClient from '../api/client';
 import { isGoogleConfigured, googleSignInErrorText } from '../utils/googleAuth';
+import { validatePasswordStrength, STRENGTH_COLORS } from '../utils/passwordPolicy';
+import { normalizeCustomerPhone, sanitizePhoneInput, isValidCustomerPhone } from '../utils/phonePolicy';
 import { Mail, CheckCircle, Calendar, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
 function useCountdown(initial = 0) {
@@ -87,7 +89,6 @@ function calculateAge(dob) {
 }
 
 const NAME_REGEX = /^[A-Za-z][A-Za-z .'-]*$/;
-const PHONE_ALLOWED_CHARS_REGEX = /^[0-9+\-\s()]+$/;
 
 function validateName(value, label) {
   const input = String(value || '').trim();
@@ -95,20 +96,6 @@ function validateName(value, label) {
   if (input.length > 100) return `${label} is too long.`;
   if (!NAME_REGEX.test(input)) return `${label} has invalid characters.`;
   return '';
-}
-
-function validatePhone(value) {
-  const input = String(value || '').trim();
-  if (!input) return '';
-  if (input.length > 25) return 'Phone number is too long.';
-  if (!PHONE_ALLOWED_CHARS_REGEX.test(input)) return 'Enter a valid phone number.';
-  const digits = input.replace(/\D/g, '');
-  if (digits.length < 7 || digits.length > 15) return 'Enter a valid phone number.';
-  return '';
-}
-
-function sanitizePhoneInput(value) {
-  return String(value || '').replace(/[^0-9+\-\s()]/g, '').slice(0, 25);
 }
 
 function RegisterView() {
@@ -164,6 +151,61 @@ function RegisterView() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Live email availability: idle | invalid | checking | available | taken | taken-unverified | error
+  const [emailCheck, setEmailCheck] = useState({ status: 'idle' });
+  const emailCheckAbort = useRef(null);
+  const emailCheckTimer = useRef(null);
+
+  // Show field errors only after touch or a submit attempt.
+  const [touched, setTouched] = useState({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const markTouched = (key) => setTouched((p) => (p[key] ? p : { ...p, [key]: true }));
+
+  const emailFormatOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
+
+  useEffect(() => {
+    if (!emailFormatOk) {
+      if (emailCheckAbort.current) emailCheckAbort.current.abort();
+      if (emailCheckTimer.current) clearTimeout(emailCheckTimer.current);
+      setEmailCheck({ status: form.email.trim() ? 'invalid' : 'idle' });
+      return;
+    }
+    if (emailCheckTimer.current) clearTimeout(emailCheckTimer.current);
+    emailCheckTimer.current = setTimeout(async () => {
+      if (emailCheckAbort.current) emailCheckAbort.current.abort();
+      const controller = new AbortController();
+      emailCheckAbort.current = controller;
+      setEmailCheck({ status: 'checking' });
+      try {
+        const res = await apiClient.get('/auth/check-email', {
+          params: { email: form.email.trim() },
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        const data = res.data || {};
+        if (data.available) {
+          setEmailCheck({ status: 'available' });
+        } else if (data.status === 'unverified') {
+          setEmailCheck({ status: 'taken-unverified' });
+        } else {
+          setEmailCheck({ status: 'taken' });
+        }
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setEmailCheck({ status: 'error' });
+      }
+    }, 500);
+    return () => {
+      if (emailCheckTimer.current) clearTimeout(emailCheckTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.email, emailFormatOk]);
+
+  useEffect(() => () => {
+    if (emailCheckAbort.current) emailCheckAbort.current.abort();
+    if (emailCheckTimer.current) clearTimeout(emailCheckTimer.current);
+  }, []);
+
   const onChange = (key, val) => setForm(p => ({ ...p, [key]: val }));
 
   // Arriving from a Google ACCOUNT_NOT_FOUND redirect: prefill the verified
@@ -186,8 +228,18 @@ function RegisterView() {
     : '';
   const firstNameError = validateName(form.first_name, 'First name');
   const lastNameError = validateName(form.last_name, 'Last name');
-  const phoneError = validatePhone(form.phone_number);
+  const phoneCheck = normalizeCustomerPhone(form.phone_number);
+  const phoneError = form.phone_number.trim() ? (phoneCheck.error || '') : '';
+  const pwCheck = validatePasswordStrength(form.password, {
+    name: `${form.first_name} ${form.last_name}`,
+    email: form.email,
+  });
   const passwordMismatch = confirmPassword && form.password !== confirmPassword;
+  const emailTaken = emailCheck.status === 'taken' || emailCheck.status === 'taken-unverified';
+  const emailBusy = emailCheck.status === 'checking';
+  const showEmailError = touched.email || submitAttempted;
+  const showPasswordError = touched.password || submitAttempted;
+  const showPhoneError = touched.phone_number || submitAttempted;
   const canSubmit =
     ageConfirmed &&
     !dobError &&
@@ -197,12 +249,17 @@ function RegisterView() {
     form.date_of_birth &&
     !submitting &&
     !passwordMismatch &&
-    confirmPassword;
+    confirmPassword &&
+    pwCheck.ok &&
+    emailFormatOk &&
+    !emailBusy &&
+    !emailTaken;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitAttempted(true);
     if (!canSubmit) {
-      setError(firstNameError || lastNameError || phoneError || dobError || 'Please check your inputs.');
+      setError(firstNameError || lastNameError || phoneError || dobError || pwCheck.message || 'Please check your inputs.');
       return;
     }
     setError('');
@@ -313,19 +370,45 @@ function RegisterView() {
             value={form.email}
             onChange={e => onChange('email', e.target.value)}
             onFocus={() => setFieldsReadonly(p => ({ ...p, email: false }))}
+            onBlur={() => markTouched('email')}
             readOnly={fieldsReadonly.email}
             autoComplete="off"
             required
           />
+          <div aria-live="polite" style={{ marginTop: '-0.4rem', minHeight: '1.1rem' }}>
+            {showEmailError && emailCheck.status === 'checking' && (
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Checking…</p>
+            )}
+            {showEmailError && emailCheck.status === 'available' && form.email.trim() && (
+              <p style={{ fontSize: '0.75rem', color: '#22c55e' }}>Email is available</p>
+            )}
+            {showEmailError && emailCheck.status === 'taken' && (
+              <p style={{ fontSize: '0.75rem', color: '#ef4444' }}>
+                This email is already registered. <a href="#" onClick={e => { e.preventDefault(); navigate(VIEWS.LOGIN); }} style={{ color: 'var(--color-red-primary)', fontWeight: 600 }}>Log in instead</a>
+              </p>
+            )}
+            {showEmailError && emailCheck.status === 'taken-unverified' && (
+              <p style={{ fontSize: '0.75rem', color: '#f59e0b' }}>
+                This email is waiting for verification.{' '}
+                <a href="#" onClick={e => { e.preventDefault(); navigate(VIEWS.VERIFY_EMAIL, { email: form.email.trim() }); }} style={{ color: 'var(--color-red-primary)', fontWeight: 600 }}>Resend code</a>
+              </p>
+            )}
+            {showEmailError && emailCheck.status === 'error' && (
+              <p style={{ fontSize: '0.75rem', color: '#f59e0b' }}>Couldn't check email, try again</p>
+            )}
+            {showEmailError && emailCheck.status === 'invalid' && (
+              <p style={{ fontSize: '0.75rem', color: '#ef4444' }}>Enter a valid email address</p>
+            )}
+          </div>
           <div className="password-input-wrapper">
             <input
               className="glass-input password-input"
               type={showPassword ? 'text' : 'password'}
-              placeholder="Password (min 6 chars)"
-              minLength={6}
+              placeholder="Password (min 8 chars)"
               value={form.password}
               onChange={e => onChange('password', e.target.value)}
               onFocus={() => setFieldsReadonly(p => ({ ...p, password: false }))}
+              onBlur={() => markTouched('password')}
               readOnly={fieldsReadonly.password}
               autoComplete="new-password"
               required
@@ -339,6 +422,42 @@ function RegisterView() {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
+          {form.password && (
+            <div style={{ marginTop: '0.4rem' }} aria-live="polite">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${Math.round((pwCheck.score / 6) * 100)}%`,
+                    height: '100%',
+                    borderRadius: 999,
+                    background: STRENGTH_COLORS[pwCheck.label],
+                    transition: 'width 0.2s',
+                  }} />
+                </div>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: STRENGTH_COLORS[pwCheck.label], minWidth: 44, textAlign: 'right' }}>
+                  {pwCheck.label}
+                </span>
+              </div>
+              <ul style={{ listStyle: 'none', margin: '0.45rem 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                {[
+                  ['At least 8 characters (12+ is stronger)', pwCheck.checks.length],
+                  ['Uppercase letter', pwCheck.checks.upper],
+                  ['Lowercase letter', pwCheck.checks.lower],
+                  ['Number', pwCheck.checks.digit],
+                  ['Special character', pwCheck.checks.special],
+                  ['Not a common password', pwCheck.checks.notCommon],
+                  ["Doesn't contain your name or email", pwCheck.checks.notPersonal],
+                ].map(([label, met]) => (
+                  <li key={label} style={{ fontSize: '0.72rem', color: met ? '#22c55e' : 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <span aria-hidden="true">{met ? '✓' : '○'}</span> {label}
+                  </li>
+                ))}
+              </ul>
+              {showPasswordError && !pwCheck.ok && (
+                <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem' }}>{pwCheck.message}</p>
+              )}
+            </div>
+          )}
           <div>
             <div className="password-input-wrapper">
               <input
@@ -372,20 +491,24 @@ function RegisterView() {
           <input
             className="glass-input"
             type="tel"
-            inputMode="tel"
-            placeholder="Phone number (optional)"
+            inputMode="numeric"
+            placeholder="Phone number (optional, 09xxxxxxxxx)"
             value={form.phone_number}
             onChange={e => onChange('phone_number', sanitizePhoneInput(e.target.value))}
-            maxLength={25}
+            onBlur={() => markTouched('phone_number')}
+            maxLength={11}
             onFocus={() => setFieldsReadonly(p => ({ ...p, phone: false }))}
             readOnly={fieldsReadonly.phone}
             autoComplete="off"
           />
-          {phoneError && (
-            <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '-0.4rem' }}>
-              {phoneError}
-            </p>
-          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '-0.4rem' }} aria-live="polite">
+            <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>
+              {showPhoneError && phoneError ? phoneError : ''}
+            </span>
+            <span style={{ fontSize: '0.72rem', color: form.phone_number.length === 11 ? '#22c55e' : 'var(--color-text-muted)' }}>
+              {form.phone_number.length}/11
+            </span>
+          </div>
 
           {/* Birthday */}
           <div>

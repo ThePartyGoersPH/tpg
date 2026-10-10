@@ -8,6 +8,17 @@ export default defineConfig({
     port: 5173,
     open: false,
     allowedHosts: true,
+    // Local dev has no CORS issues: /api calls proxy to the backend, so the
+    // app can use a relative base URL just like production nginx does.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        // Backend mounts routes at root (/auth/...); strip the prefix exactly
+        // like the production nginx location block does.
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
   },
   preview: {
     host: '0.0.0.0',

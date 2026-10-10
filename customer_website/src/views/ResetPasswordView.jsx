@@ -3,6 +3,7 @@ import { useView } from '../hooks/useView';
 import { VIEWS } from '../contexts/ViewContext';
 import { KeyRound, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import apiClient from '../api/client';
+import { validatePasswordStrength, STRENGTH_COLORS } from '../utils/passwordPolicy';
 
 function ResetPasswordView() {
   const { viewParams, navigate } = useView();
@@ -17,7 +18,8 @@ function ResetPasswordView() {
   const [done, setDone] = useState(false);
 
   const passwordMismatch = confirmPassword && newPassword !== confirmPassword;
-  const canSubmit = newPassword.length >= 6 && confirmPassword && !passwordMismatch && !submitting;
+  const pwCheck = validatePasswordStrength(newPassword, {});
+  const canSubmit = pwCheck.ok && confirmPassword && !passwordMismatch && !submitting;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -103,14 +105,13 @@ function ResetPasswordView() {
             </div>
             <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>RESET <span style={{ color: 'var(--color-red-primary)' }}>PASSWORD</span></h1>
           </div>
-          <p className="text-muted" style={{ fontSize: '0.9rem' }}>Enter your new password below. Must be at least 6 characters.</p>
+          <p className="text-muted" style={{ fontSize: '0.9rem' }}>Enter your new password below. Must be at least 8 characters with upper, lower, and number.</p>
 
           <div style={{ position: 'relative' }}>
             <input
               className="glass-input"
               type={showNew ? 'text' : 'password'}
-              placeholder="New password (min 6 chars)"
-              minLength={6}
+              placeholder="New password (min 8 chars)"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
               autoComplete="new-password"
@@ -125,6 +126,27 @@ function ResetPasswordView() {
               {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
+          {newPassword && (
+            <div style={{ marginTop: '-0.5rem' }} aria-live="polite">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${Math.round((pwCheck.score / 6) * 100)}%`,
+                    height: '100%',
+                    borderRadius: 999,
+                    background: STRENGTH_COLORS[pwCheck.label],
+                    transition: 'width 0.2s',
+                  }} />
+                </div>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: STRENGTH_COLORS[pwCheck.label], minWidth: 44, textAlign: 'right' }}>
+                  {pwCheck.label}
+                </span>
+              </div>
+              {!pwCheck.ok && (
+                <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem' }}>{pwCheck.message}</p>
+              )}
+            </div>
+          )}
 
           <div style={{ position: 'relative' }}>
             <input

@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Base URL resolution: explicit VITE_API_URL wins (production builds set the
+// live https URL); otherwise relative '/api', which the Vite dev proxy
+// forwards to the local backend (no CORS) and which nginx proxies in prod.
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

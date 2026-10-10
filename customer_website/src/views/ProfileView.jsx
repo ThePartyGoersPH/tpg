@@ -7,10 +7,10 @@ import { imageUrl } from '../utils/imageUrl';
 import apiClient from '../api/client';
 import CropPictureModal from '../components/ui/CropPictureModal';
 import { CheckCircle, ShieldAlert, Star, MessageCircle } from 'lucide-react';
+import { normalizeCustomerPhone, sanitizePhoneInput } from '../utils/phonePolicy';
 
 const CATEGORIES = ['general', 'ui_ux', 'performance', 'features', 'support', 'other'];
 const NAME_REGEX = /^[A-Za-z][A-Za-z .'-]*$/;
-const PHONE_ALLOWED_CHARS_REGEX = /^[0-9+\-\s()]+$/;
 const AVATAR_MAX_BYTES = 10 * 1024 * 1024;
 const AVATAR_ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
 
@@ -20,20 +20,6 @@ function validateName(value, label) {
   if (input.length > 100) return `${label} is too long.`;
   if (!NAME_REGEX.test(input)) return `${label} has invalid characters.`;
   return '';
-}
-
-function validatePhone(value) {
-  const input = String(value || '').trim();
-  if (!input) return '';
-  if (input.length > 25) return 'Phone number is too long.';
-  if (!PHONE_ALLOWED_CHARS_REGEX.test(input)) return 'Enter a valid phone number.';
-  const digits = input.replace(/\D/g, '');
-  if (digits.length < 7 || digits.length > 15) return 'Enter a valid phone number.';
-  return '';
-}
-
-function sanitizePhoneInput(value) {
-  return String(value || '').replace(/[^0-9+\-\s()]/g, '').slice(0, 25);
 }
 
 function StarRating({ value, onChange, readonly = false }) {
@@ -153,7 +139,8 @@ function ProfileView() {
 
   const profileFirstNameError = validateName(profileForm.first_name, 'First name');
   const profileLastNameError = validateName(profileForm.last_name, 'Last name');
-  const profilePhoneError = validatePhone(profileForm.phone_number);
+  const profilePhoneCheck = normalizeCustomerPhone(profileForm.phone_number);
+  const profilePhoneError = profileForm.phone_number.trim() ? (profilePhoneCheck.error || '') : '';
   const canSaveProfile = !profileFirstNameError && !profileLastNameError && !profilePhoneError;
 
   const handleProfileSave = async (e) => {
@@ -281,7 +268,7 @@ function ProfileView() {
               </span>
             )}
           </div>
-          <input className="glass-input" type="tel" inputMode="tel" maxLength={25} placeholder="Phone number" value={profileForm.phone_number} onChange={e => pv('phone_number', sanitizePhoneInput(e.target.value))} />
+          <input className="glass-input" type="tel" inputMode="numeric" maxLength={11} placeholder="Phone number (09xxxxxxxxx)" value={profileForm.phone_number} onChange={e => pv('phone_number', sanitizePhoneInput(e.target.value))} />
           {profilePhoneError && (
             <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '-0.35rem' }}>
               {profilePhoneError}
