@@ -619,6 +619,38 @@ async function sendStaffOnboardingEmail(toEmail, opts = {}) {
 
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@thepartygoersph.com';
 
+async function sendAccountLockedEmail(toEmail, firstName, { minutes, app } = {}) {
+  const safeName = String(firstName || 'there');
+  const safeMinutes = Number(minutes) > 0 ? Number(minutes) : 5;
+  const where = app ? ` on ${String(app)}` : '';
+  await _send(toEmail, 'Your Party Goers account was temporarily locked', `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Account locked</title></head>
+<body style="margin:0;padding:0;background:#0A0A0A;font-family:'DM Sans',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;padding:40px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#111111;border-radius:16px;border:1px solid rgba(255,255,255,0.06);max-width:560px;width:100%;">
+        <tr><td style="background:linear-gradient(135deg,#1a0000 0%,#111111 100%);padding:36px 40px 28px;border-bottom:1px solid rgba(204,0,0,0.2);">
+          <span style="font-size:1.4rem;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">Party<span style="color:#CC0000;">Goers</span> PH</span>
+        </td></tr>
+        <tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 8px;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#CC0000;">Security Notice</p>
+          <h1 style="margin:0 0 16px;font-size:1.6rem;font-weight:800;color:#ffffff;line-height:1.2;">Hey ${safeName}, was this you?</h1>
+          <p style="margin:0 0 16px;font-size:0.95rem;color:#888888;line-height:1.7;">
+            Too many wrong passwords were entered${where}, so sign-in is paused for about ${safeMinutes} minute${safeMinutes === 1 ? '' : 's'}. If that wasn't you, someone may be trying your password — consider changing it once you're back in.
+          </p>
+          <p style="margin:0;font-size:0.95rem;color:#888888;line-height:1.7;">
+            Need help? Contact our support team at ${SUPPORT_EMAIL}.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`);
+}
+
 async function sendCustomerApprovalEmail(toEmail, firstName) {
   const safeName = String(firstName || 'there');
   await _send(toEmail, 'Your Party Goers account is approved', `
@@ -677,4 +709,4 @@ async function sendCustomerRejectionEmail(toEmail, firstName, reason) {
 </html>`);
 }
 
-module.exports = { sendVerificationEmail, sendBarOwnerVerificationEmail, sendBarApprovalEmail, sendPasswordResetEmail, sendPurchaseOrderEmail, sendStaffOnboardingEmail, sendCustomerApprovalEmail, sendCustomerRejectionEmail };
+module.exports = { sendVerificationEmail, sendBarOwnerVerificationEmail, sendBarApprovalEmail, sendPasswordResetEmail, sendPurchaseOrderEmail, sendStaffOnboardingEmail, sendCustomerApprovalEmail, sendCustomerRejectionEmail, sendAccountLockedEmail };

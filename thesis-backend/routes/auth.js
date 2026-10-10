@@ -11,6 +11,18 @@ const { logAudit, auditContext } = require("../utils/audit");
 const { sendVerificationEmail, sendBarOwnerVerificationEmail, sendPasswordResetEmail } = require("../utils/emailService");
 const { DEFAULT_AVATAR } = require("../utils/profileUrl");
 const { checkCustomerApproval } = require("../utils/customerApproval");
+const {
+  policy: loginPolicy,
+  clientIp,
+  userAgent,
+  checkLoginAllowed,
+  lockedResponse,
+  recordFailure,
+  resetOnSuccess,
+  auditPlatform,
+  safeCompare,
+  ipRouteLimit,
+} = require("../utils/loginAttempts");
 
 let hasGlobalBanColumnCache = null;
 let hasUserBanReasonColumnCache = null;
@@ -555,7 +567,20 @@ router.post("/login", async (req, res) => {
     }
 
     if (String(email).length > 255 || String(password).length > 128) {
-      return res.status(400).json({ success: false, message: "Invalid credentials" });
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
+
+    // Brute-force shield (single source of truth for every portal: customer,
+    // manager/bar owner, POS, super admin). The lock is checked BEFORE the
+    // password so a locked account never even burns bcrypt work — and a
+    // locked response never reveals whether the password was right.
+    const emailNorm = String(email).trim().toLowerCase();
+    const loginPortal = String(req.headers["x-login-portal"] || req.body?.portal || "bar_management").toLowerCase();
+    const reqIp = clientIp(req);
+    const reqUa = userAgent(req);
+    const gate = await checkLoginAllowed(emailNorm, reqIp);
+    if (!gate.allowed) {
+      return lockedResponse(res, gate);
     }
 
     // Find user by email with bar_id + bar name
@@ -598,6 +623,14 @@ router.post("/login", async (req, res) => {
         }
       } catch (_) { /* table may not exist yet */ }
 
+      // Unknown address: identical shape to a wrong password (never reveal
+      // whether the email exists), same bcrypt cost for timing parity, and
+      // the attempt still counts toward the account + IP limits.
+      await safeCompare(password, null);
+      const miss = await recordFailure({ identifier: emailNorm, ip: reqIp, userId: null });
+      if (miss.locked) {
+        return lockedResponse(res, miss.lock);
+      }
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
@@ -645,9 +678,44 @@ router.post("/login", async (req, res) => {
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
+      const earlyRole = String(user.role_name || user.role || "").toUpperCase();
+      const miss = await recordFailure({
+        identifier: emailNorm, ip: reqIp, userId: user.id,
+      });
+      if (miss.locked) {
+        await auditPlatform({
+          action: "ACCOUNT_LOCKED", userId: user.id, email: user.email,
+          app: loginPortal, ip: reqIp, userAgent: reqUa,
+          details: { lock_level: miss.lock.level, lock_minutes: miss.lock.durationMinutes },
+        });
+      } else {
+        await auditPlatform({
+          action: "LOGIN_FAILED", userId: user.id, email: user.email,
+          app: loginPortal, ip: reqIp, userAgent: reqUa,
+          details: { attempts_remaining: miss.attemptsRemaining },
+        });
+      }
+      if (miss.locked) {
+        // "Was this you?" mail + an extra audit-visible ping for super admins.
+        // Best-effort: mail failure never blocks the response.
+        try {
+          const { sendAccountLockedEmail } = require("../utils/emailService");
+          await sendAccountLockedEmail(user.email, user.first_name, {
+            minutes: miss.lock.durationMinutes, app: loginPortal,
+          });
+          if (earlyRole === "SUPER_ADMIN") {
+            const { alertEmail } = require("../config/loginSecurity");
+            await sendAccountLockedEmail(alertEmail(), "admin", {
+              minutes: miss.lock.durationMinutes, app: `super-admin (${user.email})`,
+            });
+          }
+        } catch (_) {}
+        return lockedResponse(res, miss.lock);
+      }
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
+        attemptsRemaining: miss.attemptsRemaining,
       });
     }
 
@@ -658,7 +726,6 @@ router.post("/login", async (req, res) => {
     //   they can preview their own public bar page (and add products/tables)
     //   before payment setup is finished. Their session stays bar-scoped.
     const roleName = String(user.role_name || user.role || "").toUpperCase();
-    const loginPortal = String(req.headers["x-login-portal"] || req.body?.portal || "bar_management").toLowerCase();
 
     if (loginPortal === "customer") {
       const customerPortalRoles = ["CUSTOMER", "BAR_OWNER", "MANAGER"];
@@ -803,6 +870,16 @@ router.post("/login", async (req, res) => {
       }
     }
 
+    // A correct password wipes the slate: counter and lock level reset. When
+    // the account had lock history, say so in the audit trail explicitly.
+    const hadLockHistory = await resetOnSuccess({ identifier: emailNorm, ip: reqIp });
+    if (hadLockHistory) {
+      await auditPlatform({
+        action: "LOGIN_SUCCESS_AFTER_LOCK", userId: user.id, email: user.email,
+        app: loginPortal, ip: reqIp, userAgent: reqUa, details: {},
+      });
+    }
+
     // Generate token
     const token = signToken(user);
 
@@ -863,7 +940,7 @@ router.post("/login", async (req, res) => {
 });
 
 // CUSTOMER REGISTER (sets role_id too)
-router.post("/register", async (req, res) => {
+router.post("/register", ipRouteLimit("register"), async (req, res) => {
   try {
     const { first_name, last_name, email, password, phone_number, date_of_birth } = req.body || {};
 
@@ -1374,6 +1451,13 @@ router.post("/google", async (req, res) => {
       // Server-side only: the real reason (expired token, wrong audience aka
       // old/revoked client, etc.). Message only — never the credential.
       console.error("GOOGLE VERIFY ERROR:", e?.message || e);
+      // No account to lock here, but repeated junk credentials from one IP
+      // still earn the shared IP cooldown.
+      try {
+        const { recordGoogleFailure } = require("../utils/loginAttempts");
+        const limited = await recordGoogleFailure(clientIp(req));
+        if (limited) return lockedResponse(res, limited);
+      } catch (_) {}
       return res.status(401).json({ success: false, message: "Invalid Google credential. Please try again." });
     }
 
@@ -1555,6 +1639,11 @@ router.post("/google/complete", async (req, res) => {
       payload = ticket.getPayload();
     } catch (e) {
       console.error("GOOGLE VERIFY ERROR:", e?.message || e);
+      try {
+        const { recordGoogleFailure } = require("../utils/loginAttempts");
+        const limited = await recordGoogleFailure(clientIp(req));
+        if (limited) return lockedResponse(res, limited);
+      } catch (_) {}
       return res.status(401).json({ success: false, message: "Google session expired. Please try again." });
     }
 
@@ -1635,7 +1724,7 @@ router.post("/google/complete", async (req, res) => {
 });
 
 // ─── FORGOT PASSWORD ───
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", ipRouteLimit("forgot-password"), async (req, res) => {
   try {
     const { email } = req.body || {};
     if (!email) return res.status(400).json({ success: false, message: "Email is required" });
