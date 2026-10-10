@@ -4,7 +4,7 @@ import { customerApprovalsAPI } from '../api/services';
 import { formatDateTime } from '../utils/formatters';
 import { Search, UserCheck, UserX, Eye, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { confirmDestructive, promptRejectReason, swalSuccess, swalError } from '../utils/swal';
+import { confirmDestructive, promptRejectReason, promptApproveNote, swalError } from '../utils/swal';
 
 const TABS = [
   { key: 'pending', label: 'Pending' },
@@ -126,17 +126,42 @@ export default function CustomerApprovals() {
     fetchList({ tab, page: next, search, verified });
   };
 
+  // Toast that offers a one-tap resend when the email failed. react-hot-toast
+  // custom content keeps it to a single toast per action.
+  const toastDecision = (verbPast, emailSent, customerId) => {
+    if (emailSent) {
+      toast.success(`Customer ${verbPast} and email sent`);
+      return;
+    }
+    toast((t) => (
+      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span>Customer {verbPast}, but the email could not be sent.</span>
+        <button
+          onClick={async () => {
+            toast.dismiss(t.id);
+            try {
+              const r = await customerApprovalsAPI.resend(customerId);
+              if (r.data?.emailSent) toast.success('Status email resent.');
+              else toast.error('The email could not be sent.');
+            } catch {
+              toast.error('The email could not be sent.');
+            }
+          }}
+          style={{ fontSize: 12, fontWeight: 700, color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+        >
+          Resend email
+        </button>
+      </span>
+    ), { duration: 6000 });
+  };
+
   const handleApprove = async (c) => {
-    const ok = await confirmDestructive({
-      title: `Approve ${c.name || 'this customer'}?`,
-      text: 'They will be able to log in immediately.',
-      confirmText: 'Approve',
-    });
-    if (!ok) return;
+    const note = await promptApproveNote({ title: `Approve ${c.name || 'this customer'}?` });
+    if (note === null) return;
     setActing(true);
     try {
-      const r = await customerApprovalsAPI.approve(c.id);
-      swalSuccess(r.data?.message || 'Customer approved');
+      const r = await customerApprovalsAPI.approve(c.id, note ? { note } : {});
+      toastDecision('approved', r.data?.emailSent, c.id);
       refresh();
       setDetail(null);
     } catch (e) {
@@ -149,10 +174,11 @@ export default function CustomerApprovals() {
   const handleReject = async (c) => {
     const reason = await promptRejectReason({ name: c.name ? `${c.name} (${c.email || 'no email'})` : '' });
     if (reason === null) return;
+    const wasApproved = String(c.approval_status || '').toLowerCase() === 'approved';
     setActing(true);
     try {
       const r = await customerApprovalsAPI.reject(c.id, { reason });
-      swalSuccess(r.data?.message || 'Customer rejected');
+      toastDecision(wasApproved ? 'revoked' : 'rejected', r.data?.emailSent, c.id);
       refresh();
       setDetail(null);
     } catch (e) {
@@ -184,10 +210,37 @@ export default function CustomerApprovals() {
     try {
       const payload = action === 'reject' ? { action, ids: selected, reason } : { action, ids: selected };
       const r = await customerApprovalsAPI.bulk(payload);
-      swalSuccess(r.data?.message || 'Bulk update complete');
+      const items = Array.isArray(r.data?.data) ? r.data.data : [];
+      const failedMail = items.filter((x) => !x.error && x.emailSent === false);
+      if (failedMail.length) {
+        toast((t) => (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>{r.data?.message || 'Bulk update complete'} {failedMail.length} email(s) failed.</span>
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                let ok = 0;
+                for (const x of failedMail) {
+                  try {
+                    const rr = await customerApprovalsAPI.resend(x.id);
+                    if (rr.data?.emailSent) ok += 1;
+                  } catch { /* per-item, keep going */ }
+                }
+                if (ok) toast.success(`Resent ${ok} email(s).`);
+                else toast.error('The emails could not be sent.');
+              }}
+              style={{ fontSize: 12, fontWeight: 700, color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Retry failed
+            </button>
+          </span>
+        ), { duration: 8000 });
+      } else {
+        toast.success(r.data?.message || 'Bulk update complete');
+      }
       refresh();
     } catch (e) {
-      swalError(e.response?.data?.message || 'Bulk update failed — no changes were applied');
+      swalError(e.response?.data?.message || 'Bulk update failed');
     } finally {
       setActing(false);
     }
@@ -481,7 +534,7 @@ export default function CustomerApprovals() {
                 ['Registered', formatDateTime(detail.created_at)],
                 ['Reviewed by', detail.reviewed_by_name || '—'],
                 ['Reviewed at', detail.reviewed_at ? formatDateTime(detail.reviewed_at) : '—'],
-                ['Rejection reason', detail.rejection_reason || '—'],
+                ['Decision note', detail.rejection_reason || '—'],
               ].map(([k, v]) => (
                 <div key={k} className="flex gap-3">
                   <span className="w-32 flex-shrink-0 text-white/35">{k}</span>
@@ -490,6 +543,24 @@ export default function CustomerApprovals() {
               ))}
             </div>
             <div className="flex justify-end gap-2 mt-5">
+              {(String(detail.approval_status || '').toLowerCase() === 'approved' ||
+                String(detail.approval_status || '').toLowerCase() === 'rejected') && (
+                <button
+                  onClick={async () => {
+                    try {
+                      const r = await customerApprovalsAPI.resend(detail.id);
+                      if (r.data?.emailSent) toast.success('Status email resent.');
+                      else toast.error('The email could not be sent.');
+                    } catch {
+                      toast.error('The email could not be sent.');
+                    }
+                  }}
+                  disabled={acting}
+                  className="text-xs font-medium px-3 py-2 rounded bg-white/[0.06] text-white/60 hover:text-white/90 disabled:opacity-50"
+                >
+                  Resend email
+                </button>
+              )}
               {canApprove(detail) && (
                 <button
                   onClick={() => handleApprove(detail)}

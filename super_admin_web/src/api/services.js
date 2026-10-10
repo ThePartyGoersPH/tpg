@@ -73,9 +73,10 @@ export const usersAPI = {
 export const customerApprovalsAPI = {
   list: (params) => api.get('/super-admin/customer-approvals', { params }),
   stats: () => api.get('/super-admin/customer-approvals/stats'),
-  approve: (id) => api.post(`/super-admin/customer-approvals/${id}/approve`),
+  approve: (id, data) => api.post(`/super-admin/customer-approvals/${id}/approve`, data),
   reject: (id, data) => api.post(`/super-admin/customer-approvals/${id}/reject`, data),
   bulk: (data) => api.post('/super-admin/customer-approvals/bulk', data),
+  resend: (id) => api.post(`/super-admin/customer-approvals/${id}/resend-email`),
 };
 
 // ─── CUSTOMER BANNING ────────────────────────────────────────────────

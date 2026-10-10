@@ -62,7 +62,7 @@ const REJECT_QUICK_PICKS = [
 ];
 
 /**
- * Rejection dialog: required reason textarea (5-500 chars) plus quick picks.
+ * Rejection dialog: required reason textarea (5-300 chars) plus quick picks.
  * Resolves the trimmed reason string, or null when cancelled.
  */
 export async function promptRejectReason({ title = 'Reject this registration?', name = '' }) {
@@ -78,8 +78,8 @@ export async function promptRejectReason({ title = 'Reject this registration?', 
       ).join('') +
       `</div>`,
     input: 'textarea',
-    inputPlaceholder: 'Reason (required, 5-500 characters)…',
-    inputAttributes: { maxlength: 500, 'aria-label': 'Rejection reason' },
+    inputPlaceholder: 'Reason (required, 5-300 characters)…',
+    inputAttributes: { maxlength: 300, 'aria-label': 'Rejection reason' },
     showCancelButton: true,
     confirmButtonText: 'Reject',
     cancelButtonText: 'Cancel',
@@ -100,14 +100,38 @@ export async function promptRejectReason({ title = 'Reject this registration?', 
     },
     preConfirm: (value) => {
       const reason = String(value || '').trim();
-      if (reason.length < 5 || reason.length > 500) {
-        Swal.showValidationMessage('Please give a reason between 5 and 500 characters.');
+      if (reason.length < 5 || reason.length > 300) {
+        Swal.showValidationMessage('Please give a reason between 5 and 300 characters.');
         return false;
       }
       return reason;
     },
   });
   return result.isConfirmed ? String(result.value || '').trim() : null;
+}
+
+/**
+ * Optional-note dialog for approvals. Resolves the trimmed note
+ * (empty string when skipped), or null when cancelled.
+ */
+export async function promptApproveNote({ title = 'Approve this registration?', name = '' }) {
+  ensureStyle();
+  const result = await Swal.fire({
+    ...base,
+    title,
+    html: name ? `<p style="margin:0 0 10px;">${name}</p>` : '',
+    input: 'textarea',
+    inputPlaceholder: 'Optional note for the customer (up to 300 characters)…',
+    inputAttributes: { maxlength: 300, 'aria-label': 'Approval note (optional)' },
+    showCancelButton: true,
+    confirmButtonText: 'Approve',
+    cancelButtonText: 'Cancel',
+    reverseButtons: true,
+    focusCancel: true,
+    showLoaderOnConfirm: true,
+    preConfirm: (value) => String(value || '').trim().slice(0, 300),
+  });
+  return result.isConfirmed ? String(result.value || '').trim().slice(0, 300) : null;
 }
 
 const toastMixin = () =>
