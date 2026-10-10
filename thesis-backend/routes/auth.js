@@ -1369,6 +1369,9 @@ router.post("/google", async (req, res) => {
       });
       payload = ticket.getPayload();
     } catch (e) {
+      // Server-side only: the real reason (expired token, wrong audience aka
+      // old/revoked client, etc.). Message only — never the credential.
+      console.error("GOOGLE VERIFY ERROR:", e?.message || e);
       return res.status(401).json({ success: false, message: "Invalid Google credential. Please try again." });
     }
 
