@@ -13,7 +13,8 @@ export function isCustomerPortalUser(user) {
 
 /**
  * True when a signed-in user object explicitly reports an unverified email:
- * `isVerified === false`, `is_verified` falsy, or `verified === 'UNVERIFIED'`.
+ * `isVerified === false`, `email_verified === false`, `is_verified` falsy,
+ * or `verified === 'UNVERIFIED'`.
  * Missing flags mean "unknown", not "unverified", so this never nags by
  * default — callers render the reminder only on an explicit negative signal.
  */
@@ -21,6 +22,7 @@ export function isEmailUnverified(user) {
   if (!user || typeof user !== 'object') return false;
 
   if (user.isVerified === false) return true;
+  if (user.email_verified === false) return true;
   if (user.is_verified === false || user.is_verified === 0) return true;
   if (String(user.verified || '').trim().toUpperCase() === 'UNVERIFIED') return true;
 

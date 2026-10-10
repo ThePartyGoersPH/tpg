@@ -1514,14 +1514,14 @@ textarea {
 
 .email-verification-banner__text {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #92400e;
 }
 
 .email-verification-banner__notice {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 1rem;
   font-weight: 600;
 }
 
@@ -1546,7 +1546,7 @@ textarea {
   border: 1px solid #92400e;
   background: #92400e;
   color: #fffbeb;
-  font-size: 0.75rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1;
   padding: 0.45rem 0.8rem;
@@ -1571,6 +1571,24 @@ textarea {
 }
 
 .evb-btn--ghost:hover:not(:disabled) {
+  background: rgba(146, 64, 14, 0.12);
+  border-color: #92400e;
+}
+
+.evb-btn--icon {
+  background: transparent;
+  color: #92400e;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.evb-btn--icon:hover:not(:disabled) {
   background: rgba(146, 64, 14, 0.12);
   border-color: #92400e;
 }
