@@ -447,6 +447,7 @@ router.get("/me", require("../middlewares/requireAuth"), async (req, res) => {
     // boolean or the string form without caring how MySQL stored it.
     user.is_verified = Number(user.is_verified || 0) === 1;
     user.isVerified = user.is_verified;
+    user.email_verified = user.is_verified;
     user.verified = user.is_verified ? "VERIFIED" : "UNVERIFIED";
     user.verifiedAt = user.email_verified_at || null;
 
@@ -837,6 +838,7 @@ router.post("/login", async (req, res) => {
           is_active: user.is_active,
           is_verified: Number(user.is_verified || 0) === 1,
           isVerified: Number(user.is_verified || 0) === 1,
+          email_verified: Number(user.is_verified || 0) === 1,
           verified: Number(user.is_verified || 0) === 1 ? "VERIFIED" : "UNVERIFIED"
         },
         ...(emailUnverified ? { verification_sent: verificationSent, verification_method: "link+otp" } : {}),

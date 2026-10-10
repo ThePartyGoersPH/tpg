@@ -7,10 +7,12 @@ import apiClient from '../../api/client';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
-// Persistent, non-blocking reminder for signed-in users whose email is still
-// unverified. It never gates navigation or API access on its own — login and
-// requireAuth remain the enforcement points — it only surfaces the state and
-// offers a way forward (resend, or jump to the code entry screen).
+// Persistent, dismissible reminder for signed-in users whose email is still
+// unverified. It never gates navigation or API access on its own — the login
+// limited-session model and requireAuth remain the enforcement points — it
+// only surfaces the state and offers a way forward (resend, or jump to the
+// code entry screen). Dismissal lives in component state only, so the banner
+// returns on the next session until the email is verified.
 function EmailVerificationBanner() {
   const { user, isAuthenticated, refreshUser } = useAuth() || {};
   const { navigate } = useView() || {};
@@ -18,12 +20,18 @@ function EmailVerificationBanner() {
   const [cooldown, setCooldown] = useState(0);
   const [notice, setNotice] = useState('');
   const [noticeOk, setNoticeOk] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const cooldownRef = useRef(null);
+
+  const accountKey = String(user?.email || '').trim().toLowerCase();
 
   useEffect(() => () => clearInterval(cooldownRef.current), []);
 
+  // A new session (or a different account) gets a fresh reminder.
+  useEffect(() => { setDismissed(false); }, [accountKey]);
+
   const unverified = Boolean(isAuthenticated) && isEmailUnverified(user);
-  if (!unverified) return null;
+  if (!unverified || dismissed) return null;
 
   const email = String(user?.email || '').trim();
 
@@ -83,7 +91,7 @@ function EmailVerificationBanner() {
         <span className="email-verification-banner__icon" aria-hidden="true">✉️</span>
         <div className="email-verification-banner__copy">
           <p className="email-verification-banner__text">
-            Please verify your email address to unlock full account features.
+            Verify your email to keep your account secure.
           </p>
           {notice && (
             <p className={`email-verification-banner__notice ${noticeOk ? 'is-ok' : 'is-err'}`}>
@@ -106,6 +114,15 @@ function EmailVerificationBanner() {
             onClick={handleEnterCode}
           >
             Enter code
+          </button>
+          <button
+            type="button"
+            className="evb-btn evb-btn--icon"
+            onClick={() => setDismissed(true)}
+            aria-label="Dismiss email verification reminder"
+            title="Dismiss"
+          >
+            ×
           </button>
         </div>
       </div>
