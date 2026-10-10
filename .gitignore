@@ -1,0 +1,40 @@
+# Secrets and local config — never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Database dumps — never commit these. Migration files under
+# thesis-backend/migrations/ are versioned code and ARE committed.
+*.sql
+*.sql.gz
+!thesis-backend/migrations/*.sql
+*.dump
+
+# Uploads and user content
+uploads/
+**/uploads/
+
+# Dependencies
+node_modules/
+
+# Build output (rebuilt at deploy time; dist churn stays out of git)
+dist/
+build/
+
+# Logs and OS noise
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Editor state
+.vscode/
+.idea/
+*.swp
+
+# Local deploy scratch
+tmp_logo_checks/
+_deploy_customer_notifications/
+*.tgz
