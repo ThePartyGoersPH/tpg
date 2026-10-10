@@ -1338,7 +1338,7 @@ function getGoogleAudiences() {
 if (!getGoogleAudiences().length) {
   console.warn(
     "[auth] WARNING: GOOGLE_CLIENT_ID / GOOGLE_CLIENT_IDS is not set — " +
-    "Google sign-in will return 'Google OAuth not configured on server' until it is."
+    "Google sign-in will return 'Google sign-in is temporarily unavailable. Please try again later.' until it is."
   );
 }
 
@@ -1358,7 +1358,7 @@ router.post("/google", async (req, res) => {
     const { credential } = req.body || {};
     if (!credential) return res.status(400).json({ success: false, message: "Google credential is required" });
     const googleAudiences = getGoogleAudiences();
-    if (!googleAudiences.length) return res.status(500).json({ success: false, message: "Google OAuth not configured on server" });
+    if (!googleAudiences.length) return res.status(500).json({ success: false, message: "Google sign-in is temporarily unavailable. Please try again later." });
 
     const client = getGoogleClient();
     let payload;
@@ -1488,7 +1488,11 @@ router.post("/google", async (req, res) => {
             date_of_birth: user.date_of_birth,
             profile_picture: effectiveProfilePicture,
             profile_url: effectiveProfileUrl,
-            is_active: user.is_active
+            is_active: user.is_active,
+            is_verified: Number(user.is_verified || 0) === 1,
+            isVerified: Number(user.is_verified || 0) === 1,
+            email_verified: Number(user.is_verified || 0) === 1,
+            verified: Number(user.is_verified || 0) === 1 ? "VERIFIED" : "UNVERIFIED"
           },
           permissions: permissionCodes,
           bar_ban_notices: barBanNotices
@@ -1537,7 +1541,7 @@ router.post("/google/complete", async (req, res) => {
 
     // Re-verify Google credential
     const googleAudiences = getGoogleAudiences();
-    if (!googleAudiences.length) return res.status(500).json({ success: false, message: "Google OAuth not configured on server" });
+    if (!googleAudiences.length) return res.status(500).json({ success: false, message: "Google sign-in is temporarily unavailable. Please try again later." });
 
     const client = getGoogleClient();
     let payload;
@@ -1548,6 +1552,7 @@ router.post("/google/complete", async (req, res) => {
       });
       payload = ticket.getPayload();
     } catch (e) {
+      console.error("GOOGLE VERIFY ERROR:", e?.message || e);
       return res.status(401).json({ success: false, message: "Google session expired. Please try again." });
     }
 
@@ -1568,12 +1573,17 @@ router.post("/google/complete", async (req, res) => {
     const lastName = payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '';
     const picture = payload.picture || DEFAULT_AVATAR;
 
+    // Google asserts the address itself: a token with email_verified=false is
+    // vanishingly rare, but when it happens the account starts unverified
+    // (limited session + banner) instead of being stamped verified.
+    const googleEmailVerified = payload.email_verified !== false;
+
     const [result] = await pool.query(
       `INSERT INTO users
        (first_name, last_name, email, password, phone_number, date_of_birth, role, role_id,
         is_verified, is_active, bar_id, profile_picture, approval_status, created_at, updated_at)
-       VALUES (?, ?, ?, '', NULL, ?, 'customer', ?, 1, 1, NULL, ?, 'pending', NOW(), NOW())`,
-      [firstName, lastName, emailNorm, dobValidation.value, customerRoleId, picture]
+       VALUES (?, ?, ?, '', NULL, ?, 'customer', ?, ?, 1, NULL, ?, 'pending', NOW(), NOW())`,
+      [firstName, lastName, emailNorm, dobValidation.value, customerRoleId, googleEmailVerified ? 1 : 0, picture]
     );
 
     const [newUserRows] = await pool.query(
@@ -1606,7 +1616,11 @@ router.post("/google/complete", async (req, res) => {
           date_of_birth: user.date_of_birth,
           profile_picture: picture,
           profile_url: picture,
-          is_active: 1
+          is_active: 1,
+          is_verified: googleEmailVerified,
+          isVerified: googleEmailVerified,
+          email_verified: googleEmailVerified,
+          verified: googleEmailVerified ? "VERIFIED" : "UNVERIFIED"
         },
         permissions: permissionCodes,
         bar_ban_notices: []
