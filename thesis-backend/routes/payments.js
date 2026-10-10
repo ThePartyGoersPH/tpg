@@ -1023,6 +1023,16 @@ async function markPaymentSuccess(conn, payment, paymongoPaymentId = null) {
           [reservationNotifRow.customer_user_id, notifMessage, payment.related_id]
         );
       }
+
+      // Mirror email, best-effort: never blocks the payment.
+      try {
+        const { notifyCustomer } = require("../utils/notifyCustomer");
+        await notifyCustomer(reservationNotifRow.customer_user_id, "payment_status", {
+          barName: reservationNotifRow.bar_name,
+          when: `${formattedDate} at ${formattedTime}`,
+          status: newPaymentStatus === 'partial' ? 'Partially Paid' : 'Paid',
+        });
+      } catch (_) {}
     }
 
     if (shouldDeductInventory) {

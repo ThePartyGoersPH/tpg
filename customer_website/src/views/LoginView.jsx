@@ -38,8 +38,6 @@ function LoginView() {
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [googleError, setGoogleError] = useState('');
   const [googleNotice, setGoogleNotice] = useState('');
-  const [pendingNotice, setPendingNotice] = useState('');
-  const [rejectedNotice, setRejectedNotice] = useState('');
 
   // Unverified-block state: notice + resend-code action on the login form.
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
@@ -148,16 +146,6 @@ function LoginView() {
         setLockInfo(info);
         persistLock(info);
         setGoogleError('');
-      } else if (code === 'ACCOUNT_PENDING_APPROVAL') {
-        setPendingNotice(msg);
-        setRejectedNotice('');
-        setGoogleError('');
-        setAuthError('');
-      } else if (code === 'ACCOUNT_REJECTED') {
-        setRejectedNotice(msg);
-        setPendingNotice('');
-        setGoogleError('');
-        setAuthError('');
       } else {
         setGoogleError(msg);
       }
@@ -178,8 +166,6 @@ function LoginView() {
     if (lockActive || submitting) return;
     setSubmitting(true);
     setAuthError('');
-    setPendingNotice('');
-    setRejectedNotice('');
     setUnverifiedEmail('');
     setResendMsg('');
     try {
@@ -214,12 +200,6 @@ function LoginView() {
         setAuthError(err.message || 'Platform is currently under maintenance. Please try again later.');
       } else if (code === 'ACCOUNT_BANNED' || code === 'BAR_SUSPENDED') {
         setAuthError(err.message);
-      } else if (code === 'ACCOUNT_PENDING_APPROVAL') {
-        setPendingNotice(err.message || 'Your account is waiting for admin approval.');
-        setRejectedNotice('');
-      } else if (code === 'ACCOUNT_REJECTED') {
-        setRejectedNotice(err.message || 'Your registration was not approved.');
-        setPendingNotice('');
       } else {
         setAuthError(err?.message || 'Unable to login.');
       }
@@ -412,22 +392,6 @@ function LoginView() {
               </a>
             </div>
 
-            {pendingNotice && (
-              <div style={{ marginTop: '0.6rem', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: 8, padding: '0.75rem 1rem', textAlign: 'center' }}>
-                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fbbf24', margin: '0 0 0.3rem' }}>⏳ Waiting for admin approval</p>
-                <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: '0 0 0.6rem' }}>{pendingNotice}</p>
-                <button type="submit" className="btn btn-red btn-sm" disabled={submitting}>
-                  {submitting ? 'Checking…' : 'Try again'}
-                </button>
-              </div>
-            )}
-            {rejectedNotice && (
-              <div style={{ marginTop: '0.6rem', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '0.75rem 1rem', textAlign: 'center' }}>
-                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f87171', margin: '0 0 0.3rem' }}>Registration not approved</p>
-                <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: '0 0 0.6rem' }}>{rejectedNotice}</p>
-                <a href="mailto:support@thepartygoersph.com" style={{ fontSize: '0.78rem', color: 'var(--color-red-primary)', fontWeight: 600 }}>Contact support</a>
-              </div>
-            )}
             {authError && (
               <div>
                 <p className="error-text">{authError}</p>

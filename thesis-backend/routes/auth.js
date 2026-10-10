@@ -10,7 +10,6 @@ const { safeProfileUrl } = require("../utils/profileUrl");
 const { logAudit, auditContext } = require("../utils/audit");
 const { sendVerificationEmail, sendBarOwnerVerificationEmail, sendPasswordResetEmail } = require("../utils/emailService");
 const { DEFAULT_AVATAR } = require("../utils/profileUrl");
-const { checkCustomerApproval } = require("../utils/customerApproval");
 const {
   policy: loginPolicy,
   clientIp,
@@ -420,6 +419,10 @@ async function issueEmailVerification(email, { force = false } = {}) {
   try {
     await sendVerificationEmail(user.email, user.first_name || "there", token, otp);
     sent = true;
+    try {
+      const { auditEmail } = require("../utils/notifyCustomer");
+      await auditEmail(user.id, user.email, "verification_code", "Confirm your Party Goers account");
+    } catch (_) {}
   } catch (err) {
     console.error("EMAIL VERIFICATION SEND ERROR:", err?.code || "", err?.message || err);
   }
@@ -446,6 +449,11 @@ async function markCustomerVerified(userId) {
       WHERE id = ?`,
     [new Date(), userId]
   );
+  // Welcome mail, best-effort: never blocks verification.
+  try {
+    const { notifyCustomer } = require("../utils/notifyCustomer");
+    await notifyCustomer(userId, "welcome");
+  } catch (_) {}
 }
 
 // Build a login session for a freshly-verified user. Verification is the
@@ -631,8 +639,7 @@ router.post("/login", async (req, res) => {
       `SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.role,
               u.role_id, r.name AS role_name,
               u.is_active, u.status, u.is_verified, u.bar_id, u.phone_number, u.date_of_birth,
-              u.profile_picture, b.name AS bar_name,
-              u.approval_status, u.approval_rejection_reason
+              u.profile_picture, b.name AS bar_name
        FROM users u
        LEFT JOIN roles r ON r.id = u.role_id
        LEFT JOIN bars b ON b.id = u.bar_id
@@ -705,8 +712,8 @@ router.post("/login", async (req, res) => {
     // Email verification does NOT block login. An unverified customer receives a
     // limited session instead: safe reads are allowed so they can browse with
     // the banner reminder, while requireAuth refuses every state-changing
-    // request until the email is confirmed. Approval, bans and deactivation
-    // above still block outright. The per-login re-issue happens below, after
+    // request until the email is confirmed. Bans and deactivation above still
+    // block outright. The per-login re-issue happens below, after
     // the password is proven, so a wrong password never mints or mails a code.
 
     // Detect Google-only accounts (password stored as empty string)
@@ -890,13 +897,8 @@ router.post("/login", async (req, res) => {
       }
     }
 
-    // Customer approval gate: pending/rejected customers cannot log in.
-    // Runs after identity + portal checks, deliberately WITHOUT an audit
-    // entry so retrying users don't spam the login audit trail.
-    const approvalBlock = checkCustomerApproval(user);
-    if (approvalBlock) {
-      return res.status(403).json({ success: false, ...approvalBlock });
-    }
+    // No admin approval step: registration is auto-approved. Bans and
+    // deactivation above still block outright.
 
     // Email verification gate: unverified customers cannot log in, even with
     // the right password. No code is auto-sent here (that would let anyone
@@ -1080,14 +1082,13 @@ router.post("/register", ipRouteLimit("register"), async (req, res) => {
     const otpExpires = new Date(Date.now() + OTP_TTL_MS);
 
     // Create user as CUSTOMER (bar_id NULL) + role_id set + default avatar.
-    // approval_status is set EXPLICITLY to 'pending' here (never rely on
-    // the column default): every new customer sign-up needs admin approval.
+    // Registration is auto-approved: no admin queue, account active at once.
     const [result] = await pool.query(
       `INSERT INTO users
        (first_name, last_name, email, password, phone_number, date_of_birth, role, role_id, is_verified, is_active, bar_id,
         profile_picture, email_verification_token, email_verification_expires, email_verification_otp, email_otp_expires,
-        approval_status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'customer', ?, 0, 1, NULL, ?, ?, ?, ?, ?, 'pending', NOW(), NOW())`,
+        created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'customer', ?, 0, 1, NULL, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
        firstNameValidation.value,
        lastNameValidation.value,
@@ -1457,6 +1458,12 @@ router.post("/me/change-password", require("../middlewares/requireAuth"), async 
     const hashed = await bcrypt.hash(new_password, 10);
     await pool.query("UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?", [hashed, userId]);
 
+    // Security mail, best-effort: never blocks the change.
+    try {
+      const { notifyCustomer } = require("../utils/notifyCustomer");
+      await notifyCustomer(userId, "password_changed");
+    } catch (_) {}
+
     return res.json({ success: true, message: "Password changed successfully" });
   } catch (err) {
     console.error("CHANGE PASSWORD ERROR:", err);
@@ -1553,8 +1560,7 @@ router.post("/google", async (req, res) => {
     const [rows] = await pool.query(
       `SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.role_id, r.name AS role_name,
               u.is_active, u.status, u.is_verified, u.bar_id, u.phone_number, u.date_of_birth,
-              u.profile_picture, b.name AS bar_name,
-              u.approval_status, u.approval_rejection_reason
+              u.profile_picture, b.name AS bar_name
        FROM users u
        LEFT JOIN roles r ON r.id = u.role_id
        LEFT JOIN bars b ON b.id = u.bar_id
@@ -1626,11 +1632,7 @@ router.post("/google", async (req, res) => {
         ? safeProfileUrl(user.profile_picture)
         : (payload.picture || safeProfileUrl(user.profile_picture));
 
-      // Customer approval gate (mirrors password login, incl. no audit spam).
-      const googleApprovalBlock = checkCustomerApproval(user);
-      if (googleApprovalBlock) {
-        return res.status(403).json({ success: false, ...googleApprovalBlock });
-      }
+      // No admin approval step: registration is auto-approved.
 
       const token = signToken(user);
       const permissionCodes = await getEffectivePermissionCodes(user.id);
@@ -1741,6 +1743,10 @@ router.post("/forgot-password", ipRouteLimit("forgot-password"), async (req, res
     try {
       const isManagerPortal = req.get('x-login-portal') === 'bar_management';
       await sendPasswordResetEmail(emailNorm, user.first_name, resetToken, isManagerPortal ? 'manager' : 'customer');
+      try {
+        const { auditEmail } = require("../utils/notifyCustomer");
+        await auditEmail(user.id, emailNorm, "password_reset_requested", "Reset your Party Goers password");
+      } catch (_) {}
     } catch (emailErr) {
       console.error("PASSWORD RESET EMAIL ERROR:", emailErr);
     }
