@@ -1,0 +1,9 @@
+{
+  "name": "tpg-workspace",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Workspace helpers for The Party Goers local development (no dependencies, no workspaces).",
+  "scripts": {
+    "kill-ports": "for p in 5173 5174 5175 4173; do lsof -ti :$p | xargs kill -9 2>/dev/null; done; true"
+  }
+}

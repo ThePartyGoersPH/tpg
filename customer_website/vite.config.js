@@ -6,6 +6,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    strictPort: true,
     open: false,
     allowedHosts: true,
     // Local dev has no CORS issues: /api calls proxy to the backend, so the
