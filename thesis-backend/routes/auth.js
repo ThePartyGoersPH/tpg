@@ -448,6 +448,33 @@ async function markCustomerVerified(userId) {
   );
 }
 
+// Build a login session for a freshly-verified user. Verification is the
+// ONLY place besides password/Google login that mints tokens: registration
+// never does, so nobody is authenticated before confirming their email.
+async function fetchVerifiedSession(userId) {
+  const [rows] = await pool.query(
+    `SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.role_id,
+            r.name AS role_name, u.is_active, u.is_verified, u.email_verified_at,
+            u.bar_id, u.phone_number, u.date_of_birth, u.profile_picture,
+            b.name AS bar_name, bo.id AS bar_owner_id
+     FROM users u
+     LEFT JOIN roles r ON r.id = u.role_id
+     LEFT JOIN bars b ON b.id = u.bar_id
+     LEFT JOIN bar_owners bo ON bo.user_id = u.id
+     WHERE u.id = ? LIMIT 1`,
+    [userId]
+  );
+  const user = rows[0];
+  if (!user) return null;
+  user.profile_url = safeProfileUrl(user.profile_picture);
+  user.is_verified = Number(user.is_verified || 0) === 1;
+  user.isVerified = user.is_verified;
+  user.email_verified = user.is_verified;
+  user.verified = user.is_verified ? "VERIFIED" : "UNVERIFIED";
+  user.verifiedAt = user.email_verified_at || null;
+  return { token: signToken(user), user };
+}
+
 // Get current user profile
 router.get("/me", require("../middlewares/requireAuth"), async (req, res) => {
   try {
@@ -1155,10 +1182,14 @@ router.get("/verify-email", async (req, res) => {
 
     await markCustomerVerified(user.id);
 
+    // Verification logs the user in: this is where the session starts.
+    const session = await fetchVerifiedSession(user.id);
+
     return res.json({
       success: true,
       code: "VERIFIED",
-      message: "Email verified successfully! Your account is now waiting for admin approval — you'll be able to log in once it's approved."
+      message: "Email verified successfully! You are now logged in.",
+      data: session,
     });
   } catch (err) {
     console.error("VERIFY EMAIL ERROR:", err);
@@ -1279,10 +1310,14 @@ router.post("/verify-otp", async (req, res) => {
 
     await markCustomerVerified(user.id);
 
+    // Verification logs the user in: this is where the session starts.
+    const session = await fetchVerifiedSession(user.id);
+
     return res.json({
       success: true,
       code: "VERIFIED",
-      message: "Email verified successfully! You can now log in."
+      message: "Email verified successfully! You are now logged in.",
+      data: session,
     });
   } catch (err) {
     console.error("VERIFY OTP ERROR:", err);

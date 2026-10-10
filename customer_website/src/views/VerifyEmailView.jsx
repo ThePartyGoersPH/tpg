@@ -9,7 +9,7 @@ const RESEND_COOLDOWN = 60;
 
 function VerifyEmailView() {
   const { viewParams, navigate } = useView();
-  const { clearNeedsVerification } = useAuth();
+  const { clearNeedsVerification, loginWithGoogle } = useAuth();
 
   const token = viewParams?.token;
   const paramEmail = viewParams?.email || '';
@@ -41,15 +41,33 @@ function VerifyEmailView() {
     }, 1000);
   };
 
+  // Verification is where the session starts: store it, then head home.
+  // A short beat lets the user read the confirmation first.
+  const storeSession = (data) => {
+    try {
+      if (data?.token && data?.user && typeof loginWithGoogle === 'function') {
+        loginWithGoogle(data);
+        setTimeout(() => navigate(VIEWS.HOME), 1200);
+      }
+    } catch (_) {
+      // Session UI stays on the success panel with its continue button.
+    }
+  };
+
+  const markVerified = (resMessage, data) => {
+    storeSession(data);
+    setStatus('success');
+    setMessage(resMessage || 'Email verified successfully!');
+    clearNeedsVerification();
+  };
+
   // ── Emailed link flow: the ?token= itself is the verification ──
   useEffect(() => {
     if (!token) return;
 
     apiClient.get(`/auth/verify-email?token=${token}`)
       .then(res => {
-        setStatus('success');
-        setMessage(res.data?.message || 'Email verified successfully!');
-        clearNeedsVerification();
+        markVerified(res.data?.message, res.data?.data);
         if (window.location.search) {
           window.history.replaceState({}, '', window.location.pathname);
         }
@@ -78,12 +96,6 @@ function VerifyEmailView() {
 
   useEffect(() => () => clearInterval(cooldownRef.current), []);
 
-  const markVerified = (resMessage) => {
-    setStatus('success');
-    setMessage(resMessage || 'Email verified successfully!');
-    clearNeedsVerification();
-  };
-
   // ── OTP flow ──
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
@@ -105,7 +117,7 @@ function VerifyEmailView() {
     setSubmitting(true);
     try {
       const res = await apiClient.post('/auth/verify-otp', { email: emailNorm, code: codeNorm });
-      markVerified(res.data?.message);
+      markVerified(res.data?.message, res.data?.data);
     } catch (err) {
       const data = err?.response?.data;
       if (data?.code === 'OTP_EXPIRED' || data?.code === 'LINK_EXPIRED') {
@@ -219,9 +231,9 @@ function VerifyEmailView() {
           {status === 'success' && (
             <button
               className="btn btn-red w-full btn-red-pulse"
-              onClick={() => { clearNeedsVerification(); navigate(VIEWS.LOGIN); }}
+              onClick={() => { clearNeedsVerification(); navigate(VIEWS.HOME); }}
             >
-              Continue to Login
+              Continue to dashboard
             </button>
           )}
 
