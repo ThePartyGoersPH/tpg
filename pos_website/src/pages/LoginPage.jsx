@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { useAuth } from '../contexts/useAuth';
+import {
+  readPersistedLock, persistLock, clearPersistedLock,
+  formatCountdown, isLockExpired, warningForRemaining,
+} from '../utils/loginLockout';
 
 const ACCESS_DENIED_CODES = new Set([
   'POS_PERMISSION_REQUIRED',
@@ -18,6 +22,29 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [accessModal, setAccessModal] = useState(null);
+
+  // Brute-force lockout: server-driven countdown, persisted across reloads.
+  const [lockInfo, setLockInfo] = useState(null);
+  const [, setLockTick] = useState(0);
+
+  useEffect(() => {
+    setLockInfo(readPersistedLock());
+  }, []);
+
+  useEffect(() => {
+    if (!lockInfo) return;
+    if (isLockExpired(lockInfo.lockedUntil)) {
+      setLockInfo(null);
+      clearPersistedLock();
+      return;
+    }
+    const iv = setInterval(() => setLockTick((t) => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, [lockInfo?.lockedUntil]);
+
+  const lockMatchesEmail = (info, value) =>
+    info && (!info.email || info.email.trim().toLowerCase() === String(value || '').trim().toLowerCase());
+  const lockActive = lockInfo && !isLockExpired(lockInfo.lockedUntil) && lockMatchesEmail(lockInfo, email);
 
   useEffect(() => {
     const raw = localStorage.getItem('pos_login_block_reason');
@@ -39,17 +66,28 @@ export default function LoginPage() {
 
   const onSubmit = async (event) => {
     event.preventDefault();
+    if (lockActive || loading) return;
     setError('');
     setLoading(true);
 
     try {
       await login(email.trim(), password);
+      clearPersistedLock();
+      setLockInfo(null);
     } catch (err) {
-      const code = String(err?.code || err?.response?.data?.code || '').toUpperCase();
-      const message = err?.response?.data?.message || err?.message || 'Login failed.';
+      const data = err?.response?.data || {};
+      const code = String(err?.code || data.code || '').toUpperCase();
+      const message = data.message || err?.message || 'Login failed.';
       const status = Number(err?.response?.status || 0);
 
-      if (ACCESS_DENIED_CODES.has(code) || status === 403) {
+      if (code === 'ACCOUNT_LOCKED' && data.lockedUntil) {
+        const info = { email: email.trim(), lockedUntil: data.lockedUntil };
+        setLockInfo(info);
+        persistLock(info);
+        setError('');
+      } else if (status === 401 && typeof data.attemptsRemaining === 'number') {
+        setError(warningForRemaining(data.attemptsRemaining) || message);
+      } else if (ACCESS_DENIED_CODES.has(code) || status === 403) {
         setAccessModal({
           title: 'POS Access Denied',
           message,
@@ -80,6 +118,7 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@bar.com"
             required
+            disabled={loading || lockActive}
           />
         </label>
 
@@ -91,13 +130,20 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
             required
+            disabled={loading || lockActive}
           />
         </label>
 
         {error ? <p className="error-msg">{error}</p> : null}
 
-        <button type="submit" disabled={loading}>
-          {loading ? 'Signing in...' : 'Sign In'}
+        {lockActive ? (
+          <p className="error-msg" role="status">
+            Too many failed attempts. Try again in {formatCountdown(lockInfo.lockedUntil)}.
+          </p>
+        ) : null}
+
+        <button type="submit" disabled={loading || lockActive}>
+          {loading ? 'Signing in...' : lockActive ? `Locked ${formatCountdown(lockInfo.lockedUntil)}` : 'Sign In'}
         </button>
       </form>
 

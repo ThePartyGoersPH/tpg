@@ -25,12 +25,19 @@ export const authService = {
     } catch (error) {
       const msg = extractError(error) || error.message;
       const thrownError = new Error(msg);
-      thrownError.code = error?.response?.data?.code || null;
+      const data = error?.response?.data || {};
+      thrownError.code = data.code || null;
       thrownError.status = error?.response?.status || null;
-      thrownError.email = error?.response?.data?.email || null;
+      thrownError.email = data.email || null;
+      // Brute-force signals for the login screens (absent on success paths).
+      thrownError.attemptsRemaining =
+        typeof data.attemptsRemaining === 'number' ? data.attemptsRemaining : null;
+      thrownError.retryAfterSeconds =
+        typeof data.retryAfterSeconds === 'number' ? data.retryAfterSeconds : null;
+      thrownError.lockedUntil = data.lockedUntil || null;
       // True when the backend actually re-sent the verification email on this
       // attempt (it stays quiet while the previous code is still valid).
-      thrownError.verificationSent = error?.response?.data?.verification_sent === true;
+      thrownError.verificationSent = data.verification_sent === true;
       throw thrownError;
     }
   },

@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import useAuthStore from '../stores/authStore';
+import {
+  readPersistedLock, persistLock, clearPersistedLock,
+  formatCountdown, isLockExpired, warningForRemaining,
+} from '../utils/loginLockout';
 import logoImg from '../../logo.png';
 
 const Login = () => {
@@ -11,6 +15,25 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Brute-force lockout: server-driven countdown, persisted across reloads.
+  const [lockInfo, setLockInfo] = useState(null);
+  const [, setLockTick] = useState(0);
+
+  useEffect(() => {
+    setLockInfo(readPersistedLock());
+  }, []);
+
+  useEffect(() => {
+    if (!lockInfo) return;
+    if (isLockExpired(lockInfo.lockedUntil)) {
+      setLockInfo(null);
+      clearPersistedLock();
+      return;
+    }
+    const iv = setInterval(() => setLockTick((t) => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, [lockInfo?.lockedUntil]);
+
   const { login, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
@@ -18,27 +41,34 @@ const Login = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const lockMatchesEmail = (info, value) =>
+    info && (!info.email || info.email.trim().toLowerCase() === String(value || '').trim().toLowerCase());
+  const lockActive = lockInfo && !isLockExpired(lockInfo.lockedUntil) && lockMatchesEmail(lockInfo, email);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+    if (lockActive || loading) return;
+
     setError('');
     setLoading(true);
-    console.log('🔑 Attempting login with:', email);
-    
+
     try {
       const result = await login(email, password);
-      console.log('📝 Login result:', result);
       setLoading(false);
       if (result.success) {
-        console.log('✅ Login successful, navigating to dashboard');
+        clearPersistedLock();
+        setLockInfo(null);
         navigate('/dashboard');
+      } else if (result.code === 'ACCOUNT_LOCKED' && result.lockedUntil) {
+        const info = { email, lockedUntil: result.lockedUntil };
+        setLockInfo(info);
+        persistLock(info);
+        setError('');
       } else {
-        console.log('❌ Login failed:', result.message);
-        setError(result.message || 'Invalid credentials');
+        setError(warningForRemaining(result.attemptsRemaining) || result.message || 'Invalid credentials');
       }
     } catch (error) {
-      console.error('💥 Login error:', error);
       setLoading(false);
       setError('Connection problem. Please try again in a moment.');
     }
@@ -97,6 +127,21 @@ const Login = () => {
             </div>
           )}
 
+          {lockActive && (
+            <div
+              className="mb-6 text-sm rounded-lg px-4 py-3 text-center"
+              style={{ background: 'rgba(204,0,0,0.1)', border: '1px solid rgba(204,0,0,0.3)', fontFamily: "'DM Sans', Inter, sans-serif" }}
+            >
+              <p style={{ color: '#ff6666', fontWeight: 700, margin: '0 0 0.3rem' }}>
+                Too many failed attempts. Try again in {formatCountdown(lockInfo.lockedUntil)}.
+              </p>
+              <p style={{ color: '#888', fontSize: '0.78rem', margin: 0 }}>
+                Locked for your protection.{' '}
+                <Link to="/forgot-password" style={{ color: '#CC0000', fontWeight: 600 }}>Forgot password?</Link>
+              </p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label
@@ -120,6 +165,7 @@ const Login = () => {
                 placeholder="you@example.com"
                 required
                 autoFocus
+                disabled={loading || lockActive}
               />
             </div>
 
@@ -145,6 +191,7 @@ const Login = () => {
                   onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; }}
                   placeholder="Enter your password"
                   required
+                  disabled={loading || lockActive}
                 />
                 <button
                   type="button"
@@ -161,7 +208,7 @@ const Login = () => {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || lockActive}
               className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-white text-sm transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed mt-2"
               style={{
                 background: loading ? '#991500' : '#CC0000',
@@ -174,6 +221,8 @@ const Login = () => {
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Signing in...
                 </>
+              ) : lockActive ? (
+                `Locked ${formatCountdown(lockInfo.lockedUntil)}`
               ) : (
                 'Log In'
               )}

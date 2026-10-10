@@ -6,6 +6,10 @@ import { VIEWS } from '../contexts/ViewContext';
 import { Mail, ArrowLeft, KeyRound, Calendar, ShieldCheck, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import apiClient from '../api/client';
 import { isGoogleConfigured, googleSignInErrorText } from '../utils/googleAuth';
+import {
+  readPersistedLock, persistLock, clearPersistedLock,
+  formatCountdown, isLockExpired, warningForRemaining,
+} from '../utils/loginLockout';
 
 function GoogleIcon() {
   return (
@@ -60,6 +64,27 @@ function LoginView() {
   const [barBanPopupOpen, setBarBanPopupOpen] = useState(false);
   const [barBanNotices, setBarBanNotices] = useState([]);
 
+  // Brute-force lockout: server is the source of truth (lockedUntil); the
+  // ticker below only re-renders the countdown, and the persisted copy keeps
+  // it ticking across reloads.
+  const [lockInfo, setLockInfo] = useState(null);
+  const [, setLockTick] = useState(0);
+
+  useEffect(() => {
+    setLockInfo(readPersistedLock());
+  }, []);
+
+  useEffect(() => {
+    if (!lockInfo) return;
+    if (isLockExpired(lockInfo.lockedUntil)) {
+      setLockInfo(null);
+      clearPersistedLock();
+      return;
+    }
+    const iv = setInterval(() => setLockTick((t) => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, [lockInfo?.lockedUntil]);
+
   const startForgotCooldown = (s) => {
     setForgotCooldown(s);
     clearInterval(forgotCooldownRef.current);
@@ -110,7 +135,13 @@ function LoginView() {
     } catch (err) {
       const code = err?.response?.data?.code;
       const msg = err?.response?.data?.message || 'Google sign-in failed. Please try again.';
-      if (code === 'ACCOUNT_PENDING_APPROVAL') {
+      if (code === 'ACCOUNT_LOCKED' && err?.response?.data?.lockedUntil) {
+        // IP-level brake on junk Google credentials: surface the same panel.
+        const info = { email: '', lockedUntil: err.response.data.lockedUntil };
+        setLockInfo(info);
+        persistLock(info);
+        setGoogleError('');
+      } else if (code === 'ACCOUNT_PENDING_APPROVAL') {
         setPendingNotice(msg);
         setRejectedNotice('');
         setGoogleError('');
@@ -154,14 +185,21 @@ function LoginView() {
   const onGoogleSuccess = (credentialResponse) => handleGoogleSuccess(credentialResponse.credential);
   const onGoogleError = () => setGoogleError(googleSignInErrorText());
 
+  const lockMatchesEmail = (info, value) =>
+    info && (!info.email || info.email.trim().toLowerCase() === String(value || '').trim().toLowerCase());
+  const lockActive = lockInfo && !isLockExpired(lockInfo.lockedUntil) && lockMatchesEmail(lockInfo, email);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (lockActive || submitting) return;
     setSubmitting(true);
     setAuthError('');
     setPendingNotice('');
     setRejectedNotice('');
     try {
       const loginData = await login(email, password);
+      clearPersistedLock();
+      setLockInfo(null);
       const notices = Array.isArray(loginData?.bar_ban_notices) ? loginData.bar_ban_notices : [];
       if (notices.length > 0) {
         setBarBanNotices(notices);
@@ -172,7 +210,12 @@ function LoginView() {
     } catch (err) {
       const code = err?.code;
       const status = err?.status;
-      if (code === 'EMAIL_NOT_VERIFIED') {
+      if (code === 'ACCOUNT_LOCKED' && err?.lockedUntil) {
+        const info = { email, lockedUntil: err.lockedUntil };
+        setLockInfo(info);
+        persistLock(info);
+        setAuthError('');
+      } else if (code === 'EMAIL_NOT_VERIFIED') {
         // Access is blocked until the email is confirmed. The backend re-sends
         // the link + OTP on demand, so only claim "email sent" when it did.
         navigate(VIEWS.VERIFY_EMAIL, { email: err?.email || email, sent: err?.verificationSent === true });
@@ -180,7 +223,7 @@ function LoginView() {
       } else if (code === 'GOOGLE_ACCOUNT') {
         setAuthError(err.message);
       } else if (status === 401) {
-        setAuthError('Invalid email or password.');
+        setAuthError(warningForRemaining(err?.attemptsRemaining) || 'Invalid email or password.');
       } else if (code === 'MAINTENANCE_MODE') {
         setAuthError(err.message || 'Platform is currently under maintenance. Please try again later.');
       } else if (code === 'ACCOUNT_BANNED' || code === 'BAR_SUSPENDED') {
@@ -400,6 +443,7 @@ function LoginView() {
               readOnly={emailReadonly}
               autoComplete="off"
               required
+              disabled={lockActive}
             />
             <div className="password-input-wrapper">
               <input
@@ -412,6 +456,7 @@ function LoginView() {
                 readOnly={passwordReadonly}
                 autoComplete="off"
                 required
+                disabled={lockActive}
               />
               <button
                 type="button"
@@ -454,9 +499,17 @@ function LoginView() {
                 <p className="error-text">{authError}</p>
               </div>
             )}
+            {lockActive && (
+              <div style={{ marginTop: '0.6rem', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '0.75rem 1rem', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f87171', margin: '0 0 0.3rem' }}>Too many failed attempts. Try again in {formatCountdown(lockInfo.lockedUntil)}.</p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: 0 }}>
+                  Locked for your protection. <a href="#" onClick={e => { e.preventDefault(); setForgotEmail(email); setStep(2); }} style={{ color: 'var(--color-red-primary)', fontWeight: 600 }}>Forgot password?</a>
+                </p>
+              </div>
+            )}
 
-            <button className="btn btn-red w-full" type="submit" disabled={submitting}>
-              {submitting ? 'Signing in...' : 'Login'}
+            <button className="btn btn-red w-full" type="submit" disabled={submitting || lockActive}>
+              {submitting ? 'Signing in...' : lockActive ? `Locked ${formatCountdown(lockInfo.lockedUntil)}` : 'Login'}
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0.1rem 0' }}>

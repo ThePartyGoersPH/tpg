@@ -32,10 +32,18 @@ const useAuthStore = create((set, get) => ({
       set({ hasInitialized: true });
       return { success: true };
     } catch (err) {
-      const errorCode = err.response?.data?.code;
-      const message = err.response?.data?.message || 'Login failed';
+      const errorData = err.response?.data || {};
+      const errorCode = errorData.code;
+      const message = errorData.message || 'Login failed';
       set({ error: message, isLoading: false });
-      return { success: false, message, code: errorCode };
+      return {
+        success: false,
+        message,
+        code: errorCode,
+        attemptsRemaining: typeof errorData.attemptsRemaining === 'number' ? errorData.attemptsRemaining : null,
+        retryAfterSeconds: typeof errorData.retryAfterSeconds === 'number' ? errorData.retryAfterSeconds : null,
+        lockedUntil: errorData.lockedUntil || null,
+      };
     }
   },
 
