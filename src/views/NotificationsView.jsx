@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { socialService } from '../services/socialService';
 import { formatDate } from '../utils/dateHelpers';
+import { sortNotifications } from '../utils/notificationSort';
 import { Bell, CalendarDays, CreditCard, PartyPopper, Star, Heart, MessageCircle } from 'lucide-react';
 
 function getNotificationMessage(notification) {
@@ -39,7 +40,7 @@ function NotificationsView() {
     try {
       setLoading(true); setErr('');
       const data = await socialService.notifications({ page: p, limit: perPage });
-      setNotifications(data?.notifications || data?.data || []);
+      setNotifications(sortNotifications(data?.notifications || data?.data || []));
       setTotal(data?.total || data?.unread_count || 0);
       setPage(p);
     } catch (e) {

@@ -13,13 +13,15 @@ export function LeftSidebar({ activeFilter, onFilterChange }) {
     async function load() {
       try {
         const [bars, stats] = await Promise.all([
-          feedWidgetsService.getActiveBars(),
-          feedWidgetsService.getQuickStats(),
+          feedWidgetsService.getActiveBars().catch(() => []),
+          feedWidgetsService.getQuickStats().catch(() => ({})),
         ]);
-        setActiveBars(bars);
-        setQuickStats(stats);
+        setActiveBars(Array.isArray(bars) ? bars : []);
+        setQuickStats(stats || {});
       } catch (err) {
         console.error('Left sidebar load error:', err);
+        setActiveBars([]);
+        setQuickStats({});
       } finally {
         setLoading(false);
       }
@@ -123,15 +125,18 @@ export function RightSidebar() {
     async function load() {
       try {
         const [events, tags, cities] = await Promise.all([
-          feedWidgetsService.getHotTonight(),
-          feedWidgetsService.getGenreTags(),
-          feedWidgetsService.getBarCities(),
+          feedWidgetsService.getHotTonight().catch(() => []),
+          feedWidgetsService.getGenreTags().catch(() => []),
+          feedWidgetsService.getBarCities().catch(() => []),
         ]);
-        setHotTonight(events);
-        setGenreTags(tags);
-        setBarCities(cities);
+        setHotTonight(Array.isArray(events) ? events : []);
+        setGenreTags(Array.isArray(tags) ? tags : []);
+        setBarCities(Array.isArray(cities) ? cities : []);
       } catch (err) {
         console.error('Right sidebar load error:', err);
+        setHotTonight([]);
+        setGenreTags([]);
+        setBarCities([]);
       } finally {
         setLoading(false);
       }

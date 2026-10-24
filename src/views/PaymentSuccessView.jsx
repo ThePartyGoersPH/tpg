@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useView } from '../hooks/useView';
 import { VIEWS } from '../contexts/ViewContext';
 import { paymentService } from '../services/paymentService';
+import { formatDate, formatTime } from '../utils/dateHelpers';
 import { CheckCircle } from 'lucide-react';
 
 const CART_STORAGE_KEY = 'bar_cart_data';
@@ -97,21 +98,6 @@ function PaymentSuccessView() {
       </div>
     );
   }
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  };
-
-  const formatTime = (timeStr) => {
-    if (!timeStr) return '';
-    const [h, m] = timeStr.split(':');
-    const hour = parseInt(h);
-    const suffix = hour >= 12 ? 'PM' : 'AM';
-    const h12 = hour % 12 || 12;
-    return `${h12}:${m} ${suffix}`;
-  };
 
   return (
     <div className="result-page">

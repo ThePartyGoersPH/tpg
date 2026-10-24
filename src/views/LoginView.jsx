@@ -3,8 +3,13 @@ import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../hooks/useAuth';
 import { useView } from '../hooks/useView';
 import { VIEWS } from '../contexts/ViewContext';
-import { Mail, ArrowLeft, KeyRound, Calendar, ShieldCheck, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Mail, ArrowLeft, KeyRound, ShieldCheck, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import apiClient from '../api/client';
+import { isGoogleConfigured, googleSignInErrorText } from '../utils/googleAuth';
+import {
+  readPersistedLock, persistLock, clearPersistedLock,
+  formatCountdown, isLockExpired, warningForRemaining,
+} from '../utils/loginLockout';
 
 function GoogleIcon() {
   return (
@@ -17,19 +22,9 @@ function GoogleIcon() {
   );
 }
 
-function calculateAge(dob) {
-  if (!dob) return 0;
-  const today = new Date();
-  const birth = new Date(dob);
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
-
 function LoginView() {
   const { login, authError, setAuthError, loginWithGoogle } = useAuth();
-  const { navigate, viewParams } = useView();
+  const { navigate } = useView();
 
   // Login state
   const [email, setEmail] = useState('');
@@ -38,20 +33,21 @@ function LoginView() {
   const [submitting, setSubmitting] = useState(false);
   const [emailReadonly, setEmailReadonly] = useState(true);
   const [passwordReadonly, setPasswordReadonly] = useState(true);
-  const [unverifiedEmail, setUnverifiedEmail] = useState('');
-  const [resending, setResending] = useState(false);
-  const [resendMsg, setResendMsg] = useState('');
-  const [resendOk, setResendOk] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
-  const cooldownRef = useRef(null);
 
   // Google OAuth state
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [googleError, setGoogleError] = useState('');
-  const [googleProfile, setGoogleProfile] = useState(null); // set when new google user needs age verification
-  const [googleDob, setGoogleDob] = useState('');
-  const [googleAgeConfirmed, setGoogleAgeConfirmed] = useState(false);
-  const [googleCompleting, setGoogleCompleting] = useState(false);
+  const [googleNotice, setGoogleNotice] = useState('');
+  const [pendingNotice, setPendingNotice] = useState('');
+  const [rejectedNotice, setRejectedNotice] = useState('');
+
+  // Unverified-block state: notice + resend-code action on the login form.
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendMsg, setResendMsg] = useState('');
+  const [resendOk, setResendOk] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const resendCooldownRef = useRef(null);
 
   // Forgot password state
   const [step, setStep] = useState(1); // 1=login, 2=forgot form, 3=sent, 4=google age verify
@@ -60,13 +56,36 @@ function LoginView() {
   const [forgotError, setForgotError] = useState('');
   const [forgotCooldown, setForgotCooldown] = useState(0);
   const forgotCooldownRef = useRef(null);
+  const [barBanPopupOpen, setBarBanPopupOpen] = useState(false);
+  const [barBanNotices, setBarBanNotices] = useState([]);
 
-  const startCooldown = (s) => {
-    setCooldown(s);
-    clearInterval(cooldownRef.current);
-    cooldownRef.current = setInterval(() => {
-      setCooldown(prev => {
-        if (prev <= 1) { clearInterval(cooldownRef.current); return 0; }
+  // Brute-force lockout: server is the source of truth (lockedUntil); the
+  // ticker below only re-renders the countdown, and the persisted copy keeps
+  // it ticking across reloads.
+  const [lockInfo, setLockInfo] = useState(null);
+  const [, setLockTick] = useState(0);
+
+  useEffect(() => {
+    setLockInfo(readPersistedLock());
+  }, []);
+
+  useEffect(() => {
+    if (!lockInfo) return;
+    if (isLockExpired(lockInfo.lockedUntil)) {
+      setLockInfo(null);
+      clearPersistedLock();
+      return;
+    }
+    const iv = setInterval(() => setLockTick((t) => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, [lockInfo?.lockedUntil]);
+
+  const startResendCooldown = (s) => {
+    setResendCooldown(s);
+    clearInterval(resendCooldownRef.current);
+    resendCooldownRef.current = setInterval(() => {
+      setResendCooldown(prev => {
+        if (prev <= 1) { clearInterval(resendCooldownRef.current); return 0; }
         return prev - 1;
       });
     }, 1000);
@@ -84,92 +103,125 @@ function LoginView() {
   };
 
   useEffect(() => () => {
-    clearInterval(cooldownRef.current);
     clearInterval(forgotCooldownRef.current);
+    clearInterval(resendCooldownRef.current);
   }, []);
 
-  // If navigated here from RegisterView with a googleProfile, jump to age verification
-  useEffect(() => {
-    if (viewParams?.googleProfile) {
-      setGoogleProfile(viewParams.googleProfile);
-      setStep(4);
-    }
-  }, [viewParams?.googleProfile]);
-
-  const googleAge = calculateAge(googleDob);
-  const googleDobError = googleDob && googleAge < 18 ? `You must be at least 18 years old. (You are ${googleAge})` : '';
-  const googleCanComplete = googleAgeConfirmed && googleDob && !googleDobError && !googleCompleting;
+  // Registration prefill is handled by RegisterView reading its own view params.
+  const hasActiveBarBans = barBanNotices.length > 0;
 
   const handleGoogleSuccess = async (credential) => {
     setGoogleError('');
+    setGoogleNotice('');
+    setPendingNotice('');
+    setRejectedNotice('');
     setGoogleSubmitting(true);
     try {
       const res = await apiClient.post('/auth/google', { credential });
       const data = res.data;
-      if (data.new_user) {
-        setGoogleProfile(data.google_profile);
-        setStep(4);
+      loginWithGoogle(data.data);
+      const notices = Array.isArray(data?.data?.bar_ban_notices) ? data.data.bar_ban_notices : [];
+      if (notices.length > 0) {
+        setBarBanNotices(notices);
+        setBarBanPopupOpen(true);
       } else {
-        loginWithGoogle(data.data);
         navigate(VIEWS.HOME);
       }
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Google sign-in failed. Please try again.';
-      setGoogleError(msg);
+      const data = err?.response?.data || {};
+      const code = data.code;
+      const msg = data.message || 'Google sign-in failed. Please try again.';
+      if (code === 'ACCOUNT_NOT_FOUND') {
+        // Unregistered Google address: no account is created here. Show the
+        // notice, then hand off to registration with the verified details.
+        setGoogleNotice(msg);
+        setGoogleError('');
+        setTimeout(() => {
+          navigate(VIEWS.REGISTER, {
+            email: data.email || '',
+            first_name: String(data.name || '').split(' ')[0] || '',
+            last_name: String(data.name || '').split(' ').slice(1).join(' ') || '',
+            fromGoogle: true,
+          });
+        }, 1500);
+      } else if (code === 'ACCOUNT_LOCKED' && data.lockedUntil) {
+        // IP-level brake on junk Google credentials: surface the same panel.
+        const info = { email: '', lockedUntil: err.response.data.lockedUntil };
+        setLockInfo(info);
+        persistLock(info);
+        setGoogleError('');
+      } else if (code === 'ACCOUNT_PENDING_APPROVAL') {
+        setPendingNotice(msg);
+        setRejectedNotice('');
+        setGoogleError('');
+        setAuthError('');
+      } else if (code === 'ACCOUNT_REJECTED') {
+        setRejectedNotice(msg);
+        setPendingNotice('');
+        setGoogleError('');
+        setAuthError('');
+      } else {
+        setGoogleError(msg);
+      }
     } finally {
       setGoogleSubmitting(false);
     }
   };
 
-  const handleGoogleComplete = async (e) => {
-    e.preventDefault();
-    if (!googleCanComplete) return;
-    setGoogleCompleting(true);
-    setGoogleError('');
-    try {
-      const res = await apiClient.post('/auth/google/complete', {
-        credential: googleProfile.credential,
-        date_of_birth: googleDob
-      });
-      loginWithGoogle(res.data.data);
-      navigate(VIEWS.HOME);
-    } catch (err) {
-      const data = err?.response?.data;
-      setGoogleError(data?.message || 'Registration failed. Please try again.');
-      if (data?.code === 'UNDERAGE') {
-        setGoogleAgeConfirmed(false);
-      }
-    } finally {
-      setGoogleCompleting(false);
-    }
-  };
-
   const onGoogleSuccess = (credentialResponse) => handleGoogleSuccess(credentialResponse.credential);
-  const onGoogleError = () => setGoogleError('Google sign-in was cancelled or failed. Please try again.');
+  const onGoogleError = () => setGoogleError(googleSignInErrorText());
+
+  const lockMatchesEmail = (info, value) =>
+    info && (!info.email || info.email.trim().toLowerCase() === String(value || '').trim().toLowerCase());
+  const lockActive = lockInfo && !isLockExpired(lockInfo.lockedUntil) && lockMatchesEmail(lockInfo, email);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (lockActive || submitting) return;
     setSubmitting(true);
     setAuthError('');
+    setPendingNotice('');
+    setRejectedNotice('');
     setUnverifiedEmail('');
     setResendMsg('');
     try {
-      await login(email, password);
-      navigate(VIEWS.HOME);
+      const loginData = await login(email, password);
+      clearPersistedLock();
+      setLockInfo(null);
+      const notices = Array.isArray(loginData?.bar_ban_notices) ? loginData.bar_ban_notices : [];
+      if (notices.length > 0) {
+        setBarBanNotices(notices);
+        setBarBanPopupOpen(true);
+      } else {
+        navigate(VIEWS.HOME);
+      }
     } catch (err) {
       const code = err?.code;
       const status = err?.status;
-      if (code === 'EMAIL_NOT_VERIFIED') {
+      if (code === 'ACCOUNT_LOCKED' && err?.lockedUntil) {
+        const info = { email, lockedUntil: err.lockedUntil };
+        setLockInfo(info);
+        persistLock(info);
+        setAuthError('');
+      } else if (code === 'EMAIL_NOT_VERIFIED') {
+        // Login stays blocked until the email is confirmed. Show the notice
+        // with a resend-code action instead of whisking the user away.
         setUnverifiedEmail(err?.email || email);
-        setAuthError(err.message);
+        setAuthError('');
       } else if (code === 'GOOGLE_ACCOUNT') {
         setAuthError(err.message);
       } else if (status === 401) {
-        setAuthError('Invalid email or password.');
+        setAuthError(warningForRemaining(err?.attemptsRemaining) || 'Invalid email or password.');
       } else if (code === 'MAINTENANCE_MODE') {
         setAuthError(err.message || 'Platform is currently under maintenance. Please try again later.');
       } else if (code === 'ACCOUNT_BANNED' || code === 'BAR_SUSPENDED') {
         setAuthError(err.message);
+      } else if (code === 'ACCOUNT_PENDING_APPROVAL') {
+        setPendingNotice(err.message || 'Your account is waiting for admin approval.');
+        setRejectedNotice('');
+      } else if (code === 'ACCOUNT_REJECTED') {
+        setRejectedNotice(err.message || 'Your registration was not approved.');
+        setPendingNotice('');
       } else {
         setAuthError(err?.message || 'Unable to login.');
       }
@@ -178,19 +230,20 @@ function LoginView() {
     }
   };
 
-  const handleResend = async () => {
-    if (cooldown > 0 || resending) return;
+  // Resend a fresh code from the login form (cooldown-protected server-side).
+  const handleResendCode = async () => {
+    if (resending || resendCooldown > 0 || !unverifiedEmail) return;
     setResending(true);
     setResendMsg('');
     try {
       const res = await apiClient.post('/auth/resend-verification', { email: unverifiedEmail });
-      setResendMsg(res.data?.message || 'Verification email sent! Check your inbox.');
+      setResendMsg(res.data?.message || 'Verification code sent! Check your inbox or the backend console.');
       setResendOk(true);
-      startCooldown(60);
+      startResendCooldown(60);
     } catch (err) {
       const data = err?.response?.data;
       if (data?.code === 'RESEND_COOLDOWN' && data?.wait_seconds) {
-        startCooldown(data.wait_seconds);
+        startResendCooldown(data.wait_seconds);
         setResendMsg(`Please wait ${data.wait_seconds}s before resending.`);
         setResendOk(false);
       } else {
@@ -222,83 +275,6 @@ function LoginView() {
       setForgotSubmitting(false);
     }
   };
-
-  // ── Step 4: Google age verification (new Google user) ──
-  if (step === 4 && googleProfile) {
-    return (
-      <div className="auth-view">
-        <form className="glass-card auth-card" onSubmit={handleGoogleComplete} autoComplete="off">
-          <div className="glass-card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <button
-              type="button"
-              onClick={() => { setStep(1); setGoogleProfile(null); setGoogleDob(''); setGoogleAgeConfirmed(false); setGoogleError(''); }}
-              style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', padding: 0, alignSelf: 'flex-start' }}
-            >
-              <ArrowLeft size={14} /> Back
-            </button>
-
-            {googleProfile.picture && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--color-bg-elevated)', borderRadius: 10, border: '1px solid var(--color-border)' }}>
-                <img src={googleProfile.picture} alt="" style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0 }} />
-                <div>
-                  <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: '#fff' }}>{googleProfile.first_name} {googleProfile.last_name}</p>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{googleProfile.email}</p>
-                </div>
-              </div>
-            )}
-
-            <div>
-              <div className="land-live-badge" style={{ marginBottom: '0.25rem', alignSelf: 'flex-start' }}>
-                <span className="land-live-dot" />
-                <span>ONE MORE STEP</span>
-              </div>
-              <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 'clamp(1.3rem, 3vw, 1.7rem)', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>VERIFY <span style={{ color: 'var(--color-red-primary)' }}>YOUR AGE</span></h1>
-            </div>
-            <p className="text-muted" style={{ fontSize: '0.88rem' }}>You must be <strong style={{ color: '#fff' }}>18 or older</strong> to use PartyGoers PH. Please enter your date of birth.</p>
-
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.4rem' }}>
-                <Calendar size={13} /> Date of Birth
-              </label>
-              <input
-                className="glass-input"
-                type="date"
-                value={googleDob}
-                onChange={e => { setGoogleDob(e.target.value); setGoogleAgeConfirmed(false); }}
-                max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
-                required
-                autoComplete="off"
-              />
-              {googleDobError && <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem' }}>{googleDobError}</p>}
-              {googleDob && !googleDobError && <p style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: '0.3rem' }}>Age confirmed: {googleAge} years old.</p>}
-            </div>
-
-            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
-              <input
-                type="checkbox"
-                checked={googleAgeConfirmed}
-                onChange={e => setGoogleAgeConfirmed(e.target.checked)}
-                disabled={Boolean(googleDobError) || !googleDob}
-                style={{ marginTop: '0.1rem', flexShrink: 0, accentColor: '#CC0000' }}
-              />
-              I confirm I am 18 years old or older and agree to the terms.
-            </label>
-
-            {googleError && <p className="error-text">{googleError}</p>}
-
-            <button
-              className="btn btn-red w-full"
-              type="submit"
-              disabled={!googleCanComplete}
-              style={{ opacity: googleCanComplete ? 1 : 0.45, cursor: googleCanComplete ? 'pointer' : 'not-allowed', transition: 'opacity 0.2s' }}
-            >
-              {googleCompleting ? 'Creating account…' : 'Continue with Google'}
-            </button>
-          </div>
-        </form>
-      </div>
-    );
-  }
 
   // ── Step 3: Email sent confirmation ──
   if (step === 3) {
@@ -382,123 +358,205 @@ function LoginView() {
 
   // ── Step 1: Login form ──
   return (
-    <div className="auth-view">
-      <form className="glass-card auth-card" onSubmit={handleSubmit} autoComplete="off">
-        <div className="glass-card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div className="land-live-badge" style={{ marginBottom: '0.25rem', alignSelf: 'flex-start' }}>
-            <span className="land-live-dot" />
-            <span>CUSTOMER ACCESS</span>
-          </div>
-          <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>WELCOME <span style={{ color: 'var(--color-red-primary)' }}>BACK</span></h1>
-          <p className="text-muted" style={{ fontSize: '0.9rem' }}>Sign in to discover bars and reserve your table.</p>
+    <>
+      <div className="auth-view">
+        <form className="glass-card auth-card" onSubmit={handleSubmit} autoComplete="off">
+          <div className="glass-card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="land-live-badge" style={{ marginBottom: '0.25rem', alignSelf: 'flex-start' }}>
+              <span className="land-live-dot" />
+              <span>CUSTOMER ACCESS</span>
+            </div>
+            <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>WELCOME <span style={{ color: 'var(--color-red-primary)' }}>BACK</span></h1>
+            <p className="text-muted" style={{ fontSize: '0.9rem' }}>Sign in to discover bars and reserve your table.</p>
 
-          <input
-            className="glass-input"
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onFocus={() => setEmailReadonly(false)}
-            readOnly={emailReadonly}
-            autoComplete="off"
-            required
-          />
-          <div className="password-input-wrapper">
             <input
-              className="glass-input password-input"
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onFocus={() => setPasswordReadonly(false)}
-              readOnly={passwordReadonly}
+              className="glass-input"
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onFocus={() => setEmailReadonly(false)}
+              readOnly={emailReadonly}
               autoComplete="off"
               required
+              disabled={lockActive}
             />
-            <button
-              type="button"
-              className="password-toggle-btn"
-              onClick={() => setShowPassword(!showPassword)}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
+            <div className="password-input-wrapper">
+              <input
+                className="glass-input password-input"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => setPasswordReadonly(false)}
+                readOnly={passwordReadonly}
+                autoComplete="off"
+                required
+                disabled={lockActive}
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
 
-          <div style={{ textAlign: 'right', marginTop: '-0.25rem' }}>
-            <a
-              href="#"
-              onClick={e => { e.preventDefault(); setStep(2); setForgotEmail(email); setAuthError(''); }}
-              style={{ fontSize: '0.82rem', color: 'var(--color-red-primary)', fontWeight: 600 }}
-            >
-              Forgot password?
-            </a>
-          </div>
+            <div style={{ textAlign: 'right', marginTop: '-0.25rem' }}>
+              <a
+                href="#"
+                onClick={e => { e.preventDefault(); setStep(2); setForgotEmail(email); setAuthError(''); }}
+                style={{ fontSize: '0.82rem', color: 'var(--color-red-primary)', fontWeight: 600 }}
+              >
+                Forgot password?
+              </a>
+            </div>
 
-          {authError && (
-            <div>
-              <p className="error-text">{authError}</p>
-              {unverifiedEmail && (
-                <div style={{ marginTop: '0.6rem', background: 'var(--color-bg-elevated)', border: '1px solid rgba(204,0,0,0.2)', borderRadius: 8, padding: '0.75rem 1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                    <Mail size={14} color="#CC0000" />
-                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#fff' }}>Email not verified</span>
-                  </div>
-                  {resendMsg && (
-                    <p style={{ fontSize: '0.75rem', color: resendOk ? '#22c55e' : '#f87171', margin: '0 0 0.35rem' }}>{resendMsg}</p>
-                  )}
-                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: 0 }}>
-                    Didn't get it?{' '}
-                    <a
-                      href="#"
-                      onClick={e => { e.preventDefault(); handleResend(); }}
-                      style={{
-                        color: (cooldown > 0 || resending) ? 'var(--color-text-muted)' : 'var(--color-red-primary)',
-                        fontWeight: 600,
-                        pointerEvents: (cooldown > 0 || resending) ? 'none' : 'auto'
-                      }}
-                    >
-                      {resending ? 'Sending…' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend verification email'}
-                    </a>
-                  </p>
+            {pendingNotice && (
+              <div style={{ marginTop: '0.6rem', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: 8, padding: '0.75rem 1rem', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fbbf24', margin: '0 0 0.3rem' }}>⏳ Waiting for admin approval</p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: '0 0 0.6rem' }}>{pendingNotice}</p>
+                <button type="submit" className="btn btn-red btn-sm" disabled={submitting}>
+                  {submitting ? 'Checking…' : 'Try again'}
+                </button>
+              </div>
+            )}
+            {rejectedNotice && (
+              <div style={{ marginTop: '0.6rem', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '0.75rem 1rem', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f87171', margin: '0 0 0.3rem' }}>Registration not approved</p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: '0 0 0.6rem' }}>{rejectedNotice}</p>
+                <a href="mailto:thepartygoersph@gmail.com" style={{ fontSize: '0.78rem', color: 'var(--color-red-primary)', fontWeight: 600 }}>Contact support</a>
+              </div>
+            )}
+            {authError && (
+              <div>
+                <p className="error-text">{authError}</p>
+              </div>
+            )}
+            {unverifiedEmail && (
+              <div style={{ marginTop: '0.6rem', background: 'var(--color-bg-elevated)', border: '1px solid rgba(204,0,0,0.2)', borderRadius: 8, padding: '0.75rem 1rem', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', margin: '0 0 0.3rem' }}>Please verify your email before logging in.</p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: '0 0 0.6rem' }}>Enter the 6-digit code we sent to {unverifiedEmail}.</p>
+                {resendMsg && (
+                  <p style={{ fontSize: '0.75rem', color: resendOk ? '#22c55e' : '#f87171', margin: '0 0 0.5rem' }}>{resendMsg}</p>
+                )}
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn-red btn-sm"
+                    onClick={() => navigate(VIEWS.VERIFY_EMAIL, { email: unverifiedEmail })}
+                  >
+                    Enter verification code
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={handleResendCode}
+                    disabled={resending || resendCooldown > 0}
+                  >
+                    {resending ? 'Sending…' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
+                  </button>
                 </div>
+              </div>
+            )}
+            {lockActive && (
+              <div style={{ marginTop: '0.6rem', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '0.75rem 1rem', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f87171', margin: '0 0 0.3rem' }}>Too many failed attempts. Try again in {formatCountdown(lockInfo.lockedUntil)}.</p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: 0 }}>
+                  Locked for your protection. <a href="#" onClick={e => { e.preventDefault(); setForgotEmail(email); setStep(2); }} style={{ color: 'var(--color-red-primary)', fontWeight: 600 }}>Forgot password?</a>
+                </p>
+              </div>
+            )}
+
+            <button className="btn btn-red w-full" type="submit" disabled={submitting || lockActive}>
+              {submitting ? 'Signing in...' : lockActive ? `Locked ${formatCountdown(lockInfo.lockedUntil)}` : 'Login'}
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0.1rem 0' }}>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>OR</span>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+            </div>
+
+            {googleError && !authError && <p className="error-text" style={{ marginTop: '-0.25rem' }}>{googleError}</p>}
+            {googleNotice && <p style={{ fontSize: '0.82rem', color: '#22c55e', marginTop: '-0.25rem' }}>{googleNotice} Redirecting to registration…</p>}
+
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              {isGoogleConfigured() ? (
+                <GoogleLogin
+                  onSuccess={onGoogleSuccess}
+                  onError={onGoogleError}
+                  theme="filled_black"
+                  shape="pill"
+                  size="large"
+                  text="signin_with"
+                  width="320"
+                  useOneTap={false}
+                  disabled={googleSubmitting}
+                />
+              ) : (
+                <p className="text-muted text-center" style={{ fontSize: '0.85rem' }}>
+                  Google sign-in is not configured for this site yet. Please use email sign-in.
+                </p>
               )}
             </div>
-          )}
 
-          <button className="btn btn-red w-full" type="submit" disabled={submitting}>
-            {submitting ? 'Signing in...' : 'Login'}
-          </button>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0.1rem 0' }}>
-            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>OR</span>
-            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+            <p className="text-muted text-center" style={{ fontSize: '0.85rem' }}>
+              No account yet?{' '}
+              <a href="#" onClick={(e) => { e.preventDefault(); navigate(VIEWS.REGISTER); }}>Register here</a>
+            </p>
           </div>
+        </form>
+      </div>
 
-          {googleError && !authError && <p className="error-text" style={{ marginTop: '-0.25rem' }}>{googleError}</p>}
+      {barBanPopupOpen && hasActiveBarBans && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.75)' }}>
+          <div className="glass-card" style={{ width: '100%', maxWidth: 560, border: '1px solid rgba(204,0,0,0.28)' }}>
+            <div className="glass-card-body" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ShieldCheck size={18} color="#CC0000" />
+                <h3 style={{ margin: 0, fontSize: '1rem', color: '#fff', fontWeight: 700 }}>Bar Access Notice</h3>
+              </div>
+              <p className="text-muted" style={{ margin: 0, fontSize: '0.86rem' }}>
+                You can still use your account, but you are currently banned from the bar(s) below:
+              </p>
 
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <GoogleLogin
-              onSuccess={onGoogleSuccess}
-              onError={onGoogleError}
-              theme="filled_black"
-              shape="pill"
-              size="large"
-              text="signin_with"
-              width="320"
-              useOneTap={false}
-              disabled={googleSubmitting}
-            />
+              <div style={{ maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                {barBanNotices.map((notice, idx) => (
+                  <div
+                    key={`${notice.bar_id || 'bar'}-${idx}`}
+                    style={{
+                      background: 'var(--color-bg-elevated)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 10,
+                      padding: '0.65rem 0.75rem'
+                    }}
+                  >
+                    <p style={{ margin: 0, color: '#fff', fontWeight: 600, fontSize: '0.86rem' }}>{notice.bar_name || 'Unknown Bar'}</p>
+                    <p style={{ margin: '0.2rem 0 0', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+                      {notice.ban_reason || 'You are banned from this bar.'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-red w-full"
+                onClick={() => {
+                  setBarBanPopupOpen(false);
+                  navigate(VIEWS.HOME);
+                }}
+              >
+                Continue
+              </button>
+            </div>
           </div>
-
-          <p className="text-muted text-center" style={{ fontSize: '0.85rem' }}>
-            No account yet?{' '}
-            <a href="#" onClick={(e) => { e.preventDefault(); navigate(VIEWS.REGISTER); }}>Register here</a>
-          </p>
         </div>
-      </form>
-    </div>
+      )}
+    </>
   );
 }
 

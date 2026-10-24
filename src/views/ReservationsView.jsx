@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useView } from '../hooks/useView';
 import { useAuth } from '../hooks/useAuth';
 import { VIEWS } from '../contexts/ViewContext';
 import { reservationService } from '../services/reservationService';
 import { paymentService } from '../services/paymentService';
 import { formatDate, formatTime, fullName } from '../utils/dateHelpers';
-import { CalendarDays, Clock, Utensils, BookMarked, Star, Download } from 'lucide-react';
+import { CalendarDays, Clock, Utensils, BookMarked, Star, Download, Printer, CheckCircle2, MapPin, Users, CreditCard } from 'lucide-react';
+import QRCode from 'qrcode';
+import { jsPDF } from 'jspdf';
 
 function parseOrderItems(notes) {
   if (!notes) return [];
@@ -19,116 +22,326 @@ function asMoney(value) {
   return `PHP ${n.toFixed(2)}`;
 }
 
-function buildBookingReceiptData(reservation, customerName) {
-  const paymentStatus = (reservation.payment_status || '').toLowerCase();
-  const reservationStatus = (reservation.status || '').toLowerCase();
-  const paidAmount = Number(reservation.payment_amount || reservation.deposit_amount || 0);
-  const remainingBalance = Math.max(0, Number(reservation.remaining_balance || 0));
+function normalizeReservationStatus(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (normalized === 'no-show' || normalized === 'no show') return 'no_show';
+  if (normalized === 'checked-in' || normalized === 'checked in') return 'checked_in';
+  return normalized;
+}
+
+function getReservationBadge(status, paymentStatus) {
+  const normalizedStatus = normalizeReservationStatus(status);
+  const normalizedPaymentStatus = String(paymentStatus || '').toLowerCase();
+
+  const isPaid = normalizedPaymentStatus === 'paid';
+  const isPartialPaid = normalizedPaymentStatus === 'partial';
+  const isConfirmed = normalizedStatus === 'confirmed';
+  const isApproved = normalizedStatus === 'approved';
+  const isCancelled = normalizedStatus.includes('cancel');
+  const isRejected = normalizedStatus === 'rejected';
+  const isNoShow = normalizedStatus === 'no_show';
+  const isDone = normalizedStatus === 'checked_in' || normalizedStatus === 'completed' || normalizedStatus === 'done';
+
+  let badgeBg = '#C98A2F'; // Pending amber
+  let badgeColor = '#FFFFFF';
+  let badgeLabel = 'Pending';
+  let badgeClass = 'pending';
+
+  if (isNoShow) {
+    badgeBg = '#52161E'; badgeLabel = 'No Show'; badgeClass = 'failed';
+  } else if (isCancelled) {
+    badgeBg = '#7A2430'; badgeLabel = 'Cancelled'; badgeClass = 'cancelled';
+  } else if (isRejected) {
+    badgeBg = '#7A2430'; badgeLabel = 'Rejected'; badgeClass = 'rejected';
+  } else if (isDone) {
+    badgeBg = '#2E7D4F'; badgeLabel = 'Completed'; badgeClass = 'confirmed';
+  } else if (isPaid || isConfirmed) {
+    badgeBg = '#2E7D4F'; badgeLabel = 'Confirmed'; badgeClass = 'confirmed';
+  } else if (isApproved) {
+    badgeBg = '#2563EB'; badgeLabel = 'Approved'; badgeClass = 'approved';
+  } else if (isPartialPaid) {
+    badgeBg = '#C98A2F'; badgeLabel = 'Partial Paid'; badgeClass = 'pending';
+  }
 
   return {
-    title: 'Booking Confirmation Receipt',
-    transactionNumber: reservation.transaction_number || reservation.reference_id || `RES-${reservation.id}`,
-    customerName,
-    barName: reservation.bar_name || '-',
-    barAddress: reservation.bar_address || '-',
-    tableNumber: reservation.table_number || reservation.table_id || '-',
-    reservationDateTime: `${formatDate(reservation.reservation_date)} ${formatTime(reservation.reservation_time)}`,
-    guestCount: reservation.party_size || '-',
-    amountPaid: asMoney(paidAmount),
-    remainingBalance: asMoney(remainingBalance),
-    reservationStatus:
-      paymentStatus === 'partial' ? 'PARTIALLY PAID' :
-      paymentStatus === 'paid' ? 'PAID' :
-      reservationStatus === 'confirmed' ? 'CONFIRMED' :
-      (reservation.status || '-').toUpperCase(),
-    generatedAt: new Date().toLocaleString(),
+    normalizedStatus,
+    isPaid,
+    isPartialPaid,
+    isConfirmed,
+    isApproved,
+    isCancelled,
+    isRejected,
+    isNoShow,
+    isDone,
+    badgeBg,
+    badgeColor,
+    badgeLabel,
+    badgeClass,
   };
 }
 
-function escapePdfText(value) {
-  return String(value || '')
-    .replace(/\\/g, '\\\\')
-    .replace(/\(/g, '\\(')
-    .replace(/\)/g, '\\)');
+function buildBookingReceiptData(reservation, customerName) {
+  const { badgeLabel } = getReservationBadge(reservation.status, reservation.payment_status);
+  const paidAmount = Number(reservation.payment_amount || reservation.deposit_amount || 0);
+  const totalAmount = Number(reservation.total_amount || reservation.payment_amount || 0);
+  const remainingBalance = Number(reservation.remaining_balance || Math.max(0, totalAmount - paidAmount));
+  const items = parseOrderItems(reservation.notes || '');
+
+  return {
+    transactionNumber: reservation.transaction_number || reservation.reference_id || `RES-${reservation.id}`,
+    customerName,
+    barName: reservation.bar_name || '-',
+    tableNumber: reservation.table_number || reservation.table_id || '-',
+    floorAssignment: reservation.floor_assignment || '',
+    reservationDate: formatDate(reservation.reservation_date),
+    reservationTime: formatTime(reservation.reservation_time),
+    guestCount: reservation.party_size || '-',
+    menuItems: items,
+    totalAmount,
+    paidAmount,
+    remainingBalance,
+    reservationStatus: badgeLabel.toUpperCase(),
+    bookedAt: reservation.created_at ? new Date(reservation.created_at) : null,
+  };
 }
 
-function buildSimplePdf(lines) {
-  const content = [
-    'BT',
-    '/F1 16 Tf',
-    '50 790 Td',
-    `(${escapePdfText(lines[0] || 'Booking Confirmation Receipt')}) Tj`,
-    '/F1 11 Tf',
-  ];
+async function buildReceiptPdf(receipt) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 14;
+  const contentW = pageW - margin * 2;
+  const accent = [201, 118, 47];   // #C9762F
+  const dark = [26, 26, 26];
+  const muted = [120, 120, 120];
+  const lightGray = [200, 200, 200];
+  let y = margin;
 
-  for (let i = 1; i < lines.length; i += 1) {
-    content.push('0 -22 Td');
-    content.push(`(${escapePdfText(lines[i])}) Tj`);
+  // Helper: add text and return new y
+  const text = (str, x, opts = {}) => {
+    const { size = 10, color = dark, style = 'normal', maxWidth } = opts;
+    doc.setFont('helvetica', style);
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    if (maxWidth) {
+      const lines = doc.splitTextToSize(String(str || ''), maxWidth);
+      lines.forEach(line => { doc.text(line, x, y); y += size * 0.4; });
+    } else {
+      doc.text(String(str || ''), x, y);
+      y += size * 0.4;
+    }
+  };
+
+  const line = () => { y += 1; };
+
+  // ── Header: Bar name ──
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(...accent);
+  doc.text(receipt.barName || 'ThePartyGoers', margin, y + 7);
+  y += 10;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...muted);
+  doc.text('RESERVATION CONFIRMATION', margin, y + 2);
+  y += 6;
+
+  // ── Dashed separator ──
+  doc.setDrawColor(...lightGray);
+  doc.setLineDashPattern([3, 2], 0);
+  doc.line(margin, y, pageW - margin, y);
+  doc.setLineDashPattern([], 0);
+  y += 6;
+
+  // ── QR Code + Transaction Number ──
+  let qrY = y;
+  try {
+    const qrDataUrl = await QRCode.toDataURL(receipt.transactionNumber, {
+      width: 200, margin: 1,
+      color: { dark: '#1a1a1a', light: '#ffffff' },
+    });
+    doc.addImage(qrDataUrl, 'PNG', margin, qrY, 24, 24);
+  } catch (_) { /* QR generation failed, continue without it */ }
+
+  const txnX = margin + 28;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...muted);
+  doc.text('TRANSACTION NUMBER', txnX, qrY + 3);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(...accent);
+  doc.text(receipt.transactionNumber, txnX, qrY + 10);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...muted);
+  doc.text(receipt.reservationStatus, txnX, qrY + 15);
+
+  y = qrY + 28;
+
+  // ── Dashed separator ──
+  doc.setDrawColor(...lightGray);
+  doc.setLineDashPattern([3, 2], 0);
+  doc.line(margin, y, pageW - margin, y);
+  doc.setLineDashPattern([], 0);
+  y += 6;
+
+  // ── Section helper ──
+  const section = (icon, label) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(...muted);
+    doc.text(`${icon}  ${label}`, margin, y + 1);
+    y += 5;
+  };
+
+  const field = (label, value, opts = {}) => {
+    const { bold = false, color = dark, size = 10 } = opts;
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    doc.text(String(value || '-'), margin + 2, y + 1);
+    y += 5;
+  };
+
+  // ── Table ──
+  section('TABLE', 'TABLE');
+  const tableLabel = `Table #${receipt.tableNumber}` + (receipt.floorAssignment ? ` · ${receipt.floorAssignment}` : '');
+  field('', tableLabel, { size: 10 });
+  field('', `Party of ${receipt.guestCount} guests`, { color: muted, size: 9 });
+  y += 1;
+
+  // ── Date & Time ──
+  section('DATE & TIME', 'DATE & TIME');
+  field('', `${receipt.reservationDate}  ·  ${receipt.reservationTime}`, { size: 10 });
+  y += 1;
+
+  // ── Guest ──
+  section('GUEST', 'GUEST');
+  field('', receipt.customerName, { size: 10 });
+  y += 1;
+
+  // ── Menu Items ──
+  if (receipt.menuItems.length > 0) {
+    section('MENU ITEMS', 'MENU ITEMS');
+    receipt.menuItems.forEach(item => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...dark);
+      doc.text(`•  ${item}`, margin + 2, y + 1);
+      y += 4.5;
+    });
+    y += 1;
   }
 
-  content.push('ET');
-  const streamContent = `${content.join('\n')}\n`;
-  const streamLength = streamContent.length;
+  // ── Dashed separator ──
+  doc.setDrawColor(...lightGray);
+  doc.setLineDashPattern([3, 2], 0);
+  doc.line(margin, y, pageW - margin, y);
+  doc.setLineDashPattern([], 0);
+  y += 6;
 
-  const objects = [
-    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
-    '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
-    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n',
-    '4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
-    `5 0 obj\n<< /Length ${streamLength} >>\nstream\n${streamContent}endstream\nendobj\n`,
-  ];
+  // ── Payment Summary Box ──
+  const boxH = 34;
+  doc.setFillColor(245, 245, 245);
+  doc.setDrawColor(220, 220, 220);
+  doc.roundedRect(margin, y, contentW, boxH, 3, 3, 'FD');
 
-  let pdf = '%PDF-1.4\n';
-  const offsets = [0];
-  for (const obj of objects) {
-    offsets.push(pdf.length);
-    pdf += obj;
+  const bx = margin + 4;
+  let by = y + 5;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...muted);
+  doc.text('PAYMENT SUMMARY', bx, by);
+  by += 7;
+
+  // Total Bill
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...dark);
+  doc.text('Total Bill', bx, by);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`\u20B1${receipt.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, pageW - margin - 4, by, { align: 'right' });
+  by += 7;
+
+  // Paid
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...muted);
+  const paidLabel = receipt.remainingBalance > 0 ? 'Paid (Deposit)' : 'Paid';
+  doc.text(paidLabel, bx, by);
+  doc.setTextColor(34, 160, 94);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`\u20B1${receipt.paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, pageW - margin - 4, by, { align: 'right' });
+  by += 7;
+
+  // Remaining
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  if (receipt.remainingBalance > 0) {
+    doc.setTextColor(200, 140, 30);
+    doc.text('Remaining Balance', bx, by);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`\u20B1${receipt.remainingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, pageW - margin - 4, by, { align: 'right' });
+  } else {
+    doc.setTextColor(34, 160, 94);
+    doc.text('\u2714  Fully Paid', bx, by);
   }
 
-  const xrefStart = pdf.length;
-  pdf += `xref\n0 ${objects.length + 1}\n`;
-  pdf += '0000000000 65535 f \n';
-  for (let i = 1; i < offsets.length; i += 1) {
-    pdf += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
-  }
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+  y += boxH + 6;
 
-  return new Blob([pdf], { type: 'application/pdf' });
+  // ── Dashed separator ──
+  doc.setDrawColor(...lightGray);
+  doc.setLineDashPattern([3, 2], 0);
+  doc.line(margin, y, pageW - margin, y);
+  doc.setLineDashPattern([], 0);
+  y += 6;
+
+  // ── Footer ──
+  if (receipt.bookedAt) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...muted);
+    const bookedStr = `Booked on ${receipt.bookedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at ${receipt.bookedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+    doc.text(bookedStr, margin, y + 1);
+    y += 5;
+  }
+
+  if (receipt.remainingBalance > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(200, 140, 30);
+    doc.text(`Please pay \u20B1${receipt.remainingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })} balance at the door`, margin, y + 1);
+  }
+
+  return doc;
 }
 
-function downloadReceiptPdf(receipt) {
-  const lines = [
-    receipt.title,
-    `Generated: ${receipt.generatedAt}`,
-    '',
-    `Transaction Number: ${receipt.transactionNumber}`,
-    `Customer Name: ${receipt.customerName}`,
-    `Bar Name: ${receipt.barName}`,
-    `Bar Address: ${receipt.barAddress}`,
-    `Table Number: ${String(receipt.tableNumber)}`,
-    `Reservation Date & Time: ${receipt.reservationDateTime}`,
-    `Number of Guests: ${String(receipt.guestCount)}`,
-    `Amount Paid: ${receipt.amountPaid}`,
-    `Reservation Status: ${receipt.reservationStatus}`,
-    ...(receipt.remainingBalance && receipt.remainingBalance !== asMoney(0)
-      ? [`Remaining Balance to be Paid: ${receipt.remainingBalance}`]
-      : []),
-    '',
-    'This is a system-generated booking receipt.',
-  ];
-
-  const pdfBlob = buildSimplePdf(lines);
-  const objectUrl = URL.createObjectURL(pdfBlob);
-
+async function downloadReceiptPdf(receipt) {
+  const doc = await buildReceiptPdf(receipt);
   const txn = String(receipt.transactionNumber || 'booking').replace(/[^A-Za-z0-9-_]/g, '_');
-  const anchor = document.createElement('a');
-  anchor.href = objectUrl;
-  anchor.download = `booking-receipt-${txn}.pdf`;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(objectUrl);
+  doc.save(`booking-receipt-${txn}.pdf`);
 }
+
+function ViewportModal({ children }) {
+  if (typeof document === 'undefined') return null;
+  return createPortal(children, document.body);
+}
+
+const viewportBackdropStyle = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(0,0,0,0.6)',
+  backdropFilter: 'blur(8px)',
+  zIndex: 2000,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '1rem',
+  overflowY: 'auto',
+};
 
 async function settleReservationPayment(referenceId, attempts = 5, delayMs = 1500) {
   let lastResult = null;
@@ -146,116 +359,221 @@ async function settleReservationPayment(referenceId, attempts = 5, delayMs = 150
 }
 
 function ReservationModal({ reservation, onClose, onCancel, onDownloadReceipt }) {
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const printRef = useRef(null);
+
+  useEffect(() => {
+    if (reservation?.transaction_number) {
+      QRCode.toDataURL(reservation.transaction_number, {
+        width: 120,
+        margin: 1,
+        color: { dark: '#1a1a1a', light: '#ffffff' },
+      }).then(setQrDataUrl).catch(() => {});
+    }
+  }, [reservation?.transaction_number]);
+
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
+
   if (!reservation) return null;
   const items = parseOrderItems(reservation.notes || '');
-  const isPaid = (reservation.payment_status || '').toLowerCase() === 'paid';
-  const isPartialPaid = (reservation.payment_status || '').toLowerCase() === 'partial';
-  const isConfirmed = (reservation.status || '').toLowerCase() === 'confirmed';
-  const isApproved = (reservation.status || '').toLowerCase() === 'approved';
-  const isCancelled = (reservation.status || '').toLowerCase().includes('cancel');
-  const isRejected = (reservation.status || '').toLowerCase() === 'rejected';
-  const isNoShow = (reservation.status || '').toLowerCase() === 'no_show';
+  const {
+    isCancelled,
+    isPaid,
+    badgeClass,
+    badgeLabel,
+  } = getReservationBadge(reservation.status, reservation.payment_status);
 
-  const badgeClass = (isPaid || isConfirmed) ? 'paid'
-    : isPartialPaid ? 'approved'
-    : isCancelled || isRejected || isNoShow ? 'cancelled'
-    : isApproved ? 'approved'
-    : 'pending';
-
-  const badgeLabel = isPaid ? 'Paid'
-    : isPartialPaid ? 'Partially Paid'
-    : isConfirmed ? 'Confirmed'
-    : isCancelled ? 'Cancelled'
-    : isRejected ? 'Rejected'
-    : isNoShow ? 'No Show'
-    : isApproved ? 'Approved'
-    : 'Pending';
+  const total = Number(reservation.total_amount || reservation.payment_amount || 0);
+  const paid = Number(reservation.payment_amount || reservation.deposit_amount || 0);
+  const remaining = Number(reservation.remaining_balance || Math.max(0, total - paid));
+  const hasPaymentInfo = total > 0 || paid > 0;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-panel" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3 className="text-h3">Reservation Details</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body flex flex-col gap-md">
-          {/* Transaction Number */}
-          {reservation.transaction_number && (
-            <div style={{ background: 'rgba(232,0,30,0.08)', border: '1px solid var(--red-primary)', borderRadius: '8px', padding: '0.6rem 1rem' }}>
-              <p className="text-label" style={{ fontSize: '0.7rem', marginBottom: '0.2rem' }}>TRANSACTION NUMBER</p>
-              <p style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '1rem', letterSpacing: '0.05em', color: 'var(--red-primary)' }}>{reservation.transaction_number}</p>
-              <p className="text-dim" style={{ fontSize: '0.7rem', marginTop: '0.2rem' }}>Share this with the bar to confirm your reservation</p>
+    <ViewportModal>
+      <div className="modal-backdrop" style={viewportBackdropStyle} onClick={onClose}>
+        <div className="modal-panel receipt-modal" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
+          {/* Print-only header */}
+          <div className="print-only-header" style={{ display: 'none' }}>
+            <p style={{ fontSize: '0.7rem', color: '#999', marginBottom: '0.5rem' }}>Printed from ThePartyGoers</p>
+          </div>
+
+          {/* Screen header with actions */}
+          <div className="modal-header no-print" style={{ borderBottom: '1px dashed rgba(255,255,255,0.12)' }}>
+            <h3 className="text-h3" style={{ fontSize: '1rem' }}>Reservation Receipt</h3>
+            <div className="flex gap-xs">
+              <button onClick={handlePrint} className="modal-close" title="Print" style={{ fontSize: '1.1rem' }}>
+                <Printer size={18} />
+              </button>
+              <button className="modal-close" onClick={onClose}>✕</button>
             </div>
-          )}
-          {/* Status */}
-          <div className="flex gap-sm items-center">
-            <span className={`payment-status ${badgeClass}`}>
-              {badgeLabel}
-            </span>
-            {reservation.bar_name && <span className="badge-glass">{reservation.bar_name}</span>}
           </div>
 
-          {/* Table info */}
-          <div className="res-detail-section">
-            <p className="text-label mb-sm">Table</p>
-            <p className="text-body">Table #{reservation.table_number || reservation.table_id} &nbsp;·&nbsp; Party of {reservation.party_size}</p>
-          </div>
+          <div ref={printRef} className="receipt-content" style={{ padding: '1.5rem' }}>
+            {/* Bar Branding */}
+            <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+              <p style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--red-primary)', fontFamily: "'Outfit', sans-serif", letterSpacing: '0.05em', margin: 0 }}>
+                {reservation.bar_name || 'ThePartyGoers'}
+              </p>
+              <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', margin: '0.15rem 0 0', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                Reservation Confirmation
+              </p>
+            </div>
 
-          {/* Date & Time */}
-          <div className="res-detail-section">
-            <p className="text-label mb-sm">Date & Time</p>
-            <p className="text-body" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}><CalendarDays size={14} /> {formatDate(reservation.reservation_date)} &nbsp;·&nbsp; <Clock size={14} /> {formatTime(reservation.reservation_time)}</p>
-          </div>
+            {/* Status Badge */}
+            <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+              <span className={`receipt-status-badge ${badgeClass}`} style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                padding: '0.4rem 1rem', borderRadius: '50px',
+                fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+              }}>
+                <CheckCircle2 size={15} /> {badgeLabel}
+              </span>
+            </div>
 
-          {/* Menu items */}
-          {items.length > 0 && (
-            <div className="res-detail-section">
-              <p className="text-label mb-sm">Menu Items Ordered</p>
-              <div className="flex flex-col gap-sm">
-                {items.map((item, i) => (
-                  <div key={i} className="phc-item">
-                    <Utensils size={14} style={{ flexShrink: 0 }} />
-                    <span className="text-body">{item}</span>
-                  </div>
-                ))}
+            {/* Dashed separator */}
+            <div className="receipt-dashed-line" />
+
+            {/* Transaction + QR */}
+            {reservation.transaction_number && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '1rem 0', padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                {qrDataUrl && (
+                  <img src={qrDataUrl} alt="QR Code" style={{ width: '120px', height: '120px', borderRadius: '8px', flexShrink: 0, background: '#fff', padding: '6px' }} />
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: '0.2rem' }}>
+                    Transaction Number
+                  </p>
+                  <p style={{ fontFamily: "'Sora', monospace", fontWeight: 800, fontSize: '1.05rem', color: 'var(--red-primary)', letterSpacing: '0.04em', wordBreak: 'break-all', margin: 0 }}>
+                    {reservation.transaction_number}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Dashed separator */}
+            <div className="receipt-dashed-line" />
+
+            {/* Table Info */}
+            <div className="receipt-row">
+              <span className="receipt-row-icon"><MapPin size={14} /></span>
+              <div>
+                <p className="receipt-row-label">Table</p>
+                <p className="receipt-row-value">{reservation.table_number || reservation.table_id ? `Table #${reservation.table_number || reservation.table_id}` : 'Menu-only order'}</p>
+                <p className="receipt-row-sub">Party of {reservation.party_size} guests</p>
               </div>
             </div>
-          )}
 
-          {/* Total */}
-          {reservation.payment_amount && (
-            <div className="res-detail-section">
-              <p className="text-label mb-sm">Total Payment</p>
-              <p className="phc-amount">₱{Number(reservation.payment_amount).toFixed(2)}</p>
+            {/* Date & Time */}
+            <div className="receipt-row">
+              <span className="receipt-row-icon"><CalendarDays size={14} /></span>
+              <div>
+                <p className="receipt-row-label">Date & Time</p>
+                <p className="receipt-row-value">{formatDate(reservation.reservation_date)}</p>
+                <p className="receipt-row-sub"><Clock size={11} style={{ display: 'inline', verticalAlign: '-1px' }} /> {formatTime(reservation.reservation_time)}</p>
+              </div>
             </div>
-          )}
 
-          {/* Actions */}
-          <div className="flex gap-sm mt-sm" style={{ flexWrap: 'wrap' }}>
-            {reservation.bar_id && (
-              <button className="btn btn-glass btn-sm" onClick={() => { onClose(); }}>
-                Close
-              </button>
+            {/* Guest Name */}
+            <div className="receipt-row">
+              <span className="receipt-row-icon"><Users size={14} /></span>
+              <div>
+                <p className="receipt-row-label">Guest</p>
+                <p className="receipt-row-value">{reservation.first_name} {reservation.last_name}</p>
+              </div>
+            </div>
+
+            {/* Menu Items */}
+            {items.length > 0 && (
+              <div className="receipt-row">
+                <span className="receipt-row-icon"><Utensils size={14} /></span>
+                <div>
+                  <p className="receipt-row-label">Menu Items</p>
+                  {items.map((item, i) => (
+                    <p key={i} className="receipt-row-sub" style={{ margin: '0.1rem 0' }}>• {item}</p>
+                  ))}
+                </div>
+              </div>
             )}
+
+            {/* Dashed separator */}
+            {hasPaymentInfo && <div className="receipt-dashed-line" />}
+
+            {/* Payment Summary */}
+            {hasPaymentInfo && (
+              <div className="receipt-payment-box">
+                <div className="receipt-payment-header">
+                  <CreditCard size={13} /> Payment Summary
+                </div>
+                <div className="receipt-payment-row">
+                  <span>Total Bill</span>
+                  <span className="receipt-payment-amount">₱{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="receipt-payment-row paid">
+                  <span>Paid{remaining > 0 ? ' (Deposit)' : ''}</span>
+                  <span className="receipt-payment-amount" style={{ color: '#4ade80' }}>₱{paid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                {remaining > 0 && (
+                  <div className="receipt-payment-row due">
+                    <span>Remaining Balance (collect at door)</span>
+                    <span className="receipt-payment-amount" style={{ color: '#fbbf24' }}>₱{remaining.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
+                {remaining === 0 && (
+                  <div className="receipt-payment-row due">
+                    <span style={{ color: '#4ade80', fontWeight: 700 }}>✓ Fully Paid</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Dashed separator */}
+            <div className="receipt-dashed-line" />
+
+            {/* Footer info */}
+            <p style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', textAlign: 'center', margin: '0.75rem 0 0' }}>
+              Booked on {new Date(reservation.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              {' '}at {new Date(reservation.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+            </p>
+
+            {remaining > 0 && (
+              <p style={{ fontSize: '0.72rem', color: '#fbbf24', textAlign: 'center', fontWeight: 600, margin: '0.5rem 0 0' }}>
+                Please pay ₱{remaining.toLocaleString(undefined, { minimumFractionDigits: 2 })} balance at the door
+              </p>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="receipt-actions no-print" style={{ padding: '0 1.5rem 1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button className="btn btn-glass" style={{ flex: '1 1 0', minWidth: '100px', justifyContent: 'center' }} onClick={onClose}>
+              Close
+            </button>
+            <button className="btn btn-red" style={{ flex: '1 1 0', minWidth: '100px', justifyContent: 'center' }} onClick={handlePrint}>
+              <Printer size={14} /> Print
+            </button>
             {(reservation.status || '').toLowerCase() === 'confirmed' && (
-              <button className="btn btn-glass btn-sm" onClick={() => onDownloadReceipt(reservation)}>
-                <Download size={13} /> Download Receipt
-              </button>
-            )}
-            {!isCancelled && !isPaid && (
-              <button className="btn btn-ghost btn-sm" onClick={() => onCancel(reservation.id)}>
-                Cancel Reservation
+              <button className="btn btn-glass" style={{ flex: '1 1 0', minWidth: '100px', justifyContent: 'center' }} onClick={() => onDownloadReceipt(reservation)}>
+                <Download size={14} /> PDF
               </button>
             )}
           </div>
+
+          {!isCancelled && !isPaid && (
+            <div className="no-print" style={{ padding: '0 1.5rem 1.5rem' }}>
+              <button className="btn btn-ghost btn-sm w-full" onClick={() => onCancel(reservation.id)}>
+                Cancel Reservation
+              </button>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </ViewportModal>
   );
 }
 
 function ReservationsView() {
-  const { navigate } = useView();
+  const { navigate, viewParams } = useView();
   const { user } = useAuth();
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -268,6 +586,9 @@ function ReservationsView() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const autoOpenedReservationRef = useRef(null);
+  const attemptedTargetFetchRef = useRef(new Set());
 
   const load = async () => {
     try {
@@ -329,9 +650,9 @@ function ReservationsView() {
     }
   };
 
-  const handleDownloadReceipt = (reservation) => {
+  const handleDownloadReceipt = async (reservation) => {
     const receipt = buildBookingReceiptData(reservation, fullName(user));
-    downloadReceiptPdf(receipt);
+    await downloadReceiptPdf(receipt);
   };
 
   useEffect(() => { load(); }, []);
@@ -339,6 +660,51 @@ function ReservationsView() {
     const id = setInterval(() => setNowTs(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    const targetReservationId = Number(
+      viewParams?.reservationId ||
+      viewParams?.notificationTarget?.reservation_id ||
+      0
+    );
+
+    if (!targetReservationId || !Array.isArray(reservations)) {
+      return;
+    }
+
+    if (autoOpenedReservationRef.current === targetReservationId) return;
+
+    const targetReservation = reservations.find((item) => Number(item?.id || 0) === targetReservationId);
+    if (targetReservation) {
+      autoOpenedReservationRef.current = targetReservationId;
+      setSelected(targetReservation);
+      return;
+    }
+
+    if (loading) return;
+    if (attemptedTargetFetchRef.current.has(targetReservationId)) return;
+
+    attemptedTargetFetchRef.current.add(targetReservationId);
+
+    (async () => {
+      try {
+        const reservation = await reservationService.myReservationById(targetReservationId);
+        if (!reservation) return;
+
+        autoOpenedReservationRef.current = targetReservationId;
+        setReservations((prev) => {
+          const list = Array.isArray(prev) ? prev : [];
+          if (list.some((item) => Number(item?.id || 0) === targetReservationId)) {
+            return list;
+          }
+          return [reservation, ...list];
+        });
+        setSelected(reservation);
+      } catch (_) {
+        // Keep current list view when target reservation cannot be retrieved.
+      }
+    })();
+  }, [viewParams, reservations, loading]);
 
   const handleCancel = async (id) => {
     if (!confirm('Cancel this reservation?')) return;
@@ -378,21 +744,107 @@ function ReservationsView() {
     }
   };
 
+  const getFilterCategory = (reservation) => {
+    const {
+      isNoShow,
+      isDone,
+      isCancelled,
+      isRejected,
+    } = getReservationBadge(reservation.status, reservation.payment_status);
+
+    if (isNoShow) return 'no_show';
+    if (isDone) return 'done';
+    if (isCancelled || isRejected) return 'other';
+
+    const startTs = new Date(`${reservation.reservation_date}T${reservation.reservation_time}`).getTime();
+    if (Number.isNaN(startTs)) return 'upcoming';
+    return startTs >= nowTs ? 'upcoming' : 'other';
+  };
+
+  const filterCounts = reservations.reduce((acc, reservation) => {
+    const category = getFilterCategory(reservation);
+    if (category === 'upcoming') acc.upcoming += 1;
+    if (category === 'done') acc.done += 1;
+    if (category === 'no_show') acc.no_show += 1;
+    return acc;
+  }, {
+    all: reservations.length,
+    upcoming: 0,
+    done: 0,
+    no_show: 0,
+  });
+
+  const filteredReservations = reservations.filter((reservation) => {
+    if (statusFilter === 'all') return true;
+    return getFilterCategory(reservation) === statusFilter;
+  });
+
+  const activeFilterLabel =
+    statusFilter === 'upcoming' ? 'Upcoming' :
+    statusFilter === 'done' ? 'Done' :
+    statusFilter === 'no_show' ? 'No Show' :
+    'All';
+
   if (loading) return <div className="loading-state" style={{ minHeight: '50vh' }}><div className="spinner" /><span>Loading reservations...</span></div>;
 
   return (
     <div className="flex flex-col gap-xl">
       <div className="flex justify-between items-center flex-wrap gap-md">
         <div>
-          <span className="home-eyebrow">RESERVATIONS</span>
-          <h1 className="home-section-title" style={{ marginTop: '0.5rem' }}>MY <span className="home-accent">RESERVATIONS</span></h1>
-          <p className="home-section-sub">Click any reservation to view full details.</p>
+          <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#C9762F' }}>RESERVATIONS</span>
+          <h1 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: '1.8rem', fontWeight: 700, margin: '0.2rem 0 0', color: 'var(--color-text-primary)' }}>
+            My Reservations
+          </h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', margin: 0 }}>View, manage, and check status for your table bookings.</p>
         </div>
-        <button className="btn btn-red btn-red-pulse" onClick={() => navigate(VIEWS.BARS)}>+ New Reservation</button>
+        <button className="btn" style={{ background: '#C9762F', color: '#fff', fontWeight: 700, borderRadius: 10 }} onClick={() => navigate(VIEWS.BARS)}>+ New Reservation</button>
       </div>
 
-      {msg && <div className="alert alert-info">{msg}</div>}
-      {err && <div className="alert alert-err">{err}</div>}
+      {msg && (
+        <div style={{ background: 'rgba(46,125,79,0.1)', border: '1px solid #2E7D4F', color: '#2E7D4F', padding: '0.8rem 1rem', borderRadius: 10, fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>✓ {msg}</span>
+          <button style={{ background: 'none', border: 'none', color: '#2E7D4F', cursor: 'pointer' }} onClick={() => setMsg('')}>✕</button>
+        </div>
+      )}
+
+      {err && (
+        <div style={{ background: '#7A2430', color: '#FFFFFF', padding: '0.85rem 1.1rem', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0.25rem 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem' }}>
+            <span>⚠️</span>
+            <span>{err}</span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.75rem', borderRadius: 6 }} onClick={() => { setErr(''); load(); }}>Retry</button>
+            <button style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.1rem', cursor: 'pointer' }} onClick={() => setErr('')}>✕</button>
+          </div>
+        </div>
+      )}
+
+      {(
+        <div className="glass-card" style={{ padding: '0.9rem 1rem' }}>
+          <div className="flex gap-sm flex-wrap items-center">
+            <span className="text-label" style={{ marginRight: '0.35rem' }}>Filter:</span>
+            {[
+              { key: 'upcoming', label: 'Upcoming' },
+              { key: 'done', label: 'Done' },
+              { key: 'no_show', label: 'No Show' },
+              { key: 'all', label: 'All' },
+            ].map(({ key, label }) => {
+              const isActive = statusFilter === key;
+              return (
+                <button
+                  key={key}
+                  className={`btn btn-sm ${isActive ? 'btn-red' : 'btn-glass'}`}
+                  style={{ fontSize: '0.72rem', padding: '0.3rem 0.75rem', borderRadius: 999 }}
+                  onClick={() => setStatusFilter(key)}
+                >
+                  {label} ({filterCounts[key]})
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {reservations.length === 0 ? (
         <div className="glass-card empty-state">
@@ -400,35 +852,27 @@ function ReservationsView() {
           <h3 className="text-h3">No reservations yet</h3>
           <p className="text-muted mt-sm">Browse bars and reserve a table to get started.</p>
         </div>
+      ) : filteredReservations.length === 0 ? (
+        <div className="glass-card empty-state">
+          <div className="empty-icon"><BookMarked size={32} /></div>
+          <h3 className="text-h3">No {activeFilterLabel} reservations</h3>
+          <p className="text-muted mt-sm">Try another filter to view your other reservations.</p>
+        </div>
       ) : (
         <div className="flex flex-col gap-md">
-          {reservations.map(r => {
-            const isPaid = (r.payment_status || '').toLowerCase() === 'paid';
-            const isPartialPaid = (r.payment_status || '').toLowerCase() === 'partial';
-            const isConfirmed = (r.status || '').toLowerCase() === 'confirmed';
-            const isCheckedIn = (r.status || '').toLowerCase() === 'checked_in';
-            const isNoShow = (r.status || '').toLowerCase() === 'no_show';
-            const isApproved = (r.status || '').toLowerCase() === 'approved';
-            const isCancelled = (r.status || '').toLowerCase().includes('cancel');
-            const isRejected = (r.status || '').toLowerCase() === 'rejected';
-            const isCompleted = (r.status || '').toLowerCase() === 'completed';
+          {filteredReservations.map(r => {
+            const {
+              normalizedStatus,
+              isConfirmed,
+              isCancelled,
+              badgeBg,
+              badgeColor,
+              badgeClass,
+              badgeLabel,
+            } = getReservationBadge(r.status, r.payment_status);
+
+            const isCompleted = normalizedStatus === 'completed' || normalizedStatus === 'done';
             const isReviewSubmitted = Number(r.has_review) === 1;
-
-            const badgeClass = (isPaid || isConfirmed || isCheckedIn) ? 'paid'
-              : isPartialPaid ? 'approved'
-              : isCancelled || isRejected ? 'cancelled'
-              : isNoShow ? 'cancelled'
-              : isApproved ? 'approved'
-              : 'pending';
-
-            const badgeLabel = isPaid ? 'Paid'
-              : isPartialPaid ? 'Partially Paid'
-              : (isConfirmed || isCheckedIn) ? 'Confirmed'
-              : isCancelled ? 'Cancelled'
-              : isRejected ? 'Rejected'
-              : isNoShow ? 'No Show'
-              : isApproved ? 'Approved'
-              : 'Pending';
 
             const startDt = new Date(`${r.reservation_date}T${r.reservation_time}`);
             const graceEnd = new Date(startDt.getTime() + 30 * 60 * 1000);
@@ -441,17 +885,17 @@ function ReservationsView() {
               <div
                 className="glass-card res-card"
                 key={r.id}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', border: '1px solid var(--color-border)', borderRadius: '14px', background: 'var(--color-bg-card)', padding: '1.25rem' }}
                 onClick={() => setSelected(r)}
               >
                 <div className="res-header">
                   <div>
-                    <h3 className="text-h3">{r.bar_name || `Bar #${r.bar_id}`}</h3>
-                    <p className="text-muted" style={{ fontSize: '0.85rem' }}>
-                      Table #{r.table_number || r.table_id} · Party of {r.party_size}
+                    <h3 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--color-text-primary)' }}>{r.bar_name || `Bar #${r.bar_id}`}</h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: '0.2rem 0 0' }}>
+                      {r.table_number || r.table_id ? `Table #${r.table_number || r.table_id} · ` : r.order_type === 'takeout' ? 'Takeout · ' : r.order_type === 'dine_in' ? 'Dine-in · ' : 'Menu-only order · '}Party of {r.party_size} guests
                     </p>
                   </div>
-                  <span className={`payment-status ${badgeClass}`}>
+                  <span style={{ background: badgeBg, color: badgeColor, fontSize: '0.72rem', fontWeight: 800, padding: '0.25rem 0.75rem', borderRadius: 50, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {badgeLabel}
                   </span>
                 </div>
@@ -529,64 +973,66 @@ function ReservationsView() {
       )}
 
       {reviewModalReservation && (
-        <div className="modal-backdrop" onClick={() => setReviewModalReservation(null)}>
-          <div className="modal-panel" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="text-h3">Leave a Review</h3>
-              <button className="modal-close" onClick={() => setReviewModalReservation(null)}>✕</button>
-            </div>
-
-            <div className="modal-body flex flex-col gap-md">
-              <div className="res-detail-section">
-                <p className="text-label mb-sm">Booking</p>
-                <p className="text-body">{reviewModalReservation.bar_name} · Table #{reviewModalReservation.table_number || reviewModalReservation.table_id}</p>
-                <p className="text-dim" style={{ fontSize: '0.78rem' }}>{formatDate(reviewModalReservation.reservation_date)} · {formatTime(reviewModalReservation.reservation_time)}</p>
+        <ViewportModal>
+          <div className="modal-backdrop" style={viewportBackdropStyle} onClick={() => setReviewModalReservation(null)}>
+            <div className="modal-panel" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3 className="text-h3">Leave a Review</h3>
+                <button className="modal-close" onClick={() => setReviewModalReservation(null)}>✕</button>
               </div>
 
-              <div>
-                <p className="text-label mb-sm">Star Rating</p>
-                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      className="btn btn-glass btn-sm"
-                      onClick={() => setReviewRating(star)}
-                      style={{
-                        borderColor: reviewRating === star ? 'var(--red-primary)' : undefined,
-                        color: reviewRating >= star ? '#fbbf24' : undefined,
-                        minWidth: 48,
-                      }}
-                    >
-                      <Star size={13} fill={reviewRating >= star ? 'currentColor' : 'none'} /> {star}
-                    </button>
-                  ))}
+              <div className="modal-body flex flex-col gap-md">
+                <div className="res-detail-section">
+                  <p className="text-label mb-sm">Booking</p>
+                  <p className="text-body">{reviewModalReservation.bar_name} · Table #{reviewModalReservation.table_number || reviewModalReservation.table_id}</p>
+                  <p className="text-dim" style={{ fontSize: '0.78rem' }}>{formatDate(reviewModalReservation.reservation_date)} · {formatTime(reviewModalReservation.reservation_time)}</p>
                 </div>
-              </div>
 
-              <div>
-                <p className="text-label mb-sm">Comment (Optional)</p>
-                <textarea
-                  className="textarea"
-                  rows={4}
-                  maxLength={1000}
-                  value={reviewComment}
-                  onChange={(e) => setReviewComment(e.target.value)}
-                  placeholder="Share your experience..."
-                />
-              </div>
+                <div>
+                  <p className="text-label mb-sm">Star Rating</p>
+                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        className="btn btn-glass btn-sm"
+                        onClick={() => setReviewRating(star)}
+                        style={{
+                          borderColor: reviewRating === star ? 'var(--red-primary)' : undefined,
+                          color: reviewRating >= star ? '#fbbf24' : undefined,
+                          minWidth: 48,
+                        }}
+                      >
+                        <Star size={13} fill={reviewRating >= star ? 'currentColor' : 'none'} /> {star}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              <div className="flex gap-sm" style={{ justifyContent: 'flex-end' }}>
-                <button className="btn btn-glass btn-sm" onClick={() => setReviewModalReservation(null)} disabled={reviewSubmitting}>
-                  Cancel
-                </button>
-                <button className="btn btn-red btn-sm" onClick={handleSubmitReview} disabled={reviewSubmitting}>
-                  {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
-                </button>
+                <div>
+                  <p className="text-label mb-sm">Comment (Optional)</p>
+                  <textarea
+                    className="textarea"
+                    rows={4}
+                    maxLength={1000}
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="Share your experience..."
+                  />
+                </div>
+
+                <div className="flex gap-sm" style={{ justifyContent: 'flex-end' }}>
+                  <button className="btn btn-glass btn-sm" onClick={() => setReviewModalReservation(null)} disabled={reviewSubmitting}>
+                    Cancel
+                  </button>
+                  <button className="btn btn-red btn-sm" onClick={handleSubmitReview} disabled={reviewSubmitting}>
+                    {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </ViewportModal>
       )}
     </div>
   );

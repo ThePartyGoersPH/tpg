@@ -99,3 +99,25 @@ VITE_API_URL=http://localhost:3000
 npm run build
 npm run preview
 ```
+
+
+## Why local and online can look different
+
+If the local app looks different from the deployed version, check these in order:
+
+1. **Git branch/commit**: Run `git branch --show-current` and `git log -1 --oneline`. Ensure local is on `main` and up to date with `origin/main`. Compare with the server: `cd /var/www/my-project && git log -1 --oneline`.
+2. **Multiple frontends**: The repo has 5 Vite apps (customer_website:5173, manager:5174, super_admin_web:5175, pos_website:4173, _deploy_customer_notifications:5173). Make sure you are running the correct one.
+3. **Routing/base path**: The customer app uses `base: '/'` in vite.config.js (matching online root path). If you see 404s for assets, check that `base` matches the URL path you are opening.
+4. **Environment variables**: Ensure `.env.development.local` has `VITE_API_URL=http://localhost:3000` (no trailing `/api`). The production build uses `VITE_API_URL=https://thepartygoers.partygoers.online/api`.
+5. **Theme**: The default theme is `dark`. The inline script in `index.html` sets `data-theme` from localStorage (defaulting to `dark`). Clear localStorage if you see a stale theme.
+6. **Fonts**: The app loads fonts from Google Fonts CDN (matching online). If fonts look wrong, check the `<link>` tags in `index.html`.
+7. **Browser cache**: Do a hard refresh (Cmd+Shift+R / Ctrl+Shift+R) to clear cached assets.
+8. **Build version**: Check the console for `[BUILD] version:` to compare local vs online builds.
+
+### Preview production build locally
+
+```bash
+npm run preview:prod
+```
+
+This builds with production env and serves on port 4173, exactly like the deployed version.

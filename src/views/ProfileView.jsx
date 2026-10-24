@@ -5,9 +5,22 @@ import { VIEWS } from '../contexts/ViewContext';
 import { fullName, timeAgo } from '../utils/dateHelpers';
 import { imageUrl } from '../utils/imageUrl';
 import apiClient from '../api/client';
+import CropPictureModal from '../components/ui/CropPictureModal';
 import { CheckCircle, ShieldAlert, Star, MessageCircle } from 'lucide-react';
+import { normalizeCustomerPhone, sanitizePhoneInput } from '../utils/phonePolicy';
 
 const CATEGORIES = ['general', 'ui_ux', 'performance', 'features', 'support', 'other'];
+const NAME_REGEX = /^[A-Za-z][A-Za-z .'-]*$/;
+const AVATAR_MAX_BYTES = 10 * 1024 * 1024;
+const AVATAR_ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
+
+function validateName(value, label) {
+  const input = String(value || '').trim();
+  if (!input) return `${label} is required.`;
+  if (input.length > 100) return `${label} is too long.`;
+  if (!NAME_REGEX.test(input)) return `${label} has invalid characters.`;
+  return '';
+}
 
 function StarRating({ value, onChange, readonly = false }) {
   const [hover, setHover] = useState(0);
@@ -59,6 +72,8 @@ function ProfileView() {
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '' });
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  // Data URL of the picked picture while the crop modal is open ('' = closed).
+  const [cropSrc, setCropSrc] = useState('');
 
   // Platform Feedback state
   const [feedbackRating, setFeedbackRating] = useState(0);
@@ -69,22 +84,31 @@ function ProfileView() {
   const [feedbackErr, setFeedbackErr] = useState('');
   const [feedbackHistory, setFeedbackHistory] = useState([]);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [confirmFeedback, setConfirmFeedback] = useState(false);
 
   const loadFeedbackHistory = async () => {
     setFeedbackLoading(true);
     try {
       const res = await apiClient.get('/platform-feedback/my');
       setFeedbackHistory(res.data?.data || []);
-    } catch (_) {}
+    } catch (_) {
+      // history is non-critical — leave the list empty on failure
+    }
     finally { setFeedbackLoading(false); }
   };
 
   useEffect(() => { loadFeedbackHistory(); }, []);
 
-  const handleFeedbackSubmit = async (e) => {
+  const requestFeedbackConfirmation = (e) => {
     e.preventDefault();
     if (!feedbackRating) { setFeedbackErr('Please select a star rating.'); return; }
-    setFeedbackSubmitting(true); setFeedbackErr(''); setFeedbackMsg('');
+    setFeedbackErr(''); setFeedbackMsg('');
+    setConfirmFeedback(true);
+  };
+
+  const confirmAndSubmitFeedback = async () => {
+    setConfirmFeedback(false);
+    setFeedbackSubmitting(true);
     try {
       await apiClient.post('/platform-feedback', {
         rating: feedbackRating,
@@ -99,16 +123,43 @@ function ProfileView() {
     } finally { setFeedbackSubmitting(false); }
   };
 
+  useEffect(() => {
+    if (!confirmFeedback) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape' && !feedbackSubmitting) setConfirmFeedback(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [confirmFeedback, feedbackSubmitting]);
+
   const avatarUrl = useMemo(
     () => imageUrl(user?.profile_url || user?.profile_picture) || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' fill='%23161616' rx='60'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='52' fill='%23444'%3E👤%3C/text%3E%3C/svg%3E`,
     [user]
   );
 
+  const profileFirstNameError = validateName(profileForm.first_name, 'First name');
+  const profileLastNameError = validateName(profileForm.last_name, 'Last name');
+  const profilePhoneCheck = normalizeCustomerPhone(profileForm.phone_number);
+  const profilePhoneError = profileForm.phone_number.trim() ? (profilePhoneCheck.error || '') : '';
+  const canSaveProfile = !profileFirstNameError && !profileLastNameError && !profilePhoneError;
+
   const handleProfileSave = async (e) => {
     e.preventDefault(); setErr(''); setMsg('');
+
+    if (!canSaveProfile) {
+      setErr(profileFirstNameError || profileLastNameError || profilePhoneError || 'Please check your profile details.');
+      return;
+    }
+
     try {
       const { email, ...editableFields } = profileForm;
-      await updateProfile(editableFields);
+      await updateProfile({
+        ...editableFields,
+        first_name: profileForm.first_name.trim(),
+        last_name: profileForm.last_name.trim(),
+        phone_number: profileForm.phone_number.trim() || null,
+        date_of_birth: profileForm.date_of_birth || null,
+      });
       setMsg('Profile updated successfully.');
     } catch (e) { setErr(e?.response?.data?.message || 'Failed to update profile.'); }
   };
@@ -122,12 +173,34 @@ function ProfileView() {
     } catch (e) { setErr(e?.response?.data?.message || 'Failed to change password.'); }
   };
 
-  const handleAvatarUpload = async (e) => {
+  const handleAvatarSelect = (e) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
     setErr(''); setMsg('');
-    try { await uploadProfilePicture(file); setMsg('Profile picture updated.'); }
-    catch (e) { setErr(e?.response?.data?.message || 'Failed to upload picture.'); }
+
+    if (!AVATAR_ACCEPTED_TYPES.includes(file.type)) {
+      setErr('Please choose a JPG, PNG, WEBP or GIF image.');
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      setErr('Image is too large. Maximum file size is 10 MB.');
+      return;
+    }
+
+    // Validate first, then hand the image to the crop modal instead of uploading.
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(String(reader.result || ''));
+    reader.onerror = () => setErr('Could not read that image file.');
+    reader.readAsDataURL(file);
+  };
+
+  const closeCropModal = () => setCropSrc('');
+
+  const handleCropSave = async (croppedFile) => {
+    // Errors are surfaced inside the modal so it stays open for a retry.
+    await uploadProfilePicture(croppedFile);
+    setMsg('Profile picture updated.');
   };
 
   const pv = (key, val) => setProfileForm(p => ({ ...p, [key]: val }));
@@ -153,10 +226,14 @@ function ProfileView() {
             <label className="btn btn-ghost btn-sm" htmlFor="avatar-upload" style={{ cursor: 'pointer', marginTop: '0.5rem' }}>
               Upload Picture
             </label>
-            <input id="avatar-upload" type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
+            <input id="avatar-upload" type="file" accept="image/*" onChange={handleAvatarSelect} style={{ display: 'none' }} />
           </div>
         </div>
       </section>
+
+      {cropSrc && (
+        <CropPictureModal src={cropSrc} onClose={closeCropModal} onSave={handleCropSave} />
+      )}
 
       {err && <div className="alert alert-err">{err}</div>}
       {msg && <div className="alert alert-info">{msg}</div>}
@@ -168,9 +245,14 @@ function ProfileView() {
         </div>
         <div className="prof-section-body flex flex-col gap-md">
           <div className="g g-2">
-            <input className="glass-input" placeholder="First name" value={profileForm.first_name} onChange={e => pv('first_name', e.target.value)} style={{ textTransform: 'capitalize' }} />
-            <input className="glass-input" placeholder="Last name" value={profileForm.last_name} onChange={e => pv('last_name', e.target.value)} style={{ textTransform: 'capitalize' }} />
+            <input className="glass-input" placeholder="First name" value={profileForm.first_name} onChange={e => pv('first_name', e.target.value)} maxLength={100} style={{ textTransform: 'capitalize' }} />
+            <input className="glass-input" placeholder="Last name" value={profileForm.last_name} onChange={e => pv('last_name', e.target.value)} maxLength={100} style={{ textTransform: 'capitalize' }} />
           </div>
+          {(profileFirstNameError || profileLastNameError) && (
+            <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '-0.35rem' }}>
+              {profileFirstNameError || profileLastNameError}
+            </p>
+          )}
           <div style={{ position: 'relative' }}>
             <input
               className="glass-input"
@@ -186,7 +268,12 @@ function ProfileView() {
               </span>
             )}
           </div>
-          <input className="glass-input" placeholder="Phone number" value={profileForm.phone_number} onChange={e => pv('phone_number', e.target.value)} />
+          <input className="glass-input" type="tel" inputMode="numeric" maxLength={11} placeholder="Phone number (09xxxxxxxxx)" value={profileForm.phone_number} onChange={e => pv('phone_number', sanitizePhoneInput(e.target.value))} />
+          {profilePhoneError && (
+            <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '-0.35rem' }}>
+              {profilePhoneError}
+            </p>
+          )}
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '0.35rem', fontWeight: 600 }}>Date of Birth</label>
             <input
@@ -197,7 +284,14 @@ function ProfileView() {
               max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
             />
           </div>
-          <button className="btn btn-red" type="submit">Save Profile</button>
+          <button
+            className="btn btn-red"
+            type="submit"
+            disabled={!canSaveProfile}
+            style={{ opacity: canSaveProfile ? 1 : 0.55, cursor: canSaveProfile ? 'pointer' : 'not-allowed' }}
+          >
+            Save Profile
+          </button>
         </div>
       </form>
 
@@ -226,7 +320,7 @@ function ProfileView() {
         {feedbackErr && <div className="alert alert-err">{feedbackErr}</div>}
         {feedbackMsg && <div className="alert alert-info">{feedbackMsg}</div>}
 
-        <form className="flex flex-col gap-md" onSubmit={handleFeedbackSubmit}>
+        <form className="flex flex-col gap-md" onSubmit={requestFeedbackConfirmation}>
           <div>
             <p className="text-label mb-sm">Your Rating</p>
             <StarRating value={feedbackRating} onChange={setFeedbackRating} />
@@ -262,6 +356,76 @@ function ProfileView() {
             {feedbackSubmitting ? 'Submitting...' : <><Star size={14} style={{ display: 'inline', marginRight: '0.35rem', verticalAlign: 'middle' }} />Submit Feedback</>}
           </button>
         </form>
+
+        {/* Feedback confirmation modal */}
+        {confirmFeedback && (
+          <div
+            className="notif-panel-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Confirm feedback submission"
+            onClick={() => { if (!feedbackSubmitting) setConfirmFeedback(false); }}
+            style={{ zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: 'min(480px, 94vw)',
+                background: 'rgba(10,10,10,0.96)',
+                border: '1px solid rgba(232,0,30,0.24)',
+                borderRadius: '14px',
+                boxShadow: '0 20px 55px rgba(0,0,0,0.6)',
+                padding: '1.4rem',
+                position: 'relative',
+              }}
+            >
+              <div className="flex items-center gap-sm" style={{ marginBottom: '1rem' }}>
+                <Star size={18} fill="#f5a623" color="#f5a623" />
+                <h3 className="text-h3" style={{ margin: 0 }}>Submit Feedback?</h3>
+              </div>
+
+              <div className="flex flex-col gap-sm" style={{ marginBottom: '1.15rem' }}>
+                <div className="flex justify-between items-center flex-wrap gap-sm">
+                  <span className="text-label">Rating</span>
+                  <StarRating value={feedbackRating} readonly />
+                </div>
+                <div className="flex justify-between items-center flex-wrap gap-sm">
+                  <span className="text-label">Category</span>
+                  <span className="badge-glass" style={{ textTransform: 'capitalize', fontSize: '0.75rem' }}>
+                    {feedbackCategory.replace('_', ' / ')}
+                  </span>
+                </div>
+                <div className="flex gap-sm" style={{ alignItems: 'flex-start' }}>
+                  <span className="text-label" style={{ whiteSpace: 'nowrap' }}>Comment</span>
+                  <p className="text-body" style={{ margin: 0, fontSize: '0.85rem', flex: 1, wordBreak: 'break-word' }}>
+                    {feedbackComment.trim() || '—'}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '1.25rem' }}>
+                Your feedback will be sent to the platform admins.
+              </p>
+
+              <div className="flex gap-sm" style={{ justifyContent: 'flex-end' }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setConfirmFeedback(false)}
+                  disabled={feedbackSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-red"
+                  onClick={confirmAndSubmitFeedback}
+                  disabled={feedbackSubmitting}
+                >
+                  {feedbackSubmitting ? 'Submitting...' : 'Confirm Submit'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Feedback History */}
         {feedbackLoading ? (

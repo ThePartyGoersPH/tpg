@@ -52,6 +52,42 @@
   --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
+[data-theme="light"] {
+  --color-bg:            #f4f5f8;
+  --color-bg-card:       #ffffff;
+  --color-bg-elevated:   #eaecef;
+  --color-red-primary:   #CC0000;
+  --color-red-bright:    #e60000;
+  --color-red-glow:      rgba(204, 0, 0, 0.2);
+  --color-red-subtle:    rgba(204, 0, 0, 0.05);
+  --color-text-primary:  #0f172a;
+  --color-text-muted:    #64748b;
+  --color-border:        rgba(0, 0, 0, 0.08);
+
+  --red-primary:   #CC0000;
+  --red-glow:      rgba(204, 0, 0, 0.2);
+  --red-soft:      rgba(204, 0, 0, 0.06);
+  --red-deep:      #AA0000;
+  --glass-bg:      rgba(255, 255, 255, 0.92);
+  --glass-border:  rgba(0, 0, 0, 0.08);
+  --glass-shadow:  0 8px 30px rgba(0, 0, 0, 0.06);
+  --glass-hover:   rgba(0, 0, 0, 0.04);
+  --text-primary:  #0f172a;
+  --text-body:     #334155;
+  --text-muted:    #64748b;
+  --text-dim:      #94a3b8;
+  --bg-base:       #f4f5f8;
+  --surface-dark:  rgba(255, 255, 255, 0.95);
+
+  --bg: #f4f5f8;
+  --surface: rgba(0,0,0,0.03);
+  --surface-soft: rgba(0,0,0,0.02);
+  --text: #0f172a;
+  --muted: #64748b;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+
 * {
   box-sizing: border-box;
 }
@@ -270,11 +306,16 @@ textarea {
   position: sticky;
   top: 0;
   z-index: 100;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  background: rgba(10, 10, 10, 0.85);
-  border-bottom: 1px solid var(--color-border);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.04);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  background: rgba(22, 22, 26, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .navbar-wrap {
+  background: rgba(26, 26, 31, 0.92); /* #1A1A1F charcoal — distinct from the #0A0A0A page */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
 }
 
 .navbar {
@@ -286,11 +327,12 @@ textarea {
 }
 
 .brand {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Sora', 'Space Grotesk', sans-serif;
   font-weight: 800;
   font-size: 1.1rem;
-  color: var(--text-primary);
+  color: #FFFFFF;
   letter-spacing: -0.3px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
 }
 
 .brand-accent {
@@ -299,7 +341,7 @@ textarea {
 
 .brand-sub {
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   font-weight: 400;
 }
 
@@ -313,20 +355,20 @@ textarea {
 .nav-link {
   padding: 0.45rem 0.9rem;
   border-radius: 999px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   font-weight: 500;
   font-size: 0.85rem;
   transition: all 0.2s;
 }
 
 .nav-link:hover {
-  color: var(--text-primary);
+  color: var(--color-text-primary);
   background: rgba(255,255,255,0.06);
 }
 
 .nav-link.active {
   background: var(--color-red-subtle);
-  color: var(--text-primary);
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
@@ -368,6 +410,36 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+/* Right-cluster interactive hover (toggle, profile) */
+.user-profile-info {
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+  cursor: default;
+}
+.user-profile-info:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  transform: translateY(-1px);
+}
+
+/* Logout — bold filled treatment so it doesn't read as a ghost/disabled button */
+.nav-logout.btn-ghost {
+  background: var(--color-red-primary, #CC0000);
+  color: #ffffff;
+  border: 1px solid var(--color-red-primary, #CC0000);
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(204, 0, 0, 0.30);
+}
+.nav-logout.btn-ghost:hover {
+  background: #e41212;
+  border-color: #e41212;
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 
 /* ── FOOTER ── */
@@ -1401,6 +1473,124 @@ textarea {
 
 .maintenance-icon {
   font-size: 1.1rem;
+}
+
+/* ═══════════════════════════════════════════════════ */
+/* EMAIL VERIFICATION BANNER (non-blocking reminder)   */
+/* ═══════════════════════════════════════════════════ */
+.email-verification-banner {
+  position: sticky;
+  top: 0;
+  z-index: 1200;
+  background: #fef3c7;
+  border-bottom: 2px solid #f59e0b;
+  color: #92400e;
+  padding: 0.55rem 0;
+  padding-top: calc(0.55rem + env(safe-area-inset-top, 0px));
+}
+
+.email-verification-banner__inner {
+  width: min(1200px, 100% - 2rem);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  text-align: center;
+}
+
+.email-verification-banner__icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.email-verification-banner__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.email-verification-banner__text {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.email-verification-banner__notice {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.email-verification-banner__notice.is-ok {
+  color: #166534;
+}
+
+.email-verification-banner__notice.is-err {
+  color: #991b1b;
+}
+
+.email-verification-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.evb-btn {
+  appearance: none;
+  border: 1px solid #92400e;
+  background: #92400e;
+  color: #fffbeb;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.evb-btn:hover:not(:disabled) {
+  background: #78350f;
+  border-color: #78350f;
+}
+
+.evb-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.evb-btn--ghost {
+  background: transparent;
+  color: #92400e;
+}
+
+.evb-btn--ghost:hover:not(:disabled) {
+  background: rgba(146, 64, 14, 0.12);
+  border-color: #92400e;
+}
+
+.evb-btn--icon {
+  background: transparent;
+  color: #92400e;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.evb-btn--icon:hover:not(:disabled) {
+  background: rgba(146, 64, 14, 0.12);
+  border-color: #92400e;
 }
 
 .maintenance-overlay {

@@ -4,51 +4,10 @@ import { VIEWS } from '../contexts/ViewContext';
 import { useBars } from '../hooks/useBars';
 import { imageUrl } from '../utils/imageUrl';
 import { getBarTypes, getPrimaryBarType } from '../utils/barTypeLabel';
-import { Search, MapPin, Star, ArrowRight, SlidersHorizontal } from 'lucide-react';
+import { Search, Star, Filter, MapPin, Sparkles, Utensils, Martini, Mic, Music, Laugh, Beer } from 'lucide-react';
+import { getBarOpenStatus } from '../utils/barOpenStatus';
 
-const BAR_PLACEHOLDER = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='220' viewBox='0 0 400 220'%3E%3Crect width='400' height='220' fill='%23161616'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23333333'%3E%F0%9F%8D%B8%3C/text%3E%3C/svg%3E`;
-
-function BarCardImage({ bar }) {
-  const [hovered, setHovered] = useState(false);
-  const hasGif = Boolean(bar.video_path || bar.bar_gif);
-  const staticSrc = imageUrl(bar.image_path) || BAR_PLACEHOLDER;
-  const gifSrc = hasGif ? imageUrl(bar.video_path || bar.bar_gif) : null;
-  const [hoverTimeout, setHoverTimeout] = useState(null);
-
-  const handleMouseEnter = () => {
-    if (!hasGif) return;
-    if (hoverTimeout) clearTimeout(hoverTimeout);
-    const timeout = setTimeout(() => setHovered(true), 300); // 300ms delay
-    setHoverTimeout(timeout);
-  };
-
-  const handleMouseLeave = () => {
-    if (hoverTimeout) {
-      clearTimeout(hoverTimeout);
-      setHoverTimeout(null);
-    }
-    setHovered(false);
-  };
-
-  return (
-    <div
-      style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <img
-        src={hovered && gifSrc ? gifSrc : staticSrc}
-        alt={bar.name}
-        className="bcard-img"
-        onError={e => { e.target.src = BAR_PLACEHOLDER; }}
-        style={{ transition: 'opacity 0.25s ease' }}
-      />
-      {hasGif && !hovered && (
-        <div style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(204,0,0,0.85)', borderRadius: 4, padding: '2px 7px', fontSize: '0.6rem', fontWeight: 700, color: '#fff', letterSpacing: '1px', backdropFilter: 'blur(4px)' }}>GIF</div>
-      )}
-    </div>
-  );
-}
+const BAR_PLACEHOLDER = 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=600&auto=format&fit=crop&q=80';
 
 const NEAR_KM = 5;
 
@@ -62,24 +21,112 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/* ── Bar card cover photo with GIF hover ── */
+function BarCardImage({ bar, badge, isNear, isFeatured }) {
+  const [hovered, setHovered] = useState(false);
+  const hasGif = Boolean(bar.video_path || bar.bar_gif);
+  const staticSrc = imageUrl(bar.image_path) || BAR_PLACEHOLDER;
+  const gifSrc = hasGif ? imageUrl(bar.video_path || bar.bar_gif) : null;
+  const [hoverTimeout, setHoverTimeout] = useState(null);
+
+  const handleMouseEnter = () => {
+    if (!hasGif) return;
+    if (hoverTimeout) clearTimeout(hoverTimeout);
+    const timeout = setTimeout(() => setHovered(true), 300);
+    setHoverTimeout(timeout);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimeout) { clearTimeout(hoverTimeout); setHoverTimeout(null); }
+    setHovered(false);
+  };
+
+  return (
+    <div
+      className="grab-bar-img-wrap"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <img
+        src={hovered && gifSrc ? gifSrc : staticSrc}
+        alt={bar.name}
+        className="grab-bar-img"
+        draggable={false}
+        onError={e => { e.target.src = BAR_PLACEHOLDER; }}
+      />
+      {/* Category badge overlaid on the photo */}
+      {badge && (
+        <span
+          style={{
+            position: 'absolute',
+            top: 10,
+            left: 10,
+            background: '#CC0000',
+            color: '#fff',
+            fontSize: '0.68rem',
+            fontWeight: 800,
+            padding: '0.25rem 0.65rem',
+            borderRadius: 4,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}
+        >
+          {badge}
+        </span>
+      )}
+      {/* Top Rated tag (uniform grid — overlay only) */}
+      {isFeatured && (
+        <span className="bars-featured-ribbon">
+          <Star size={11} fill="#fff" stroke="#fff" /> Top Rated
+        </span>
+      )}
+      {/* Near badge */}
+      {isNear && (
+        <span
+          style={{
+            position: 'absolute',
+            ...(isFeatured ? { bottom: 8, right: 8 } : { top: 10, right: 10 }),
+            background: '#10b981',
+            color: '#fff',
+            fontSize: '0.65rem',
+            fontWeight: 800,
+            padding: '0.2rem 0.55rem',
+            borderRadius: 4,
+            letterSpacing: '0.5px',
+            textTransform: 'uppercase',
+          }}
+        >
+          📍 Nearby
+        </span>
+      )}
+      {/* GIF indicator */}
+      {hasGif && !hovered && (
+        <div style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(204,0,0,0.85)', borderRadius: 4, padding: '2px 7px', fontSize: '0.6rem', fontWeight: 700, color: '#fff', letterSpacing: '1px', backdropFilter: 'blur(4px)' }}>GIF</div>
+      )}
+    </div>
+  );
+}
+
+/* ── Main View ── */
 function BarsView() {
-  const { navigate } = useView();
-  const { bars, loading, error, params, updateFilters, refetch } = useBars();
+  const { navigate, viewParams } = useView();
+  const { bars, loading, error } = useBars();
   const [search, setSearch] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
-  const [categoryInput, setCategoryInput] = useState(params.category || '');
   const [selectedBarTypes, setSelectedBarTypes] = useState([]);
 
   const filterBarsByQuery = (items, query) => {
     const q = String(query || '').trim().toLowerCase();
     if (!q) return items;
     return (items || []).filter((bar) => {
-      const haystack = [bar?.name, bar?.city, bar?.address, bar?.category]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
+      const typeStr = Array.isArray(bar?.bar_types)
+        ? bar.bar_types.join(' ')
+        : (bar?.bar_types || '');
+      const haystack = [bar?.name, bar?.city, bar?.address, bar?.category, typeStr]
+        .filter(Boolean).join(' ').toLowerCase();
       return haystack.includes(q);
     });
   };
@@ -87,40 +134,24 @@ function BarsView() {
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      (p) => {
-        setUserLocation({ lat: p.coords.latitude, lng: p.coords.longitude });
-      },
+      (p) => setUserLocation({ lat: p.coords.latitude, lng: p.coords.longitude }),
       () => {},
       { enableHighAccuracy: false, timeout: 8000 }
     );
   }, []);
-
-  const handleFilterChange = (key, value) => {
-    setSearchResults(null);
-    updateFilters({ [key]: value || undefined });
-  };
-
-  const handleApplyFilters = () => {
-    setSearchResults(null);
-    // Normalize category input: treat 'bar', 'bars', 'all', empty as no filter
-    const rawCat = String(categoryInput ?? '').trim();
-    const normalizedCat = rawCat.toLowerCase();
-    const shouldClearCat = !rawCat || normalizedCat === 'bar' || normalizedCat === 'bars' || normalizedCat === 'all';
-    updateFilters({ category: shouldClearCat ? undefined : rawCat });
-    refetch();
-  };
 
   const handleSearch = async (e) => {
     e.preventDefault();
     const q = search.trim();
     if (!q) {
       setSearchResults(null);
+      window.history.pushState({}, '', '/bars');
       return;
     }
-
     setSearching(true);
     try {
       setSearchResults(filterBarsByQuery(bars, q));
+      window.history.pushState({}, '', `/bars?search=${encodeURIComponent(q)}`);
     } finally {
       setSearching(false);
     }
@@ -133,59 +164,94 @@ function BarsView() {
     setSearchResults(filterBarsByQuery(bars, q));
   }, [bars]);
 
-  // Filter by bar types
-  const filterByBarTypes = (items) => {
-    if (selectedBarTypes.length === 0) return items;
-    return items.filter(bar => {
-      const barTypes = getBarTypes(bar);
-      return selectedBarTypes.some(selectedType => barTypes.includes(selectedType));
-    });
+  // Seed search from the homepage hero or a /bars?search= URL param.
+  // Uses the SAME filterBarsByQuery so both entry points stay in sync.
+  useEffect(() => {
+    const q = String(viewParams?.search || '').trim();
+    if (!q) return;
+    if (!bars || bars.length === 0) return; // wait until bars are loaded
+    if (search.trim() === q && searchResults !== null) return; // already applied
+    setSearch(q);
+    setSearchResults(filterBarsByQuery(bars, q));
+  }, [bars, viewParams]);
+
+  const baseBars = searchResults !== null ? searchResults : bars;
+  const hasSearch = searchResults !== null && search.trim() !== '';
+
+  const displayedBars = (baseBars || []).filter((bar) => {
+    if (selectedBarTypes.length === 0) return true;
+    const types = getBarTypes(bar);
+    return selectedBarTypes.some((t) => types.includes(t));
+  });
+
+  const featuredId = displayedBars.length
+    ? [...displayedBars].sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0))[0].id
+    : null;
+
+  const CATEGORIES = ['All', 'Restobar', 'Cocktail Bar', 'KTV Lounge', 'Live Music', 'Comedy Bar', 'Beer Garden'];
+
+  const CATEGORY_ICONS = {
+    'All': Sparkles,
+    'Restobar': Utensils,
+    'Cocktail Bar': Martini,
+    'KTV Lounge': Mic,
+    'Live Music': Music,
+    'Comedy Bar': Laugh,
+    'Beer Garden': Beer,
   };
 
-  const displayedBars = filterByBarTypes(searchResults !== null ? searchResults : bars);
-
   return (
-    <div className="flex flex-col gap-xl">
-      {/* ── Search Header ── */}
-      <section className="animate-in">
-        <span className="home-eyebrow">BROWSE BARS</span>
-        <h1 className="home-section-title" style={{ marginTop: '0.5rem' }}>FIND BARS IN <span className="home-accent">CAVITE</span></h1>
-        <p className="home-section-sub">Browse active bars by category.</p>
+    <div className="flex flex-col gap-lg animate-in" style={{ maxWidth: 1200, margin: '0 auto', padding: '1rem 0.5rem 3rem' }}>
 
-        <div className="flex gap-sm mt-lg" style={{ flexWrap: 'wrap' }}>
-          <input
-            className="glass-input"
-            style={{ flex: '1 1 200px' }}
-            placeholder="Category (e.g. nightclub)"
-            value={categoryInput}
-            onChange={(e) => setCategoryInput(e.target.value)}
-          />
-          <button className="btn btn-glass" type="button" onClick={handleApplyFilters}><SlidersHorizontal size={14} /> Apply Filters</button>
+      {/* ── PAGE HEADER ── */}
+      <section className="bars-hero flex flex-col gap-md">
+        <div>
+          <span style={{ display: 'inline-block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-text-muted)', marginBottom: '0.35rem' }}>
+            EXPLORE CAVITE NIGHTLIFE
+          </span>
+          <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(1.6rem, 4vw, 2rem)', fontWeight: 800, margin: '0 0 0.3rem', color: 'var(--color-text-primary)' }}>
+            Find Bars &amp; Restobars
+          </h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', margin: 0 }}>
+            Browse top-rated nightlife spots, cocktail lounges, and restobars in Cavite.
+          </p>
         </div>
 
-        <form className="flex gap-sm mt-sm" style={{ flexWrap: 'wrap' }} onSubmit={handleSearch}>
-          <input
-            className="glass-input"
-            style={{ flex: '1 1 250px' }}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by bar name, city, address"
-          />
-          <button className="btn btn-red" type="submit" disabled={searching}>
-            {searching ? 'Searching...' : <><Search size={14} /> Search</>}
+        {/* Search Form */}
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', alignItems: 'stretch' }}>
+          <div className="grab-search-box" style={{ flex: '1 0 260px', margin: 0 }}>
+            <Search size={18} color="#CC0000" />
+            <input
+              type="text"
+              className="grab-search-input"
+              placeholder="Search by bar name, city, or address..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <button
+            type="submit"
+            className="btn btn-red"
+            style={{ padding: '0.75rem 1.5rem', borderRadius: 10, fontWeight: 700 }}
+            disabled={searching}
+          >
+            {searching ? 'Searching…' : 'Search'}
           </button>
         </form>
 
-        {/* Bar Type Filters */}
-        <div className="flex gap-sm mt-md" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
-          <span className="text-sm font-semibold" style={{ color: '#888' }}>Bar Type:</span>
-          {['All', 'Club', 'Restobar', 'Comedy Bar', 'KTV', 'Bar'].map((type) => {
+        {/* Category Pills */}
+        <div className="flex gap-sm" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-muted)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Filter size={14} color="#CC0000" /> Category:
+          </span>
+          {CATEGORIES.map((type) => {
             const isSelected = type === 'All' ? selectedBarTypes.length === 0 : selectedBarTypes.includes(type);
+            const Icon = CATEGORY_ICONS[type] || Sparkles;
             const handleClick = () => {
               if (type === 'All') {
                 setSelectedBarTypes([]);
               } else {
-                setSelectedBarTypes(prev => 
+                setSelectedBarTypes(prev =>
                   prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
                 );
               }
@@ -195,16 +261,10 @@ function BarsView() {
                 key={type}
                 type="button"
                 onClick={handleClick}
-                className="btn btn-sm"
-                style={{
-                  background: isSelected ? 'rgba(204,0,0,0.15)' : 'rgba(255,255,255,0.05)',
-                  border: isSelected ? '1px solid rgba(204,0,0,0.4)' : '1px solid rgba(255,255,255,0.1)',
-                  color: isSelected ? '#fff' : '#888',
-                  fontWeight: isSelected ? 600 : 400,
-                  fontSize: '0.8rem',
-                  padding: '0.4rem 0.8rem'
-                }}
+                className={`bars-pill ${isSelected ? 'active' : ''}`}
+                aria-pressed={isSelected}
               >
+                <Icon size={14} />
                 {type}
               </button>
             );
@@ -212,79 +272,94 @@ function BarsView() {
         </div>
 
         {!loading && displayedBars.length > 0 && (
-          <p className="text-muted mt-md" style={{ fontSize: '0.82rem' }}>Showing <strong style={{ color: '#fff' }}>{displayedBars.length}</strong> bar{displayedBars.length !== 1 ? 's' : ''}{params.category ? ` in ${params.category}` : ''}</p>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: 0 }}>
+            Showing <strong style={{ color: 'var(--color-text-primary)' }}>{displayedBars.length}</strong>{' '}
+            bar{displayedBars.length !== 1 ? 's' : ''} in Cavite
+          </p>
         )}
       </section>
 
-      {/* ── Results ── */}
-      {loading && <div className="loading-state"><div className="spinner" /><span>Loading bars...</span></div>}
+      {/* ── BAR CARDS GRID ── */}
+      {loading && (
+        <div className="loading-state" style={{ minHeight: '40vh' }}>
+          <div className="spinner" /><span>Loading bars...</span>
+        </div>
+      )}
       {error && <p className="error-text">{error}</p>}
 
       {!loading && (
         displayedBars.length ? (
-          <div className="bars-grid">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
             {displayedBars.map((bar) => {
               const lat = Number(bar.latitude);
               const lng = Number(bar.longitude);
-              const logoSrc = imageUrl(bar.logo_path || bar.bar_icon || bar.image_path);
+              const logoSrc = imageUrl(bar.logo_path || bar.bar_icon);
               const primaryBarType = getPrimaryBarType(bar);
+              const isFeatured = bar.id === featuredId;
+              const hasReviews = (bar.review_count || 0) > 0;
               const isNear =
                 Number.isFinite(lat) &&
                 Number.isFinite(lng) &&
                 userLocation &&
                 haversineKm(userLocation.lat, userLocation.lng, lat, lng) <= NEAR_KM;
+              const openStatus = getBarOpenStatus(bar);
 
               return (
                 <div
-                  className="bcard"
+                  className="grab-bar-card"
                   key={bar.id}
                   onClick={() => navigate(VIEWS.BAR_DETAIL, { barId: bar.id })}
                 >
-                  <BarCardImage bar={bar} />
-                  <div className="bcard-scrim" />
-                  <div className="bcard-badges">
-                    <span className="bcard-pill">{primaryBarType}</span>
-                    {isNear && <span className="badge-success" style={{ fontSize: '0.6rem', padding: '0.15rem 0.5rem' }}><MapPin size={10} /> Near</span>}
-                  </div>
-                  <div className="bcard-info">
-                    <div className="bcard-row">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-                        <div
-                          style={{
-                            width: 52,
-                            height: 52,
-                            borderRadius: '50%',
-                            overflow: 'hidden',
-                            border: '2px solid rgba(255,255,255,0.9)',
-                            boxShadow: '0 0 0 2px rgba(232,0,30,0.35), 0 10px 22px rgba(0,0,0,0.5)',
-                            background: 'rgba(10,10,10,0.8)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {logoSrc ? (
-                            <img
-                              src={logoSrc}
-                              alt={`${bar.name} logo`}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>🍸</span>
-                          )}
+                  {/* Cover photo with badge inside */}
+                  <BarCardImage bar={bar} badge={primaryBarType} isNear={isNear} isFeatured={isFeatured} />
+
+                  {/* Card Body */}
+                  <div className="grab-bar-body">
+                    <div className="flex items-center gap-sm">
+                      {logoSrc ? (
+                        <img
+                          src={logoSrc}
+                          alt={bar.name}
+                          style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-border)', flexShrink: 0 }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#CC0000', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.1rem', flexShrink: 0 }}>
+                          {bar.name ? bar.name[0].toUpperCase() : 'B'}
                         </div>
-                        <h3 className="bcard-name" style={{ margin: 0 }}>{bar.name}</h3>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <h3 className="grab-bar-title">{bar.name}</h3>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.45rem', borderRadius: 4, background: openStatus.isOpen ? 'rgba(16,185,129,0.15)' : 'rgba(156,163,175,0.15)', color: openStatus.isOpen ? '#10b981' : '#9ca3af', whiteSpace: 'nowrap' }}>
+                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: openStatus.isOpen ? '#10b981' : '#9ca3af' }} />
+                            {openStatus.label}
+                          </span>
+                        </div>
+                        <p className="grab-bar-meta" style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', margin: 0 }}>
+                          <MapPin size={12} style={{ marginRight: 3 }} />{bar.city || 'Cavite'} &bull; {primaryBarType}
+                        </p>
                       </div>
-                      <span className="bcard-followers">{bar.follower_count || 0} followers</span>
                     </div>
-                    <p className="bcard-loc">{bar.city} · {bar.price_range || '$$'}</p>
-                    <div className="bcard-rating"><Star size={12} /> {bar.rating || '0.0'} ({bar.review_count || 0})</div>
-                    <button className="btn btn-red w-full" style={{ marginTop: '0.75rem' }} onClick={(e) => { e.stopPropagation(); navigate(VIEWS.BAR_DETAIL, { barId: bar.id }); }}>
-                      View Details
+
+                    <div className="grab-bar-stats">
+                      <span className="grab-bar-rating">
+                        <Star size={14} fill={hasReviews ? '#F5B544' : 'none'} stroke={hasReviews ? '#F5B544' : 'rgba(255,255,255,0.25)'} />
+                        {hasReviews
+                          ? <span style={{ color: '#F5B544', fontWeight: 700 }}>{bar.rating}</span>
+                          : <span className="muted">New</span>}
+                        {hasReviews && <span className="muted">({bar.review_count} reviews)</span>}
+                      </span>
+                      {hasReviews && <span className="divider" />}
+                      <span className={hasReviews ? '' : 'muted'}>{bar.follower_count || 0} followers</span>
+                    </div>
+
+                    <button
+                      className="btn btn-red w-full"
+                      style={{ marginTop: '0.85rem', borderRadius: 10, fontWeight: 700, fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      onClick={(e) => { e.stopPropagation(); navigate(VIEWS.BAR_DETAIL, { barId: bar.id }); }}
+                    >
+                      View Details &amp; Menu <span className="cta-arrow">→</span>
                     </button>
                   </div>
                 </div>
@@ -292,10 +367,16 @@ function BarsView() {
             })}
           </div>
         ) : (
-          <div className="glass-card empty-state">
-            <div className="empty-icon"><Search size={32} /></div>
-            <h3 className="text-h3">No bars found</h3>
-            <p className="text-muted mt-sm">Try changing filters or search terms.</p>
+          <div style={{ textAlign: 'center', padding: '3rem', background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 16 }}>
+            <Search size={36} color="#CC0000" />
+            <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.25rem', fontWeight: 700, margin: '1rem 0 0.5rem', color: 'var(--color-text-primary)' }}>
+              {hasSearch ? `No bars found for "${search.trim()}"` : 'No bars found'}
+            </h3>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', margin: 0 }}>
+              {hasSearch
+                ? `We couldn't find any bars matching "${search.trim()}". Try a different keyword or clear the category filters.`
+                : 'Try changing your filters or searching another keyword.'}
+            </p>
           </div>
         )
       )}

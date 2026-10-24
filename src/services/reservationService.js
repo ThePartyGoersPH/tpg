@@ -11,6 +11,21 @@ export const reservationService = {
     return response.data?.data || [];
   },
 
+  async myReservationById(reservationId) {
+    const response = await reservationApi.myReservationById(reservationId);
+    return response.data?.data || null;
+  },
+
+  async myReviews() {
+    const response = await reservationApi.myReviews();
+    return response.data?.data || [];
+  },
+
+  async submitReview(reservationId, payload) {
+    const response = await reservationApi.submitReview(reservationId, payload);
+    return response.data;
+  },
+
   async cancel(reservationId) {
     const response = await reservationApi.cancel(reservationId);
     return response.data;

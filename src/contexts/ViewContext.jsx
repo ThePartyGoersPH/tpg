@@ -49,10 +49,17 @@ function saveViewState(view, params = {}) {
 }
 
 function detectInitialView() {
-  const path = window.location.pathname;
+  let path = window.location.pathname;
   const search = window.location.search;
+  // Strip /customer/ prefix if present (for dev deployment at /customer/)
+  // and ensure leading slash is preserved for route matching
+  const customerPrefix = '/customer/';
+  if (path.startsWith(customerPrefix)) {
+    const remainder = path.slice(customerPrefix.length);
+    path = (remainder ? '/' + remainder : '/');
+  }
   const params = new URLSearchParams(search);
-  const hasToken = Boolean(localStorage.getItem('token'));
+  const hasToken = Boolean(localStorage.getItem('tpg_customer_token'));
   const saved = hasToken ? readSavedViewState() : null;
 
   if (path.startsWith('/payment/success')) {
@@ -97,12 +104,36 @@ function detectInitialView() {
   if (path.startsWith('/register')) return { view: VIEWS.REGISTER, params: {} };
   if (path.startsWith('/map')) return { view: VIEWS.MAP, params: {} };
   if (path.startsWith('/verify-email')) {
+    // Two ways in: the emailed ?token= link, or a redirect from a blocked
+    // login that carries ?email= so the OTP form can be prefilled.
     const token = params.get('token');
-    return { view: VIEWS.VERIFY_EMAIL, params: { token } };
+    const email = params.get('email');
+    return { view: VIEWS.VERIFY_EMAIL, params: { token, email } };
   }
   if (path.startsWith('/reset-password')) {
     const token = params.get('token');
     return { view: VIEWS.RESET_PASSWORD, params: { token } };
+  }
+  if (path.startsWith('/bars')) {
+    const search = params.get('search') || params.get('q') || '';
+    return { view: VIEWS.BARS, params: { search } };
+  }
+
+  // Deep-link: ?media=<id>&bar=<barId> opens BAR_DETAIL directly
+  if (params.get('media')) {
+    const mediaId = Number(params.get('media'));
+    const barId = Number(params.get('bar'));
+    const commentId = params.get('comment') ? Number(params.get('comment')) : null;
+    if (mediaId > 0 && barId > 0) {
+      return {
+        view: VIEWS.BAR_DETAIL,
+        params: {
+          barId,
+          openMediaId: mediaId,
+          ...(commentId ? { highlightCommentId: commentId } : {}),
+        },
+      };
+    }
   }
 
   if (hasToken) {

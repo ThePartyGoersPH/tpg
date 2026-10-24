@@ -1,20 +1,52 @@
+function normalizeDateValue(value) {
+  if (!value) return null;
+  let str = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(str) && !/Z|[+-]\d{2}:?\d{2}$/.test(str)) {
+    str = str.replace(' ', 'T') + 'Z';
+  }
+  return new Date(str);
+}
+
 export function formatDate(value) {
   if (!value) return '-';
-  const date = new Date(value);
+  const date = normalizeDateValue(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString('en-PH', {
     year: 'numeric',
-    month: 'short',
+    month: 'long',
     day: 'numeric',
   });
 }
 
 export function formatTime(value) {
   if (!value) return '-';
-  const raw = value.length === 5 ? `${value}:00` : value;
-  const date = new Date(`1970-01-01T${raw}`);
+  const raw = String(value).trim();
+  const timeOnly = raw.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  let date = null;
+
+  if (timeOnly) {
+    date = new Date();
+    date.setHours(Number(timeOnly[1]), Number(timeOnly[2]), Number(timeOnly[3] || 0), 0);
+  } else {
+    date = normalizeDateValue(raw);
+  }
+
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return date.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+export function formatDateTime(value) {
+  if (!value) return '-';
+  const date = normalizeDateValue(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('en-PH', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 }
 
 export function fullName(user) {

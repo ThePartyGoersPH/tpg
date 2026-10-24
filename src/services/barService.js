@@ -65,4 +65,9 @@ export const barService = {
     const response = await barApi.deleteReview(barId);
     return response.data;
   },
+
+  async videos(barId) {
+    const response = await barApi.videos(barId);
+    return response.data?.data || [];
+  },
 };

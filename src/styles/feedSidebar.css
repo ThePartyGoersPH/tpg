@@ -409,3 +409,61 @@
     gap: 0.75rem;
   }
 }
+
+/* ── LIGHT MODE OVERRIDES FOR SIDEBAR WIDGETS ── */
+[data-theme="light"] .sidebar-widget {
+  background: #ffffff;
+  border-color: #e5e7eb;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .sidebar-widget-title {
+  color: #111827;
+}
+
+[data-theme="light"] .feed-filter-btn {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+  color: #4b5563;
+}
+
+[data-theme="light"] .feed-filter-btn:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+[data-theme="light"] .feed-filter-btn.active {
+  background: rgba(204, 0, 0, 0.08);
+  border-color: #CC0000;
+  color: #CC0000;
+}
+
+[data-theme="light"] .stat-box-mini {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+[data-theme="light"] .stat-value-mini {
+  color: #111827;
+}
+
+[data-theme="light"] .stat-label-mini {
+  color: #6b7280;
+}
+
+[data-theme="light"] .party-weather-item {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+[data-theme="light"] .party-weather-city {
+  color: #111827;
+}
+
+[data-theme="light"] .party-weather-bars {
+  color: #6b7280;
+}
+
+[data-theme="light"] .invite-text {
+  color: #4b5563;
+}

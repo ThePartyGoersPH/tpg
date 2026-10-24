@@ -1,13 +1,8 @@
 import { authApi } from '../api/authApi';
-import { CUSTOMER_ROLE, CUSTOMER_ROLE_BLOCK_MESSAGE, DEFAULT_ERROR_MESSAGE } from '../utils/constants';
+import { CUSTOMER_ROLE_BLOCK_MESSAGE, DEFAULT_ERROR_MESSAGE, isCustomerPortalUser } from '../utils/constants';
 
 function extractError(error) {
   return error?.response?.data?.message || error?.message || DEFAULT_ERROR_MESSAGE;
-}
-
-function isCustomerUser(user) {
-  const normalizedRole = String(user?.role || user?.role_name || '').toLowerCase();
-  return normalizedRole === CUSTOMER_ROLE;
 }
 
 export const authService = {
@@ -22,7 +17,7 @@ export const authService = {
       const loginData = response.data?.data;
       const user = loginData?.user;
 
-      if (!isCustomerUser(user)) {
+      if (!isCustomerPortalUser(user)) {
         throw new Error(CUSTOMER_ROLE_BLOCK_MESSAGE);
       }
 
@@ -30,9 +25,19 @@ export const authService = {
     } catch (error) {
       const msg = extractError(error) || error.message;
       const thrownError = new Error(msg);
-      thrownError.code = error?.response?.data?.code || null;
+      const data = error?.response?.data || {};
+      thrownError.code = data.code || null;
       thrownError.status = error?.response?.status || null;
-      thrownError.email = error?.response?.data?.email || null;
+      thrownError.email = data.email || null;
+      // Brute-force signals for the login screens (absent on success paths).
+      thrownError.attemptsRemaining =
+        typeof data.attemptsRemaining === 'number' ? data.attemptsRemaining : null;
+      thrownError.retryAfterSeconds =
+        typeof data.retryAfterSeconds === 'number' ? data.retryAfterSeconds : null;
+      thrownError.lockedUntil = data.lockedUntil || null;
+      // True when the backend actually re-sent the verification email on this
+      // attempt (it stays quiet while the previous code is still valid).
+      thrownError.verificationSent = data.verification_sent === true;
       throw thrownError;
     }
   },

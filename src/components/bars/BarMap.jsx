@@ -1,6 +1,6 @@
 function BarMap({ latitude, longitude, name }) {
   if (!latitude || !longitude) {
-    return <p className="section-subtitle">No map coordinates available for this bar.</p>;
+    return <p className="section-subtitle">This venue does not have a map location yet.</p>;
   }
 
   const mapLink = `https://www.google.com/maps?q=${latitude},${longitude}`;

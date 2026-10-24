@@ -14,4 +14,21 @@ export const barApi = {
   reviewEligibility: (barId) => apiClient.get(`/public/bars/${barId}/reviews/eligibility`),
   submitReview: (barId, payload) => apiClient.post(`/public/bars/${barId}/reviews`, payload),
   deleteReview: (barId) => apiClient.delete(`/public/bars/${barId}/reviews`),
+  videos: (barId) => apiClient.get(`/public/bars/${barId}/videos`),
+
+  // Media engagement (likes & comments)
+  mediaEngagement: (mediaId) => apiClient.get(`/media/${mediaId}/engagement`, { silentError: true }),
+  toggleMediaLike: (mediaId) => apiClient.post(`/media/${mediaId}/like`),
+  mediaComments: (mediaId) => apiClient.get(`/media/${mediaId}/comments`),
+  addMediaComment: (mediaId, content, parentId, mentionedUserId, mentionedUserName) =>
+    apiClient.post(`/media/${mediaId}/comments`, {
+      content,
+      parent_comment_id: parentId,
+      mentioned_user_id: mentionedUserId || null,
+      mentioned_user_name: mentionedUserName || null,
+    }),
+  toggleCommentLike: (commentId) =>
+    apiClient.post(`/media/comments/${commentId}/like`),
+  deleteMediaComment: (mediaId, commentId) =>
+    apiClient.delete(`/media/${mediaId}/comments/${commentId}`),
 };

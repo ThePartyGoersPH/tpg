@@ -2,20 +2,11 @@ import { useEffect, useState } from 'react';
 import { useView } from '../hooks/useView';
 import { VIEWS } from '../contexts/ViewContext';
 import { orderService } from '../services/orderService';
+import { formatDateTime } from '../utils/dateHelpers';
 import { ArrowLeft, Printer, CheckCircle, Clock, XCircle, Receipt, MapPin, Phone, Mail } from 'lucide-react';
 
 function fmt(n) {
   return `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function formatDateTime(dt) {
-  if (!dt) return '—';
-  try {
-    return new Date(dt).toLocaleString('en-PH', {
-      year: 'numeric', month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit', hour12: true,
-    });
-  } catch (_) { return dt; }
 }
 
 function StatusBadge({ status, paymentStatus }) {

@@ -50,6 +50,32 @@ const parseClockToMinutes = (token) => {
   return hh * 60 + mm;
 };
 
+const getLocalTodayDateString = () => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const normalizeReservationDateInput = (rawDate) => {
+  if (!rawDate) return null;
+  const str = String(rawDate).trim();
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  const parsed = new Date(`${str}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  if (parsed.getFullYear() !== year || parsed.getMonth() + 1 !== month || parsed.getDate() !== day) return null;
+
+  return str;
+};
+
 const buildHourlySlots = (hoursText, reservationDate) => {
   if (!hoursText) return [];
   const normalized = String(hoursText).replace(/\s+to\s+/gi, ' - ').trim();
@@ -70,7 +96,7 @@ const buildHourlySlots = (hoursText, reservationDate) => {
     for (let h = 0; h < endHour; h += 1) slots.push(`${String(h).padStart(2, '0')}:00:00`);
   }
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = getLocalTodayDateString();
   if (reservationDate === todayStr) {
     const nowHour = new Date().getHours();
     return slots.filter((s) => Number(s.slice(0, 2)) > nowHour);
@@ -88,6 +114,7 @@ const displayHourLabel = (timeValue) => {
 
 function ReservationForm({ barId, barDetail, tables, events, onCheckTables, onSubmit, submitting }) {
   const [form, setForm] = useState(initialState);
+  const minReservationDate = useMemo(() => getLocalTodayDateString(), []);
 
   const availableTableOptions = useMemo(
     () => tables.filter((table) => table.is_active === 1 || table.is_active === true),
@@ -143,9 +170,15 @@ function ReservationForm({ barId, barDetail, tables, events, onCheckTables, onSu
   }, [availableHours, form.date, form.time]);
 
   const handleCheck = () => {
-    if (!form.date || !form.time || !form.party_size) return;
+    const normalizedDate = normalizeReservationDateInput(form.date);
+    if (!normalizedDate || normalizedDate < minReservationDate || !form.time || !form.party_size) return;
+
+    if (normalizedDate !== form.date) {
+      setForm((prev) => ({ ...prev, date: normalizedDate }));
+    }
+
     onCheckTables({
-      date: form.date,
+      date: normalizedDate,
       time: form.time,
       party_size: Number(form.party_size),
     });
@@ -153,13 +186,14 @@ function ReservationForm({ barId, barDetail, tables, events, onCheckTables, onSu
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (!form.table_id) return;
+    const normalizedDate = normalizeReservationDateInput(form.date);
+    if (!form.table_id || !normalizedDate || normalizedDate < minReservationDate) return;
 
     onSubmit({
       bar_id: Number(barId),
       table_id: Number(form.table_id),
       event_id: form.event_id ? Number(form.event_id) : undefined,
-      reservation_date: form.date,
+      reservation_date: normalizedDate,
       reservation_time: form.time,
       party_size: Number(form.party_size),
       notes: form.notes.trim(),
@@ -172,7 +206,7 @@ function ReservationForm({ barId, barDetail, tables, events, onCheckTables, onSu
       <h4>Reserve a table</h4>
 
       <div className="grid two-col">
-        <input className="input" type="date" value={form.date} onChange={(e) => handleChange('date', e.target.value)} required />
+        <input className="input" type="date" value={form.date} min={minReservationDate} onChange={(e) => handleChange('date', e.target.value)} required />
         <select className="select" value={form.time} onChange={(e) => handleChange('time', e.target.value)} required>
           <option value="">Select hour</option>
           {availableHours.map((time) => (

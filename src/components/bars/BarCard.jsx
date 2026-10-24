@@ -89,7 +89,7 @@ function BarCard({ bar }) {
           </div>
           <h3 style={{ margin: 0 }}>{bar.name}</h3>
         </div>
-        <p className="section-subtitle">{bar.city} · {bar.price_range || '$$'}</p>
+        <p className="section-subtitle">{bar.city} · {primaryBarType}</p>
         <p style={{ 
           overflow: 'hidden', 
           textOverflow: 'ellipsis', 

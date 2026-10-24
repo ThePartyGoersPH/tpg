@@ -1,11 +1,14 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useView } from '../hooks/useView';
 import { barService } from '../services/barService';
 import { eventService } from '../services/eventService';
 import { socialService } from '../services/socialService';
 import { reservationService } from '../services/reservationService';
 import { paymentService } from '../services/paymentService';
 import { imageUrl } from '../utils/imageUrl';
+import { canOrderAtBar, readOnlyMessage } from '../utils/ownerPreview';
 import { formatDate, formatTime, timeAgo } from '../utils/dateHelpers';
 import { Clock, Heart, MessageCircle, PartyPopper, Flag } from 'lucide-react';
 import { LeftSidebar, RightSidebar } from '../components/feed/FeedSidebar';
@@ -82,6 +85,96 @@ function BarAvatar({ event, size = 22 }) {
   );
 }
 
+const parseEventClockToMinutes = (token) => {
+  if (!token) return null;
+  const cleaned = String(token).trim().toLowerCase();
+  const match = cleaned.match(/^(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?\s*(am|pm)?$/i);
+  if (!match) return null;
+
+  let hh = Number(match[1]);
+  const mm = Number(match[2] || 0);
+  const meridiem = match[4] ? match[4].toLowerCase() : null;
+  if (!Number.isFinite(hh) || !Number.isFinite(mm) || mm < 0 || mm > 59) return null;
+
+  if (meridiem) {
+    if (hh < 1 || hh > 12) return null;
+    if (meridiem === 'am' && hh === 12) hh = 0;
+    if (meridiem === 'pm' && hh !== 12) hh += 12;
+  }
+
+  if (hh < 0 || hh > 23) return null;
+  return hh * 60 + mm;
+};
+
+const normalizeDateLikeToYmd = (rawDate) => {
+  if (!rawDate) return null;
+  const str = String(rawDate).trim();
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return `${match[1]}-${match[2]}-${match[3]}`;
+  }
+
+  const parsed = new Date(str);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  const yyyy = parsed.getFullYear();
+  const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+  const dd = String(parsed.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const toOnTheHourTime = (minutes) => {
+  if (!Number.isFinite(minutes)) return null;
+  const hour = Math.floor(minutes / 60);
+  if (hour < 0 || hour > 23) return null;
+  return `${String(hour).padStart(2, '0')}:00:00`;
+};
+
+const getEventWindow = (event) => {
+  if (!event) return null;
+
+  const eventDate = normalizeDateLikeToYmd(event?.event_date || event?.eventDate);
+  if (!eventDate) return null;
+
+  const startRaw = event?.start_time || event?.startTime;
+  const endRaw = event?.end_time || event?.endTime;
+  const startMinutes = parseEventClockToMinutes(startRaw);
+  const endMinutes = parseEventClockToMinutes(endRaw);
+
+  const baseDate = new Date(`${eventDate}T00:00:00`);
+  if (Number.isNaN(baseDate.getTime())) return null;
+
+  const startsAt = new Date(baseDate);
+  if (startMinutes !== null) {
+    startsAt.setMinutes(startMinutes, 0, 0);
+  } else {
+    startsAt.setHours(0, 0, 0, 0);
+  }
+
+  const endsAt = new Date(baseDate);
+  if (endMinutes !== null) {
+    endsAt.setMinutes(endMinutes, 0, 0);
+  } else {
+    endsAt.setHours(23, 59, 59, 999);
+  }
+
+  // Cross-midnight events (e.g. 8PM to 4AM) should end the following day.
+  if (endsAt.getTime() <= startsAt.getTime()) {
+    endsAt.setDate(endsAt.getDate() + 1);
+  }
+
+  return { startsAt, endsAt };
+};
+
+const getEventLifecycleStatus = (event, now = new Date()) => {
+  const window = getEventWindow(event);
+  if (!window) return 'upcoming';
+
+  if (now.getTime() >= window.endsAt.getTime()) return 'done';
+  if (now.getTime() >= window.startsAt.getTime()) return 'ongoing';
+  return 'upcoming';
+};
+
 // ═══════════════════════════════════════════
 // FEATURE 1: Report Modal
 // ═══════════════════════════════════════════
@@ -98,6 +191,15 @@ function ReportModal({ open, onClose, commentId, commentType }) {
   const [details, setDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
   if (!open) return null;
 
@@ -123,12 +225,14 @@ function ReportModal({ open, onClose, commentId, commentType }) {
     onClose(result === 'success');
   };
 
-  return (
-    <div className="notif-panel-backdrop" onClick={handleClose} style={{ zIndex: 9999 }}>
+  const modalUi = (
+    <div className="notif-panel-backdrop" onClick={handleClose} style={{ zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 'min(12vh, 5rem) 1rem 2rem', overflowY: 'auto' }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: '#111111', borderRadius: '12px', padding: '1.5rem', maxWidth: '420px', width: '90%',
-        margin: 'auto', marginTop: '15vh', boxShadow: '0 0 30px rgba(204,0,0,0.25), 0 8px 32px rgba(0,0,0,0.6)',
+        background: '#111111', borderRadius: '12px', padding: '1.5rem', maxWidth: '420px', width: 'min(420px, 100%)',
+        margin: 0, boxShadow: '0 0 30px rgba(204,0,0,0.25), 0 8px 32px rgba(0,0,0,0.6)',
         border: '1px solid rgba(204,0,0,0.2)',
+        maxHeight: 'calc(100vh - 4rem)',
+        overflowY: 'auto',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#fff' }}>🚩 Report Comment</h3>
@@ -151,7 +255,7 @@ function ReportModal({ open, onClose, commentId, commentType }) {
             <p style={{ color: '#ccc', fontSize: '0.85rem', marginBottom: '0.75rem' }}>Why are you reporting this comment?</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem' }}>
               {REPORT_REASONS.map(r => (
-                <label key={r} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.4rem 0.6rem', borderRadius: '8px', background: reason === r ? 'rgba(204,0,0,0.15)' : 'transparent', border: reason === r ? '1px solid rgba(204,0,0,0.4)' : '1px solid transparent', transition: 'all 0.15s' }}>
+                <label key={r} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.4rem 0.6rem', borderRadius: '8px', background: reason === r ? 'rgba(204,0,0,0.15)' : 'transparent', border: reason === r ? '1px solid rgba(204,0,0,0.4)' : '1px solid transparent', transition: 'all 0.15s', userSelect: 'none' }}>
                   <input type="radio" name="report-reason" checked={reason === r} onChange={() => setReason(r)} style={{ accentColor: '#CC0000' }} />
                   <span style={{ color: '#ddd', fontSize: '0.85rem' }}>{r}</span>
                 </label>
@@ -175,6 +279,8 @@ function ReportModal({ open, onClose, commentId, commentType }) {
       </div>
     </div>
   );
+
+  return createPortal(modalUi, document.body);
 }
 
 // ═══════════════════════════════════════════
@@ -220,20 +326,37 @@ function ReportFlag({ commentId, commentType, commentUserId, currentUserId, onRe
   );
 }
 
-function CommentThread({ comments, eventId, postId, isEvent, depth = 0, onReplyPosted, barName, currentUserId }) {
+function CommentThread({ comments, eventId, postId, isEvent, depth = 0, rootParentId = null, onReplyPosted, barName, currentUserId, commentDomPrefix = '' }) {
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [posting, setPosting] = useState(false);
 
+  const directReplyDepth = depth === 1;
+
+  const resolveRootParentId = useCallback((comment) => {
+    const candidate = Number(
+      rootParentId ||
+      comment?.root_parent_id ||
+      comment?.root_comment_id ||
+      comment?.parent_comment_id ||
+      comment?.parent_id ||
+      comment?.id
+    );
+
+    if (Number.isFinite(candidate) && candidate > 0) return candidate;
+    return Number(comment?.id || 0);
+  }, [rootParentId]);
+
   const handleReply = async (e, parentId) => {
     e.preventDefault();
-    if (!replyText.trim()) return;
+    const targetParentId = Number(parentId || 0);
+    if (!replyText.trim() || !targetParentId) return;
     setPosting(true);
     try {
       if (isEvent) {
-        await eventService.postComment(eventId, { comment: replyText.trim(), parent_comment_id: parentId });
+        await eventService.postComment(eventId, { comment: replyText.trim(), parent_comment_id: targetParentId });
       } else {
-        await socialService.commentOnPost(postId, replyText.trim(), parentId);
+        await socialService.commentOnPost(postId, replyText.trim(), targetParentId);
       }
       setReplyText(''); setReplyingTo(null);
       onReplyPosted();
@@ -241,14 +364,20 @@ function CommentThread({ comments, eventId, postId, isEvent, depth = 0, onReplyP
   };
 
   const getCommentType = (c, d) => {
-    if (d > 0) return isEvent ? 'event_reply' : 'post_reply';
-    return isEvent ? 'event_comment' : 'post_comment';
+    if (isEvent) return d > 0 ? 'event_reply' : 'event_comment';
+    // Post replies in this feed are persisted in bar_post_comments with parent_comment_id.
+    return 'post_comment';
   };
 
   return (
-    <div style={{ marginLeft: depth > 0 ? '2.25rem' : 0 }}>
+    <div style={{ marginLeft: directReplyDepth ? '40px' : '0px' }}>
       {comments.map(c => (
-        <div key={c.id} className={`tweet-comment ${depth > 0 ? 'tweet-reply' : ''}`}>
+        <div
+          key={c.id}
+          id={commentDomPrefix ? `${commentDomPrefix}${c.id}` : undefined}
+          className={`tweet-comment ${depth === 1 ? 'tweet-reply' : ''} ${depth >= 2 ? 'tweet-reply-capped' : ''}`}
+          data-comment-depth={depth}
+        >
           <div className="tweet-comment-inner">
             <Avatar user={c} size={depth > 0 ? 28 : 36} />
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -281,13 +410,11 @@ function CommentThread({ comments, eventId, postId, isEvent, depth = 0, onReplyP
                 </span>
               </div>
               <p className="tweet-comment-text">{c.comment || c.reply}</p>
-              {depth < 2 && (
-                <button className="tweet-reply-btn" onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}>
-                  ↩ Reply
-                </button>
-              )}
+              <button className="tweet-reply-btn" onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}>
+                ↩ Reply
+              </button>
               {replyingTo === c.id && (
-                <form className="tweet-reply-form" onSubmit={e => handleReply(e, c.id)}>
+                <form className="tweet-reply-form" onSubmit={e => handleReply(e, depth === 0 ? c.id : resolveRootParentId(c))}>
                   <input
                     className="glass-input"
                     style={{ fontSize: '0.85rem', padding: '0.4rem 0.75rem' }}
@@ -304,7 +431,18 @@ function CommentThread({ comments, eventId, postId, isEvent, depth = 0, onReplyP
             </div>
           </div>
           {c.replies?.length > 0 && (
-            <CommentThread comments={c.replies} eventId={eventId} postId={postId} isEvent={isEvent} depth={depth + 1} onReplyPosted={onReplyPosted} barName={barName} currentUserId={currentUserId} />
+            <CommentThread
+              comments={c.replies}
+              eventId={eventId}
+              postId={postId}
+              isEvent={isEvent}
+              depth={depth + 1}
+              rootParentId={resolveRootParentId(c)}
+              onReplyPosted={onReplyPosted}
+              barName={barName}
+              currentUserId={currentUserId}
+              commentDomPrefix={commentDomPrefix}
+            />
           )}
         </div>
       ))}
@@ -316,6 +454,7 @@ function CommentThread({ comments, eventId, postId, isEvent, depth = 0, onReplyP
 // FEATURE 2: Event Table Reservation Section
 // ═══════════════════════════════════════════
 function EventTableReservation({ eventId, entryPrice }) {
+  const { user } = useAuth();
   const [tables, setTables] = useState([]);
   const [eventMeta, setEventMeta] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -365,6 +504,22 @@ function EventTableReservation({ eventId, entryPrice }) {
   if (loading) return <div className="loading-state" style={{ padding: '1rem 0' }}><div className="spinner" /><span>Loading tables...</span></div>;
   if (!eventMeta || tables.length === 0) return null;
 
+  // View-only roles see the event but cannot reserve, order, or pay.
+  const eventReadOnlyNote = readOnlyMessage(user, { id: eventMeta.bar_id });
+  if (eventReadOnlyNote) {
+    return (
+      <div style={{ marginTop: '1rem', padding: '1rem 1.15rem', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: '14px', fontSize: '0.9rem', fontWeight: 600, color: '#fbbf24', lineHeight: 1.5 }}>
+        {eventReadOnlyNote}
+      </div>
+    );
+  }
+
+  const eventStatus = getEventLifecycleStatus(eventMeta);
+  const reservationLocked = eventStatus !== 'upcoming';
+  const reservationLockMsg = eventStatus === 'ongoing'
+    ? 'This event is currently ongoing. Table reservations are closed.'
+    : 'This event is already done. Table reservations are closed.';
+
   const fee = Number(entryPrice || eventMeta.entry_price || 0);
   const selectedTableData = tables.find(t => t.id === selectedTable);
   const tablePrice = Number(selectedTableData?.price || 0);
@@ -377,13 +532,30 @@ function EventTableReservation({ eventId, entryPrice }) {
 
   const handleReserve = async () => {
     if (!selectedTable) return;
+    if (!canOrderAtBar(user, { id: eventMeta?.bar_id })) {
+      setMsg(readOnlyMessage(user, { id: eventMeta?.bar_id }) || 'Reserving is disabled in preview mode.');
+      setMsgType('error');
+      return;
+    }
+
+    if (reservationLocked) {
+      setMsg(reservationLockMsg);
+      setMsgType('error');
+      return;
+    }
+
+    const eventDate = normalizeDateLikeToYmd(eventMeta.event_date);
+    const startMinutes = parseEventClockToMinutes(eventMeta.start_time);
+    const reservationTime = toOnTheHourTime(startMinutes);
+
+    if (!eventDate || !reservationTime) {
+      setMsg('This event has an invalid date/time setup. Please contact the bar.');
+      setMsgType('error');
+      return;
+    }
+
     setReserving(true); setMsg('');
     try {
-      const eventDate = eventMeta.event_date;
-      const startTime = eventMeta.start_time;
-      const hh = String(startTime).slice(0, 2);
-      const reservationTime = `${hh}:00:00`;
-
       const menuItemsArray = Object.entries(selectedMenuItems).map(([itemId, quantity]) => {
         const item = menuItems.find(m => m.id === Number(itemId));
         return {
@@ -509,6 +681,7 @@ function EventTableReservation({ eventId, entryPrice }) {
               <div style={{ fontWeight: 700, fontSize: '0.82rem', color: isClickable ? '#fff' : '#666' }}>
                 {t.table_number || `Table ${t.id}`}
               </div>
+              {t.floor && <div style={{ fontSize: '0.7rem', color: '#888' }}>Floor: {t.floor}</div>}
               <div style={{ fontSize: '0.72rem', color: hasCapacity ? '#999' : '#f59e0b' }}>Cap: {t.capacity}</div>
               {Number(t.price) > 0 && <div style={{ fontSize: '0.72rem', color: '#CC0000' }}>₱{Number(t.price).toLocaleString()}</div>}
               <div style={{ fontSize: '0.7rem', marginTop: '0.2rem', color: !isAvail ? '#ef4444' : !hasCapacity ? '#f59e0b' : '#4ade80' }}>
@@ -607,13 +780,25 @@ function EventTableReservation({ eventId, entryPrice }) {
         </div>
       )}
 
+      {reservationLocked && (
+        <div style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', marginBottom: '0.5rem', fontSize: '0.82rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>
+          {reservationLockMsg}
+        </div>
+      )}
+
       <button
         className="btn btn-red btn-sm"
-        disabled={!selectedTable || reserving}
+        disabled={!selectedTable || reserving || reservationLocked}
         onClick={handleReserve}
         style={{ width: '100%' }}
       >
-        {reserving ? 'Processing...' : 'Reserve & Pay with GCash'}
+        {reserving
+          ? 'Processing...'
+          : reservationLocked
+            ? eventStatus === 'ongoing'
+              ? 'Reservations Closed (Ongoing Event)'
+              : 'Reservations Closed (Event Done)'
+            : 'Reserve & Pay with GCash'}
       </button>
       <p style={{ fontSize: '0.72rem', color: '#888', marginTop: '0.5rem', textAlign: 'center' }}>
         You will be redirected to PayMongo for secure payment
@@ -651,29 +836,81 @@ function EntranceFeeBadge({ entryPrice }) {
   );
 }
 
-function EventPost({ ev, onLikeToggle }) {
+function EventStatusBadge({ status }) {
+  if (status === 'ongoing') {
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
+        padding: '0.15rem 0.5rem', fontSize: '0.7rem', fontWeight: 700,
+        background: 'rgba(245,158,11,0.14)', color: '#f59e0b',
+        borderRadius: '12px', border: '1px solid rgba(245,158,11,0.35)',
+        letterSpacing: '0.35px',
+      }}>
+        ONGOING
+      </span>
+    );
+  }
+
+  if (status === 'done') {
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
+        padding: '0.15rem 0.5rem', fontSize: '0.7rem', fontWeight: 700,
+        background: 'rgba(148,163,184,0.12)', color: '#cbd5e1',
+        borderRadius: '12px', border: '1px solid rgba(148,163,184,0.35)',
+        letterSpacing: '0.35px',
+      }}>
+        EVENT DONE
+      </span>
+    );
+  }
+
+  return null;
+}
+
+function EventPost({
+  ev,
+  onLikeToggle,
+  autoExpandComments = false,
+  focusCommentId = null,
+  focusToken = '',
+  onOpenDetail = null,
+  isDetailView = false,
+  initialExpanded = false,
+}) {
   const { user } = useAuth();
   const currentUserId = user?.id;
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(Boolean(initialExpanded));
   const [showReservation, setShowReservation] = useState(false);
   const [comments, setComments] = useState([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [posting, setPosting] = useState(false);
-  const [liked, setLiked] = useState(Boolean(ev.user_liked || ev.liked_by_user));
+  const liked = Boolean(ev.user_liked || ev.liked_by_user);
+  const autoExpandedKeyRef = useRef('');
   
   const isEvent = ev.feed_type === 'event' || ev.event_date;
   const isPost = ev.feed_type === 'post' || (!ev.event_date && ev.description);
+  const eventLifecycleStatus = isEvent ? getEventLifecycleStatus(ev) : 'upcoming';
+  const reserveLocked = isEvent && eventLifecycleStatus !== 'upcoming';
   const fullDescription = (ev.description || '').trim();
   const shortDescription = fullDescription.length > 160
     ? `${fullDescription.slice(0, 157).trimEnd()}...`
     : fullDescription;
+  const descriptionText = isDetailView ? fullDescription : shortDescription;
   const eventDate = isEvent && ev.event_date ? formatDate(ev.event_date) : '';
   const eventTime = isEvent && ev.start_time
     ? `${formatTime(ev.start_time)}${ev.end_time ? ` - ${formatTime(ev.end_time)}` : ''}`
     : '';
 
   const entryPrice = Number(ev.entry_price || 0);
+  const mediaPath = ev.image_path || ev.post_image_path || ev.image_url || null;
+
+  useEffect(() => {
+    if (isDetailView && initialExpanded) {
+      setExpanded(true);
+    }
+  }, [isDetailView, initialExpanded]);
 
   const loadComments = useCallback(async () => {
     setLoadingComments(true);
@@ -693,9 +930,37 @@ function EventPost({ ev, onLikeToggle }) {
     if (expanded) loadComments();
   }, [expanded, loadComments]);
 
+  useEffect(() => {
+    if (!autoExpandComments) return;
+    const key = `${focusToken || 'notification'}:${focusCommentId || ''}`;
+    if (autoExpandedKeyRef.current === key) return;
+    autoExpandedKeyRef.current = key;
+    setExpanded(true);
+  }, [autoExpandComments, focusCommentId, focusToken]);
+
+  useEffect(() => {
+    if (!focusCommentId || !expanded || loadingComments) return;
+    const scope = isEvent ? 'event' : 'post';
+    const elementId = `notif-comment-${scope}-${ev.id}-${focusCommentId}`;
+    const targetEl = document.getElementById(elementId);
+    if (!targetEl) return;
+
+    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const prevOutline = targetEl.style.outline;
+    const prevBg = targetEl.style.backgroundColor;
+    targetEl.style.outline = '2px solid rgba(204,0,0,0.65)';
+    targetEl.style.backgroundColor = 'rgba(204,0,0,0.08)';
+
+    const timeoutId = setTimeout(() => {
+      targetEl.style.outline = prevOutline;
+      targetEl.style.backgroundColor = prevBg;
+    }, 2200);
+
+    return () => clearTimeout(timeoutId);
+  }, [focusCommentId, expanded, loadingComments, comments, isEvent, ev.id]);
+
   const handleLikeToggle = async () => {
     const wasLiked = liked;
-    setLiked(!wasLiked);
     try {
       if (isEvent) {
         if (wasLiked) {
@@ -709,7 +974,7 @@ function EventPost({ ev, onLikeToggle }) {
         await socialService.likePost(ev.id);
         onLikeToggle(ev.id, wasLiked ? -1 : 1, ev.feed_type);
       }
-    } catch (_) { setLiked(wasLiked); }
+    } catch (_) { /* like state is props-driven; keep in sync with server */ }
   };
 
   const handlePostComment = async (e) => {
@@ -727,8 +992,30 @@ function EventPost({ ev, onLikeToggle }) {
     } catch (_) {} finally { setPosting(false); }
   };
 
+  const commentDomPrefix = `notif-comment-${isEvent ? 'event' : 'post'}-${ev.id}-`;
+
+  const handleOpenDetail = useCallback(() => {
+    if (isDetailView || !onOpenDetail) return;
+    onOpenDetail(ev);
+  }, [ev, isDetailView, onOpenDetail]);
+
+  const handleCardKeyDown = useCallback((e) => {
+    if (isDetailView || !onOpenDetail) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onOpenDetail(ev);
+    }
+  }, [ev, isDetailView, onOpenDetail]);
+
   return (
-    <article className="tweet-post glass-card">
+    <article
+      className={`tweet-post glass-card ${isDetailView ? 'tweet-post-detail' : 'tweet-post-clickable'}`}
+      onClick={handleOpenDetail}
+      onKeyDown={handleCardKeyDown}
+      role={!isDetailView && onOpenDetail ? 'button' : undefined}
+      tabIndex={!isDetailView && onOpenDetail ? 0 : undefined}
+      aria-label={!isDetailView && onOpenDetail ? `Open ${isEvent ? 'event' : 'post'} details` : undefined}
+    >
       <div className="tweet-post-body">
         <div className="tweet-post-header">
           <div className="tweet-post-venue">
@@ -743,17 +1030,18 @@ function EventPost({ ev, onLikeToggle }) {
             )}
             {/* Feature 3: Entrance fee badge on event cards */}
             {isEvent && <EntranceFeeBadge entryPrice={entryPrice} />}
+            {isEvent && <EventStatusBadge status={eventLifecycleStatus} />}
           </div>
           <span className="tweet-post-time">
             {ev.time_ago || (ev.event_date ? formatDate(ev.event_date) : timeAgo(ev.created_at))}
           </span>
         </div>
 
-        {ev.title && <h2 className="tweet-post-title">{ev.title}</h2>}
+        {ev.title && <h2 className="tweet-post-title" style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: '1.25rem', color: 'var(--color-text-primary)' }}>{ev.title}</h2>}
 
         {(eventDate || eventTime) && (
-          <p className="tweet-post-date">
-            <Clock size={13} />
+          <p className="tweet-post-date" style={{ color: 'var(--color-text-muted)' }}>
+            <Clock size={13} color="#C9762F" />
             <span>{eventDate}</span>
             {eventTime && (
               <>
@@ -764,22 +1052,35 @@ function EventPost({ ev, onLikeToggle }) {
           </p>
         )}
 
-        {/* Feature 3: Entrance fee on event detail */}
+        {/* Entrance fee & Capacity Indicator */}
         {isEvent && (
-          <p style={{ fontSize: '0.82rem', color: '#ddd', margin: '0.3rem 0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            🎟 {entryPrice > 0 ? `Entrance Fee: ₱${entryPrice.toLocaleString('en-PH', { minimumFractionDigits: 2 })} per person` : 'Free Entry'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', margin: '0.4rem 0' }}>
+            <span style={{ fontSize: '0.82rem', color: 'var(--color-text-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              🎟 {entryPrice > 0 ? `₱${entryPrice.toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : 'Free Entry'}
+            </span>
+            {Boolean(ev.max_capacity) && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', background: 'var(--color-bg-card)', padding: '0.15rem 0.5rem', borderRadius: 4, border: '1px solid var(--color-border)' }}>
+                👥 {ev.current_bookings || 0} / {ev.max_capacity} booked
+              </span>
+            )}
+          </div>
+        )}
+
+        {descriptionText && (
+          <p className={`tweet-post-desc ${isDetailView ? 'tweet-post-desc-full' : ''}`}>
+            {descriptionText}
           </p>
         )}
 
-        {shortDescription && <p className="tweet-post-desc">{shortDescription}</p>}
-
-        {ev.image_path && (
-          <img
-            src={imageUrl(ev.image_path)}
-            alt={ev.title || 'Post image'}
-            className="tweet-post-img"
-            onError={(e) => { e.target.style.display = 'none'; }}
-          />
+        {mediaPath && (
+          <div className={`tweet-post-media ${isDetailView ? 'tweet-post-media-detail' : ''}`}>
+            <img
+              src={imageUrl(mediaPath)}
+              alt={ev.title || 'Post image'}
+              className={`tweet-post-img ${isDetailView ? 'tweet-post-img-full' : ''}`}
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+          </div>
         )}
 
         <div className="tweet-stats">
@@ -790,23 +1091,40 @@ function EventPost({ ev, onLikeToggle }) {
         <div className="tweet-actions">
           <button
             className={`tweet-action-btn ${liked ? 'liked' : ''}`}
-            onClick={handleLikeToggle}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleLikeToggle();
+            }}
           >
             <Heart size={15} fill={liked ? 'currentColor' : 'none'} style={{ color: liked ? '#ef4444' : 'currentColor' }} />
             <span>Like</span>
           </button>
           <button
             className={`tweet-action-btn ${expanded ? 'active' : ''}`}
-            onClick={() => setExpanded(p => !p)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded(p => !p);
+            }}
           >
             <MessageCircle size={15} />
             <span>Comment</span>
           </button>
-          {/* Feature 2: Reserve a Table button for events */}
-          {isEvent && (
+          {/* Feature 2: Reserve a Table button for events (hidden in view-only mode) */}
+          {isEvent && canOrderAtBar(user, { id: ev.bar_id }) && (
             <button
               className={`tweet-action-btn ${showReservation ? 'active' : ''}`}
-              onClick={() => setShowReservation(p => !p)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (reserveLocked) return;
+                setShowReservation(p => !p);
+              }}
+              disabled={reserveLocked}
+              title={reserveLocked
+                ? eventLifecycleStatus === 'ongoing'
+                  ? 'Reservations are disabled while this event is ongoing.'
+                  : 'Reservations are disabled because this event is done.'
+                : 'Reserve a table'}
+              style={reserveLocked ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}
             >
               🪑 <span>Reserve</span>
             </button>
@@ -815,17 +1133,19 @@ function EventPost({ ev, onLikeToggle }) {
 
         {/* Feature 2: Event Table Reservation Section */}
         {showReservation && isEvent && (
-          <EventTableReservation eventId={ev.id} entryPrice={entryPrice} />
+          <div onClick={(e) => e.stopPropagation()}>
+            <EventTableReservation eventId={ev.id} entryPrice={entryPrice} />
+          </div>
         )}
 
         {expanded && (
-          <div className="tweet-comments-section">
+          <div className="tweet-comments-section" onClick={(e) => e.stopPropagation()}>
             {loadingComments ? (
               <div className="loading-state" style={{ padding: '1rem 0' }}><div className="spinner" /><span>Loading comments...</span></div>
             ) : comments.length === 0 ? (
               <p className="text-muted" style={{ fontSize: '0.85rem', padding: '0.5rem 0' }}>No comments yet. Be the first!</p>
             ) : (
-              <CommentThread comments={comments} eventId={isEvent ? ev.id : null} postId={isPost ? ev.id : null} isEvent={isEvent} depth={0} onReplyPosted={loadComments} barName={ev.bar_name} currentUserId={currentUserId} />
+              <CommentThread comments={comments} eventId={isEvent ? ev.id : null} postId={isPost ? ev.id : null} isEvent={isEvent} depth={0} onReplyPosted={loadComments} barName={ev.bar_name} currentUserId={currentUserId} commentDomPrefix={commentDomPrefix} />
             )}
             <form className="tweet-comment-form" onSubmit={handlePostComment}>
               <input
@@ -845,19 +1165,136 @@ function EventPost({ ev, onLikeToggle }) {
   );
 }
 
+function FeedDetailModal({ open, item, onClose, onLikeToggle }) {
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, onClose]);
+
+  if (!open || !item) return null;
+
+  const modalUi = (
+    <div
+      className="notif-panel-backdrop"
+      onClick={onClose}
+      style={{
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1.25rem',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: 'min(980px, 96vw)',
+          maxHeight: '92vh',
+          overflowY: 'auto',
+          background: 'rgba(10,10,10,0.96)',
+          border: '1px solid rgba(232,0,30,0.24)',
+          borderRadius: '14px',
+          boxShadow: '0 20px 55px rgba(0,0,0,0.6)',
+          padding: '0.85rem',
+          position: 'relative',
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: 'sticky',
+            top: '0.35rem',
+            left: 'calc(100% - 2.1rem)',
+            zIndex: 3,
+            width: '30px',
+            height: '30px',
+            borderRadius: '50%',
+            border: '1px solid rgba(255,255,255,0.18)',
+            background: 'rgba(0,0,0,0.6)',
+            color: '#fff',
+            cursor: 'pointer',
+            fontSize: '1rem',
+            lineHeight: 1,
+          }}
+          aria-label="Close post details"
+          title="Close"
+        >
+          ✕
+        </button>
+
+        <EventPost
+          ev={item}
+          onLikeToggle={onLikeToggle}
+          onOpenDetail={null}
+          isDetailView
+          initialExpanded
+          autoExpandComments={false}
+        />
+      </div>
+    </div>
+  );
+
+  return createPortal(modalUi, document.body);
+}
+
 function EventsView() {
+  const { viewParams } = useView();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailItem, setDetailItem] = useState(null);
+
+  const notificationTarget = viewParams?.notificationTarget;
+  const targetFeedType = String(notificationTarget?.feed_type || '').toLowerCase();
+  const targetPostId = Number(notificationTarget?.post_id || 0);
+  const targetEventId = Number(notificationTarget?.event_id || 0);
+  const targetItemId = targetFeedType === 'event' ? targetEventId : targetPostId;
+  const targetCommentId = Number(
+    targetFeedType === 'event'
+      ? (notificationTarget?.reply_id || notificationTarget?.comment_id || 0)
+      : (notificationTarget?.comment_id || notificationTarget?.reply_id || 0)
+  ) || null;
+  const targetFocusToken = `${notificationTarget?.notification_id || ''}-${notificationTarget?.reference_id || ''}-${targetCommentId || ''}`;
+  const hasFocusedTarget =
+    (targetFeedType === 'post' && targetPostId > 0) ||
+    (targetFeedType === 'event' && targetEventId > 0);
+
+  useEffect(() => {
+    if (!notificationTarget || typeof notificationTarget !== 'object') return;
+    if (targetFeedType === 'event') setActiveTab('events');
+    if (targetFeedType === 'post') setActiveTab('posts');
+  }, [notificationTarget, targetFeedType]);
 
   useEffect(() => {
     async function load() {
       try {
         setLoading(true);
+        setErr('');
         // Try unified feed first, fallback to events only
         try {
-          const feed = await socialService.getUnifiedFeed(50);
+          const unifiedFeedParams = hasFocusedTarget
+            ? {
+                limit: 100,
+                ...(targetFeedType === 'post' && targetPostId > 0 ? { focus_post_id: targetPostId } : {}),
+                ...(targetFeedType === 'event' && targetEventId > 0 ? { focus_event_id: targetEventId } : {}),
+              }
+            : 50;
+
+          const feed = await socialService.getUnifiedFeed(unifiedFeedParams);
           setEvents(feed);
         } catch (unifiedErr) {
           console.warn('Unified feed not available, falling back to events only');
@@ -876,14 +1313,65 @@ function EventsView() {
       } finally { setLoading(false); }
     }
     load();
+  }, [hasFocusedTarget, targetFeedType, targetPostId, targetEventId]);
+
+  const resolveFeedType = useCallback((item) => {
+    if (!item) return 'post';
+    return item.feed_type === 'event' || item.event_date ? 'event' : 'post';
+  }, []);
+
+  const openDetail = useCallback(async (seedItem) => {
+    if (!seedItem) return;
+
+    const itemId = Number(seedItem.id || 0);
+    const itemType = resolveFeedType(seedItem);
+
+    setDetailItem(seedItem);
+    setDetailOpen(true);
+
+    if (!itemId) return;
+
+    try {
+      const focusedParams = itemType === 'event'
+        ? { limit: 1, focus_event_id: itemId }
+        : { limit: 1, focus_post_id: itemId };
+
+      const latest = await socialService.getUnifiedFeed(focusedParams);
+      if (!Array.isArray(latest) || !latest.length) return;
+
+      const matched = latest.find((entry) => {
+        const entryType = resolveFeedType(entry);
+        return Number(entry.id || 0) === itemId && entryType === itemType;
+      }) || latest[0];
+
+      if (matched) setDetailItem(matched);
+    } catch (_) {
+      // Keep opening with seed payload when focused fetch fails.
+    }
+  }, [resolveFeedType]);
+
+  const closeDetail = useCallback(() => {
+    setDetailOpen(false);
   }, []);
 
   const handleLikeToggle = (itemId, delta, feedType) => {
-    setEvents(prev => prev.map(e => 
-      (e.id === itemId && (!feedType || e.feed_type === feedType)) 
-        ? { ...e, like_count: Math.max(0, (e.like_count || 0) + delta), user_liked: delta > 0, liked_by_user: delta > 0 } 
-        : e
-    ));
+    const normalizedFeedType = feedType ? String(feedType).toLowerCase() : '';
+
+    setEvents(prev => prev.map(e => {
+      const eType = resolveFeedType(e);
+      const matches = Number(e.id) === Number(itemId) && (!normalizedFeedType || eType === normalizedFeedType);
+      return matches
+        ? { ...e, like_count: Math.max(0, (e.like_count || 0) + delta), user_liked: delta > 0, liked_by_user: delta > 0 }
+        : e;
+    }));
+
+    setDetailItem((prev) => {
+      if (!prev) return prev;
+      const prevType = resolveFeedType(prev);
+      const matches = Number(prev.id) === Number(itemId) && (!normalizedFeedType || prevType === normalizedFeedType);
+      if (!matches) return prev;
+      return { ...prev, like_count: Math.max(0, (prev.like_count || 0) + delta), user_liked: delta > 0, liked_by_user: delta > 0 };
+    });
   };
 
   if (loading) return <div className="loading-state" style={{ minHeight: '50vh' }}><div className="spinner" /><span>Loading events...</span></div>;
@@ -934,15 +1422,39 @@ function EventsView() {
             </div>
           ) : (
             <div className="tweet-feed">
-              {filtered.map(ev => (
-                <EventPost key={`${ev.feed_type || 'event'}-${ev.id}`} ev={ev} onLikeToggle={handleLikeToggle} />
-              ))}
+              {filtered.map(ev => {
+                const evFeedType = (ev.feed_type === 'event' || ev.event_date) ? 'event' : 'post';
+                const shouldFocusThisItem = Boolean(
+                  targetItemId > 0 &&
+                  Number(ev.id) === targetItemId &&
+                  (!targetFeedType || targetFeedType === evFeedType)
+                );
+
+                return (
+                  <EventPost
+                    key={`${ev.feed_type || 'event'}-${ev.id}`}
+                    ev={ev}
+                    onLikeToggle={handleLikeToggle}
+                    autoExpandComments={shouldFocusThisItem && Boolean(targetCommentId)}
+                    focusCommentId={shouldFocusThisItem ? targetCommentId : null}
+                    focusToken={shouldFocusThisItem ? targetFocusToken : ''}
+                    onOpenDetail={openDetail}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
 
         <RightSidebar />
       </div>
+
+      <FeedDetailModal
+        open={detailOpen}
+        item={detailItem}
+        onClose={closeDetail}
+        onLikeToggle={handleLikeToggle}
+      />
     </div>
   );
 }

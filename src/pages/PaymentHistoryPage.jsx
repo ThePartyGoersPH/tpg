@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { paymentService } from '../services/paymentService';
+import { formatDateTime } from '../utils/dateHelpers';
 
 function PaymentHistoryPage() {
   const [payments, setPayments] = useState([]);
@@ -44,14 +45,6 @@ function PaymentHistoryPage() {
       case 'cash': return 'Cash';
       default: return method || 'N/A';
     }
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A';
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
   };
 
   return (
@@ -119,8 +112,8 @@ function PaymentHistoryPage() {
                 <div className="payment-amount">₱{Number(payment.amount).toFixed(2)}</div>
                 <div className="payment-details">
                   <span>Method: {getMethodLabel(payment.payment_method)}</span>
-                  <span>Date: {formatDate(payment.created_at)}</span>
-                  {payment.paid_at && <span>Paid: {formatDate(payment.paid_at)}</span>}
+                  <span>Date: {formatDateTime(payment.created_at)}</span>
+                  {payment.paid_at && <span>Paid: {formatDateTime(payment.paid_at)}</span>}
                 </div>
               </div>
             </div>

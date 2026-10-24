@@ -2,17 +2,11 @@ import { useEffect, useState } from 'react';
 import { useView } from '../hooks/useView';
 import { VIEWS } from '../contexts/ViewContext';
 import { orderService } from '../services/orderService';
+import { formatDateTime } from '../utils/dateHelpers';
 import { ShoppingBag, Receipt, CheckCircle, Clock, XCircle, ArrowRight, Plus } from 'lucide-react';
 
 function fmt(n) {
   return `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function formatDate(dt) {
-  if (!dt) return '—';
-  try {
-    return new Date(dt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
-  } catch (_) { return dt; }
 }
 
 function StatusPill({ status, paymentStatus }) {
@@ -100,7 +94,7 @@ export default function MyOrdersView() {
                   {order.or_number && (
                     <span>OR# <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#f87171' }}>{order.or_number}</span></span>
                   )}
-                  <span>{formatDate(order.created_at)}</span>
+                  <span>{formatDateTime(order.created_at)}</span>
                 </div>
               </div>
 

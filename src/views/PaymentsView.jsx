@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { paymentService } from '../services/paymentService';
 import { formatDate, formatTime } from '../utils/dateHelpers';
 import { Star, MapPin, TrendingUp, CalendarDays, Clock, CreditCard, Utensils } from 'lucide-react';
@@ -50,6 +51,24 @@ async function settlePayment(referenceId, attempts = 5, delayMs = 1500) {
   return lastResult;
 }
 
+function ViewportModal({ children }) {
+  if (typeof document === 'undefined') return null;
+  return createPortal(children, document.body);
+}
+
+const viewportBackdropStyle = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(0,0,0,0.6)',
+  backdropFilter: 'blur(8px)',
+  zIndex: 2000,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '1rem',
+  overflowY: 'auto',
+};
+
 function getPaymentStatus(payment) {
   const status = (payment.status || '').toLowerCase();
   const paymentStatus = (payment.payment_status || '').toLowerCase();
@@ -97,13 +116,14 @@ function PaymentDetailModal({ payment, onClose }) {
   const grandTotal = itemized.tablePrice + menuTotal;
   
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-panel" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3 className="text-h3">Payment Details</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body flex flex-col gap-md">
+    <ViewportModal>
+      <div className="modal-backdrop" style={viewportBackdropStyle} onClick={onClose}>
+        <div className="modal-panel" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3 className="text-h3">Payment Details</h3>
+            <button className="modal-close" onClick={onClose}>✕</button>
+          </div>
+          <div className="modal-body flex flex-col gap-md">
           <div className="flex gap-sm items-center flex-wrap">
             <span className={`payment-status ${status}`}>
               {status === 'paid' ? 'Paid' : status === 'partial' ? 'Partially Paid' : status === 'cancelled' ? 'Cancelled' : status === 'failed' ? 'Failed' : 'Pending'}
@@ -112,9 +132,9 @@ function PaymentDetailModal({ payment, onClose }) {
           </div>
 
           {payment.transaction_number && (
-            <div style={{ background: 'rgba(232,0,30,0.08)', border: '1px solid var(--red-primary)', borderRadius: '8px', padding: '0.6rem 1rem' }}>
+            <div className="txn-callout">
               <p className="text-label" style={{ fontSize: '0.7rem', marginBottom: '0.2rem' }}>TRANSACTION NUMBER</p>
-              <p style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '1rem', letterSpacing: '0.05em', color: 'var(--red-primary)' }}>{payment.transaction_number}</p>
+              <p className="txn-callout-num">{payment.transaction_number}</p>
               <p className="text-dim" style={{ fontSize: '0.7rem', marginTop: '0.2rem' }}>Share this with the bar to confirm your reservation</p>
             </div>
           )}
@@ -178,46 +198,59 @@ function PaymentDetailModal({ payment, onClose }) {
             <p className="text-body">{payment.payment_method?.toUpperCase() || 'N/A'}</p>
           </div>
 
-          <div className="cart-total-box" style={{ marginTop: '0.5rem' }}>
-            {itemized.tablePrice > 0 && (
-              <div className="cart-total-row">
-                <span>Table Reservation</span>
-                <span>₱{itemized.tablePrice.toFixed(2)}</span>
-              </div>
-            )}
-            {itemized.menuItems.map((item, i) => (
-              <div className="cart-total-row" key={i}>
-                <span>{item.name}</span>
-                <span>₱{item.price.toFixed(2)}</span>
-              </div>
-            ))}
-            {payment.total_order_amount > 0 ? (
-              <>
+            <div className="cart-total-box" style={{ marginTop: '0.5rem' }}>
+              {itemized.tablePrice > 0 && (
                 <div className="cart-total-row">
-                  <span>Total Order</span>
-                  <span>₱{Number(payment.total_order_amount).toFixed(2)}</span>
+                  <span>Table Reservation</span>
+                  <span>₱{itemized.tablePrice.toFixed(2)}</span>
                 </div>
-                <div className="cart-grand-total">
-                  <span>Down Payment Paid</span>
-                  <span>₱{Number(payment.amount || 0).toFixed(2)}</span>
+              )}
+              {itemized.menuItems.map((item, i) => (
+                <div className="cart-total-row" key={i}>
+                  <span>{item.name}</span>
+                  <span>₱{item.price.toFixed(2)}</span>
                 </div>
-                {payment.remaining_balance > 0 && (
-                  <div className="cart-total-row" style={{ color: '#fbbf24', fontWeight: 600 }}>
-                    <span>Remaining Balance (collect in person)</span>
-                    <span>₱{Number(payment.remaining_balance).toFixed(2)}</span>
+              ))}
+              {payment.total_order_amount > 0 ? (
+                <>
+                  <div className="cart-total-row">
+                    <span>Total Order</span>
+                    <span>₱{Number(payment.total_order_amount).toFixed(2)}</span>
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="cart-grand-total">
-                <span>Total Amount</span>
-                <span>₱{(grandTotal > 0 ? grandTotal : Number(payment.amount || 0)).toFixed(2)}</span>
-              </div>
-            )}
+                  <div className="cart-grand-total">
+                    <span>Down Payment Paid</span>
+                    <span>₱{Number(payment.amount || 0).toFixed(2)}</span>
+                  </div>
+                  {payment.remaining_balance > 0 && (
+                    <div className="cart-total-row remaining-balance">
+                      <span>Remaining Balance (collect in person)</span>
+                      <span>₱{Number(payment.remaining_balance).toFixed(2)}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="cart-grand-total">
+                  <span>Total Amount</span>
+                  <span>₱{(grandTotal > 0 ? grandTotal : Number(payment.amount || 0)).toFixed(2)}</span>
+                </div>
+              )}
+              {payment.tax_amount != null && Number(payment.tax_amount) > 0 && (
+                <>
+                  <div className="cart-total-row">
+                    <span>Subtotal{payment.tax_mode === 'INCLUSIVE' ? ' (Net of VAT)' : ''}</span>
+                    <span>₱{Number(payment.net_subtotal ?? 0).toFixed(2)}</span>
+                  </div>
+                  <div className="cart-total-row">
+                    <span>VAT ({Number(payment.tax_rate || 0)}%{payment.tax_mode === 'INCLUSIVE' ? ' Included' : ''})</span>
+                    <span>₱{Number(payment.tax_amount || 0).toFixed(2)}</span>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </ViewportModal>
   );
 }
 

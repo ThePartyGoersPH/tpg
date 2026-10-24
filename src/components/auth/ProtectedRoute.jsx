@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { CUSTOMER_ROLE } from '../../utils/constants';
+import { isCustomerPortalUser } from '../../utils/constants';
 
 function ProtectedRoute({ children }) {
   const { loading, user, token, accessDeniedMessage } = useAuth();
@@ -22,7 +22,7 @@ function ProtectedRoute({ children }) {
     return <Navigate to="/login" replace state={{ from: location.pathname || '/dashboard' }} />;
   }
 
-  if (user.role !== CUSTOMER_ROLE) {
+  if (!isCustomerPortalUser(user)) {
     return <Navigate to="/unauthorized" replace />;
   }
 

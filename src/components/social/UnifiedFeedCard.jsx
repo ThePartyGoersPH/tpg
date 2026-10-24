@@ -6,7 +6,7 @@ function UnifiedFeedCard({ item, onLike, onComment }) {
   const [showComments, setShowComments] = useState(false);
 
   const isEvent = item.feed_type === 'event';
-  const displayImage = item.image_path || item.bar_image;
+  const displayImage = item.image_path || item.post_image_path || item.image_url || item.bar_image;
 
   return (
     <div className="feed-card">

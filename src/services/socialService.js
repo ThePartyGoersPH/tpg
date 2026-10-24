@@ -27,6 +27,11 @@ export const socialService = {
     return response.data;
   },
 
+  async notificationTarget(notificationId) {
+    const response = await socialApi.notificationTarget(notificationId);
+    return response.data;
+  },
+
   async markNotificationRead(notificationId) {
     const response = await socialApi.markNotificationRead(notificationId);
     return response.data;
@@ -42,9 +47,16 @@ export const socialService = {
     return response.data?.data || [];
   },
 
-  async getUnifiedFeed(limit = 50) {
-    const response = await socialApi.getUnifiedFeed(limit);
-    return response.data?.data || [];
+  async getUnifiedFeed(params = 50) {
+    const response = await socialApi.getUnifiedFeed(params);
+    const feed = response.data?.data || [];
+    if (!Array.isArray(feed)) return [];
+
+    // Normalize media keys so customer views can render both legacy and new payload shapes.
+    return feed.map((item) => ({
+      ...item,
+      image_path: item?.image_path || item?.post_image_path || item?.image_url || null,
+    }));
   },
 
   async likePost(postId) {
@@ -60,6 +72,16 @@ export const socialService = {
   async getPostComments(postId) {
     const response = await socialApi.getPostComments(postId);
     return response.data?.comments || [];
+  },
+
+  async getEventComments(eventId) {
+    const response = await socialApi.getEventComments(eventId);
+    return response.data?.comments || [];
+  },
+
+  async commentOnEvent(eventId, comment, parentCommentId = null) {
+    const response = await socialApi.commentOnEvent(eventId, comment, parentCommentId);
+    return response.data;
   },
 
   // Feature 1: Report comments

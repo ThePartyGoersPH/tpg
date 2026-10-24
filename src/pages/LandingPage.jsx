@@ -31,7 +31,7 @@ function LandingPage() {
       <section className="landing-hero">
         <div className="container">
           <div className="hero-content">
-            <img src="/logo192.png" alt="The Party Goers PH" className="landing-logo" />
+            <img src="/party-logo-v2.png" alt="The Party Goers PH" className="landing-logo" />
             <h1 className="landing-title">Discover Cavite's Best Bars & Nightlife</h1>
             <p className="landing-subtitle">
               Find trending bars, reserve tables, follow events, and explore the nightlife scene in one platform.
@@ -151,7 +151,7 @@ function LandingPage() {
         <div className="container">
           <div className="footer-grid">
             <div className="footer-col">
-              <img src="/logo192.png" alt="The Party Goers PH" className="footer-logo" />
+              <img src="/party-logo-v2.png" alt="The Party Goers PH" className="footer-logo" />
               <p>Your ultimate guide to Cavite's bar and nightlife scene.</p>
             </div>
 

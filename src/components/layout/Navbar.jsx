@@ -3,6 +3,8 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { socialService } from '../../services/socialService';
 import { imageUrl } from '../../utils/imageUrl';
+import ThemeToggle from '../ui/ThemeToggle';
+import { managerPortalUrl } from '../../utils/managerLinks';
 import '../../styles/enhancements.css';
 
 const navItems = [
@@ -72,6 +74,7 @@ function Navbar() {
           </nav>
 
           <div className="user-tools">
+            <ThemeToggle />
             <NavLink to="/dashboard/notifications" className="notification-bell" title="Notifications">
               🔔
               {unreadCount > 0 && <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
@@ -154,6 +157,11 @@ function Navbar() {
               {item.label.split(' ').slice(1).join(' ')}
             </NavLink>
           ))}
+
+          <a className="mobile-nav-link mobile-manager-link" href={managerPortalUrl()} target="_blank" rel="noopener noreferrer">
+            <span className="mobile-nav-icon">↗</span>
+            For Bar Owners
+          </a>
 
           <NavLink to="/dashboard/notifications" className="mobile-nav-link" onClick={() => setMobileOpen(false)}>
             <span className="mobile-nav-icon">🔔</span>
