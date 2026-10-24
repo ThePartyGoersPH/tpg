@@ -1,0 +1,351 @@
+================================================================================
+  BAR RESERVATION SYSTEM — IMPROVEMENT SUGGESTIONS & PRIORITY ROADMAP
+  Mock Defense Reference | March 28, 2026
+================================================================================
+
+LEGEND:
+  [DONE]         = Already implemented
+  [TODO]         = Needs to be built
+  [OPTIONAL]     = Nice to have / under OCR scope
+
+  ROLES / FOLDERS:
+  [SUPER ADMIN]    = Admin dashboard / admin panel
+  [CUSTOMER]       = Customer-facing app / web
+  [BAR OWNER]      = Bar operation panel / bar owner dashboard
+
+--------------------------------------------------------------------------------
+  RECOMMENDED PRIORITY ORDER (First to Last)
+--------------------------------------------------------------------------------
+
+  Priority is based on: core functionality first, then UX improvements,
+  then advanced/optional features. This ensures your system is defensible
+  as a complete, working product before adding extras.
+
+  PHASE 1 — FOUNDATION (Do these first — critical to core system)
+  ---------------------------------------------------------------
+  1.  Barangay dropdown (city-based)                    [BAR OWNER] registration form
+  2.  Bar type multi-select checkbox                    [BAR OWNER] registration form
+  3.  Add middle name field                             [BAR OWNER] registration form
+  4.  Email verification + admin approval               [BAR OWNER] + [SUPER ADMIN]
+  5.  Email preview before submit                       [BAR OWNER] registration form
+  6.  Selfie with ID upon document submission           [BAR OWNER] registration form
+  7.  Filter out adult/illegal bars + registration note [SUPER ADMIN] + [BAR OWNER]
+  8.  Dynamic table setup (name, floor, capacity, size) [BAR OWNER] table management
+
+  PHASE 2 — RESERVATION LOGIC (Core booking features)
+  ----------------------------------------------------
+  9.  50% down payment requirement                      [CUSTOMER] + [BAR OWNER]
+  10. 15–30 min grace period + auto-cancel if no-show   [BAR OWNER] + [SUPER ADMIN]
+  11. Table time limits by bar type                     [BAR OWNER] table/reservation settings
+  12. 1 review per booking (anti-spam)                  [CUSTOMER]
+  13. Downloadable / printable PDF receipt              [CUSTOMER]
+
+  PHASE 3 — BAR PROFILE & CONTENT (Listings quality)
+  ----------------------------------------------------
+  14. Package inclusions detail                         [BAR OWNER] menu/package setup
+  15. Staff description                                 [BAR OWNER] bar profile setup
+  16. Bar type content rules                            [BAR OWNER] bar profile setup
+  17. Units of measurement in inventory                 [BAR OWNER] inventory module
+  18. Inventory request + approval workflow             [BAR OWNER] inventory module
+
+  PHASE 4 — DISCOVERY & UX (User-facing experience)
+  --------------------------------------------------
+  19. Bar suggestions for guests (not logged in)        [CUSTOMER] landing page   [DONE]
+  20. Landing page map                                  [CUSTOMER] landing page   [DONE]
+  21. Adjustable map radius / GPS filter                [CUSTOMER] search/map page
+  22. Bar type categories & filters                     [CUSTOMER] search/browse page
+  23. Scheduled events (comedy, open mic, live band)    [BAR OWNER] events + [CUSTOMER] view
+  24. Custom events by bar owners                       [BAR OWNER] events module
+
+  PHASE 5 — ADMIN & BACK-OFFICE (Management tools)
+  -------------------------------------------------
+  25. Rename nav "People and Payroll" → "HR"            [BAR OWNER] navigation/sidebar
+  26. Dynamic / configurable payroll                    [BAR OWNER] HR module
+  27. Email confirmation sent upon registration         [BAR OWNER] + [SUPER ADMIN]
+
+  PHASE 6 — OPTIONAL / ADVANCED (Add if time permits)
+  ----------------------------------------------------
+  28. OCR for permit/document scanning                  [SUPER ADMIN] + [BAR OWNER]
+  29. Expired permit notification                       [SUPER ADMIN]
+
+--------------------------------------------------------------------------------
+  MODULE 1 — GUEST EXPERIENCE & DISCOVERY
+--------------------------------------------------------------------------------
+
+  FOLDER / ROLE: [CUSTOMER] — Customer-facing app, landing & search pages
+
+  1. Bar suggestions for guests (not logged in)                        [DONE]
+     - Show recommended bars to unauthenticated users.
+     - Goal: Encourage sign-up by letting guests see value first.
+     - Where to work: Customer landing page / home component
+
+  2. Landing page map                                                  [DONE]
+     - Homepage shows a map of nearby bars immediately.
+     - Goal: Quick visual discovery without extra navigation.
+     - Where to work: Customer landing page / map component
+
+  3. Adjustable map radius / GPS distance filter                       [TODO]
+     - User can widen or narrow the search radius using GPS.
+     - Goal: "Nearby bars" feature that adapts to the user's location.
+     - Where to work: Customer search/map page → filter sidebar or slider
+
+  4. Bar type categories & filters                                     [TODO]
+     - Filter options: Club, Restobar, Comedy Bar, KTV
+     - Goal: More organized browsing experience.
+     - Where to work: Customer browse/search page → filter component
+
+--------------------------------------------------------------------------------
+  MODULE 2 — BAR PROFILE & CONTENT
+--------------------------------------------------------------------------------
+
+  FOLDER / ROLE: [BAR OWNER] — Bar operation panel, profile & events setup
+
+  5. Filter out adult/illegal bars                                     [TODO]
+     - Exclude adult-type establishments from listings.
+     - Add a note on the registration page: "Illegal bars are not accepted."
+     - Goal: Professional and safe platform.
+     - Where to work:
+         [BAR OWNER]   → Registration page (add disclaimer note)
+         [SUPER ADMIN] → Bar approval / listing management (add filter toggle)
+
+  6. Package inclusions detail                                         [TODO]
+     - Each package must list what is included.
+     - Example: 1 bottle, pulutan, table, free entrance.
+     - Goal: Clear expectations for customers.
+     - Where to work: [BAR OWNER] → Menu / Packages module
+                      [CUSTOMER]  → Bar detail page (view-only)
+
+  7. Staff description                                                 [TODO]
+     - Bar profile displays which staff types are present.
+     - Options: DJ, Live band, Host, Security
+     - Goal: Detailed info to help customers decide.
+     - Where to work: [BAR OWNER] → Bar profile setup / staff info section
+                      [CUSTOMER]  → Bar detail page (view-only)
+
+  8. Bar type content rules                                            [TODO]
+     - Content adapts to bar type:
+         Restobar    → Bands / singers
+         Bar         → DJ
+         Comedy bar  → Comedian
+     - Goal: Relevant content per bar type.
+     - Where to work: [BAR OWNER] → Bar profile setup
+                      [CUSTOMER]  → Bar detail page (conditional display)
+
+  9. Scheduled events (comedy, live shows)                             [TODO]
+     - Bars can post upcoming shows.
+     - Examples: Stand-up comedy, open mic, live band nights.
+     - Goal: Event-based booking support.
+     - Where to work: [BAR OWNER] → Events module (create/manage events)
+                      [CUSTOMER]  → Bar detail page → Events tab (view/book)
+
+  10. Custom events by bar owners                                      [TODO]
+      - Owners can create and publish their own events.
+      - Examples: DJ night, ladies night, live band.
+      - Goal: Dynamic and up-to-date content.
+      - Where to work: [BAR OWNER] → Events module → Create Event form
+
+--------------------------------------------------------------------------------
+  MODULE 3 — RESERVATION & BOOKING SYSTEM
+--------------------------------------------------------------------------------
+
+  FOLDER / ROLE: [CUSTOMER] for booking flow | [BAR OWNER] for settings
+                 [SUPER ADMIN] for monitoring
+
+  11. Grace period + auto-cancel if no-show                            [TODO]
+      - 15–30 minute grace period after reservation time.
+      - If customer does not arrive → table auto-cancels and becomes
+        available again for the manager automatically.
+      - Goal: No wasted tables.
+      - Where to work:
+          [BAR OWNER]   → Reservation settings (configure grace period)
+          [SUPER ADMIN] → System config / global settings
+
+  12. 50% down payment requirement                                     [TODO]
+      - Reservations require a 50% down payment upfront.
+      - Grace period still applies even with down payment.
+      - Goal: Eliminate bogus reservations.
+      - Where to work:
+          [CUSTOMER]  → Booking / checkout flow (payment step)
+          [BAR OWNER] → Reservation settings (enable/set down payment %)
+
+  13. Table time limits by bar type                                    [TODO]
+      - Restobar    → 2 hours
+      - Club        → Whole day / unlimited (table not available for others)
+      - Comedy bar  → Event-based duration
+      - Goal: Proper table turnover and flexible rules per bar type.
+      - Where to work: [BAR OWNER] → Table management / reservation settings
+
+  14. 1 review per booking only                                        [TODO]
+      - Customers can leave only 1 review per completed booking.
+      - Goal: Fair ratings, no spam.
+      - Where to work: [CUSTOMER] → My bookings → Leave a review (post-visit)
+
+  15. Downloadable / printable receipt                                 [TODO]
+      - Customer can download a PDF or print their receipt.
+      - Receipt includes transaction number as proof of reservation.
+      - Goal: Official proof of booking for the customer.
+      - Where to work: [CUSTOMER] → My bookings → Booking detail → Download/Print
+
+--------------------------------------------------------------------------------
+  MODULE 4 — TABLE & SEATING MANAGEMENT
+--------------------------------------------------------------------------------
+
+  FOLDER / ROLE: [BAR OWNER] — Bar operation panel, table management module
+
+  16. Dynamic table setup based on bar size                            [TODO]
+      - Number of tables depends on available space.
+      - Each table has the following properties:
+          - Table Name / Number
+          - Floor Assignment (for multi-floor bars)
+          - Capacity (max number of guests)
+          - Size Category: Small / Medium / Large
+      - Rule: Max capacity per table is fixed.
+        If exceeded → add another table instead of squeezing guests in.
+      - Basis: Real-world interview data (cite this during defense).
+      - Where to work: [BAR OWNER] → Table Management module
+                                     → Add/Edit Table form
+
+--------------------------------------------------------------------------------
+  MODULE 5 — OWNER ACCOUNT & REGISTRATION
+--------------------------------------------------------------------------------
+
+  FOLDER / ROLE: [BAR OWNER] — Registration & account setup pages
+                 [SUPER ADMIN] — Approval & account management
+
+  17. Add middle name field                                            [TODO]
+      - Include middle name in the business owner registration form.
+      - Where to work: [BAR OWNER] → Registration page → Personal Info section
+
+  18. Email verification + admin approval                              [TODO]
+      - Registration triggers an email confirmation to the owner.
+      - Account stays inactive until admin manually approves it.
+      - Goal: Controlled onboarding, no unauthorized bars.
+      - Where to work:
+          [BAR OWNER]   → Registration page (triggers email on submit)
+          [SUPER ADMIN] → Bar/Account approval dashboard
+
+  19. Email preview before submit                                      [TODO]
+      - Show the entered email to the user before final submission.
+      - Goal: Prevent wrong email input.
+      - Where to work: [BAR OWNER] → Registration page → Review step / confirm modal
+
+  20. Selfie with ID upon document submission                          [TODO]
+      - Bar owners must upload a photo of themselves holding their ID.
+      - Used for identity verification during registration.
+      - Goal: Stronger identity check.
+      - Where to work: [BAR OWNER] → Registration page → Document Upload section
+
+  21. Barangay dropdown (city-based)                                   [TODO]
+      - Replace free-text barangay input with a filtered dropdown.
+      - Selecting a city (e.g., General Trias) shows only that city's
+        barangays in the next dropdown.
+      - Goal: Accurate and consistent location data.
+      - Where to work: [BAR OWNER] → Registration page → Location section
+
+  22. Bar type multi-select (checkbox UI)                              [TODO]
+      - Owners select one or more bar types during registration.
+      - Options: Restobar, Bar, Comedy Bar, KTV, Club
+      - Goal: Flexible classification for bars with multiple types.
+      - Where to work: [BAR OWNER] → Registration page → Bar Info section
+
+--------------------------------------------------------------------------------
+  MODULE 6 — ADMIN & DOCUMENT VERIFICATION
+--------------------------------------------------------------------------------
+
+  FOLDER / ROLE: [SUPER ADMIN] — Admin panel, verification & monitoring tools
+                 [BAR OWNER]   — Document submission during registration
+
+  23. OCR for permit / document scanning                           [OPTIONAL]
+      - Scan business permits using the device camera.
+      - Automatically extracts and fills in document data.
+      - Goal: Faster and more accurate bar verification.
+      - Where to work:
+          [BAR OWNER]   → Registration page → Document Upload (scan feature)
+          [SUPER ADMIN] → Document review panel (view extracted data)
+
+  24. Expired permit notification for admin                        [OPTIONAL]
+      - System notifies admin when a bar's business permit has expired.
+      - Goal: Only legitimate, up-to-date bars remain active.
+      - Note: Falls under the OCR feature scope.
+      - Where to work: [SUPER ADMIN] → Notifications / Bar management dashboard
+
+--------------------------------------------------------------------------------
+  MODULE 7 — HR & PAYROLL
+--------------------------------------------------------------------------------
+
+  FOLDER / ROLE: [BAR OWNER] — Bar operation panel, HR module / sidebar
+
+  25. Rename navigation item to "HR"                                   [TODO]
+      - Remove "People and Payroll" from the sidebar/nav label.
+      - Replace with simply "HR" for clarity and professionalism.
+      - Where to work: [BAR OWNER] → Sidebar / navigation component
+
+  26. Dynamic / configurable payroll                                   [TODO]
+      - Payroll rates must be editable yearly — not hardcoded.
+      - Configurable fields:
+          - Tax rates
+          - Salary adjustments
+          - SSS contributions
+          - PhilHealth contributions
+          - Pag-IBIG contributions
+      - Goal: Accurate and legally compliant payroll computation.
+      - Where to work: [BAR OWNER] → HR module → Payroll Settings
+
+--------------------------------------------------------------------------------
+  MODULE 8 — INVENTORY SYSTEM
+--------------------------------------------------------------------------------
+
+  FOLDER / ROLE: [BAR OWNER] — Bar operation panel, inventory module
+
+  27. Units of measurement                                             [TODO]
+      - Use specific quantity labels instead of generic counts.
+      - Examples:
+          - 1 bottle
+          - 1 bucket
+          - 1 case (= 12 bottles)
+      - Goal: Clear and unambiguous stock tracking.
+      - Where to work: [BAR OWNER] → Inventory module → Add/Edit Item form
+
+  28. Inventory request system + approval workflow                     [TODO]
+      - Staff can submit inventory requests before restocking.
+      - Request goes through an approval flow:
+          Pending → Approved → Processed
+      - Only the bar owner can approve requests.
+      - Goal: Controlled and traceable stock management.
+      - Where to work: [BAR OWNER] → Inventory module
+                                     → Request tab (staff submits)
+                                     → Approval tab (owner approves)
+
+================================================================================
+  QUICK ROLE SUMMARY
+================================================================================
+
+  [SUPER ADMIN] works on:
+  - Bar/account approval dashboard
+  - Filter/block adult or illegal bars
+  - Grace period / global system config
+  - Document review (OCR)
+  - Expired permit notifications
+  - Bar listing management
+
+  [BAR OWNER] works on:
+  - All registration form improvements (middle name, barangay dropdown,
+    bar type checkbox, email preview, selfie with ID)
+  - Bar profile setup (staff, packages, content rules, bar type)
+  - Table management (dynamic setup, time limits, grace period config)
+  - Reservation settings (down payment %, grace period)
+  - Events module (scheduled & custom events)
+  - HR module (rename nav, configurable payroll)
+  - Inventory module (units of measurement, request/approval workflow)
+
+  [CUSTOMER] works on:
+  - Landing page (bar suggestions for guests, map)
+  - Search/browse page (radius filter, category filters)
+  - Bar detail page (view packages, staff info, events)
+  - Booking/checkout flow (down payment)
+  - My bookings (receipt download/print, leave review)
+
+================================================================================
+  END OF DOCUMENT
+  Total suggestions: 29 | Done: 2 | Optional: 2 | To Do: 25
+================================================================================

@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Environment files (secrets)
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# Private uploads and keys
+private-uploads/
+private_uploads/
+uploads/ids/
+*.key
+*.pem
+*.p12
+vision-sa.json
+service-account*.json
+
+# Build output
+dist/
+build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test coverage
+coverage/

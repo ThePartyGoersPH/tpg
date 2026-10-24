@@ -1,0 +1,192 @@
+1. Suggest ng bar kahit hindi pa naka-login DONE
+
+👉 Kahit guest lang ang user, dapat makakita na siya ng recommended bars.
+Goal: mas ma-engganyo mag sign up.
+
+2. Huwag isama yung may “babae bars”
+
+👉 I-filter nyo yung content based sa type ng bar (hal. bawal adult-type establishments).
+Goal: mas professional at safe ang platform.
+IN REGISTER PAGE ADD A NOTE THAT ILLEGAL BARS ARE NOT ACCEPETED
+
+3. Landing page mapping DONE
+
+👉 Sa homepage, may map agad kung saan makikita nearby bars.
+Goal: mabilis makita ng user kung saan malapit.
+
+4. May time limit pag hindi dumating yung nag reserve
+
+👉 Hal.  15–30 minutes reservcation grace period.
+Kapag hindi dumating → automatic cancel and make in the bar owner the table available again.
+Goal: hindi masayang yung table.
+
+5. 50% payment + 30 minutes waiting time add downpayment
+
+👉 Reservation requires down payment (50%).
+15–30 minutes reservcation grace period if not show up make the table in manager automatically go available
+
+Goal: maiwasan bogus reservations.
+
+6. Packages need inclusion add a adding in menu items packages
+
+👉 Ipakita kung ano kasama sa package.
+Example:
+
+1 bottle
+pulutan
+table
+free entrance
+
+Goal: clear sa customer.
+
+7. Specific description ng staff
+
+👉 Ilagay kung may:
+
+DJ
+band
+host
+security
+Goal: mas detailed info.
+8. adjustable map radius filter
+
+👉 Use GPS / distance filter.
+Goal: “Nearby bars” feature.
+
+9. OCR(optional if can do)
+
+👉 Scan permit/business documents using camera.
+Goal: automatic verification ng bar.
+
+10. Expired permit check ng admin(optional can do still under ocr)
+
+👉 System mag notify pag expired na permit.
+Goal: legit lang ang bars.
+
+11. Download & printable receipt in customer so that their transaction number can be pprinted
+
+👉 User pwede mag:
+
+download PDF
+print receipt
+Goal: proof of reservation.
+12. Limit reviews
+
+👉 Example:
+
+1 review per booking
+no spam
+Goal: fair ratings.
+
+13. Unit of measurement in inventory
+
+👉 Instead of "x1 case", gamitin:
+
+1 bottle
+1 bucket
+1 case (12 bottles)
+Goal: clear quantity.
+
+14. Restobars “kumain” may time limit
+
+👉 If food or resto bar type → table limit (ex: 2 hours).
+if club bar type that is unlimited time make the resercation for whole day not available for others to reserve
+Goal: table turnover.
+
+15. Customize categories
+
+👉 Add filters:
+
+Club
+Resto bar
+Comedy bar
+Goal: mas organized.
+16. Iba time limit ng resto vs bars
+
+👉 Example:
+
+Resto → 2 hrs
+Club → unlimited
+Comedy → event-based
+Goal: flexible rules.
+
+17. Comedy bar events
+
+👉 Add scheduled shows:
+
+Stand-up comedy
+Open mic
+Goal: event booking.
+
+19. Customize events 
+
+👉 Bars can create:
+
+DJ night
+Ladies night
+Live band
+Goal: dynamic content.
+
+20. Bar type content
+
+👉 Example:
+Resto bar → bands/singers
+Bar → DJ
+Comedy bar → comedian
+
+👤 OWNER / ACCOUNT MANAGEMENT
+
+Add Middle Name field for Business Owner registration
+Implement Email Verification & Approval System registration
+Email confirmation upon registration
+Admin approval before activation
+Show entered email preview bago i-submit rregsitariotn of bars
+Para maiwasan maling email input
+add in submitting documents the face while holding their id in registrations of bar
+For login or identity verification
+📍 BAR PROFILE / SETUP
+Replace the inouting of barangay to drop down for example if toggled general trias city it will enable another toggle for barangay that show only barangay in general trias
+Add Bar Type Selection (Checkbox UI)
+Example:
+Restobar
+Bar
+Comedy Bar
+KTV
+Club
+Allow multiple selections (checkbox style)
+
+
+🪑 TABLE & SEATING MANAGEMENT
+Add Dynamic Table Setup based on Bar Size
+Number of tables depends on available space
+Add table properties:
+Table Name/Number
+Floor Assignment (if multi-floor)
+Table Capacity (max pax)
+Table Size Category
+Small
+Medium
+Large
+Rule:
+Max capacity per table is fixed
+If exceeded → add another table instead
+Basis:
+Based on real-world interview data (justification niyo sa defense)
+
+
+🧾 HR & PAYROLL SYSTEM
+Remove:
+people and payroll in navm make it named as hr
+Keep:
+Improve Payroll:
+Make it dynamic/configurable yearly
+Editable tax rates / salary adjustments / pagbigig / sss
+Not hardcoded
+📦 INVENTORY SYSTEM IMPROVEMENTS
+Add Inventory Request System
+Staff can request items before stocking
+Add Approval Workflow
+Request → barowner Approval → Process
+Request status:
+Pending
+Approved

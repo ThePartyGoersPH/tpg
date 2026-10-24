@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+!.env.*.example
+private-uploads/
+*.pem
+vision-sa*.json
+client_secret*.json
+.DS_Store
+*.log
+.git.bak-*
+tmp_logo_checks/
+tmp_google_check/

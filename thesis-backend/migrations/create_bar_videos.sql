@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS bar_videos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  bar_id INT NOT NULL,
+  video_url VARCHAR(500) NOT NULL,
+  label VARCHAR(100) DEFAULT NULL,
+  is_featured TINYINT(1) DEFAULT 0,
+  sort_order INT DEFAULT 0,
+  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (bar_id) REFERENCES bars(id) ON DELETE CASCADE,
+  INDEX idx_bar_videos_bar (bar_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

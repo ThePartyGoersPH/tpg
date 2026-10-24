@@ -1,0 +1,17 @@
+{
+  "name": "The Party Goers Platform Admin",
+  "short_name": "TPG Admin",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#1a0a0a",
+  "background_color": "#1a0a0a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

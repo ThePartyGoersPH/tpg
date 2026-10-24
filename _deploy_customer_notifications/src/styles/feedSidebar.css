@@ -1,0 +1,411 @@
+/* ═══════════════════════════════════════════════════════════════
+   FEED 3-COLUMN LAYOUT & SIDEBAR WIDGETS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── FEED PAGE CONTAINER ── */
+.feed-page-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.feed-page-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+/* ── 3-COLUMN LAYOUT ── */
+.feed-layout-3col {
+  display: grid;
+  grid-template-columns: 220px 1fr 220px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Collapsed at 1200px — see bottom of file for the full responsive block */
+
+/* ── CENTER COLUMN ── */
+.feed-center-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── SIDEBAR BASE STYLES ── */
+.feed-sidebar-left,
+.feed-sidebar-right {
+  position: sticky;
+  top: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ── SIDEBAR WIDGET CARD ── */
+.sidebar-widget {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+.sidebar-widget:hover {
+  border-color: rgba(224, 48, 48, 0.3);
+}
+
+.sidebar-widget-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sidebar-widget-title svg {
+  color: #e03030;
+}
+
+/* ── FEED FILTER BUTTONS ── */
+.feed-filter-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.feed-filter-btn {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  text-align: left;
+}
+
+.feed-filter-btn:hover {
+  background: rgba(224, 48, 48, 0.1);
+  border-color: rgba(224, 48, 48, 0.3);
+  color: var(--text-primary);
+}
+
+.feed-filter-btn.active {
+  background: rgba(224, 48, 48, 0.15);
+  border-color: #e03030;
+  color: #e03030;
+}
+
+/* ── ACTIVE BARS LIST ── */
+.active-bars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.active-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+
+.active-bar-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.active-bar-avatar {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.active-bar-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid #2a2a2a;
+}
+
+.active-bar-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(224, 48, 48, 0.15);
+  border: 1.5px solid #2a2a2a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #e03030;
+}
+
+.live-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: #e03030;
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  box-shadow: 0 0 8px rgba(224, 48, 48, 0.6);
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.active-bar-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.active-bar-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-bar-meta {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+/* ── QUICK STATS GRID ── */
+.quick-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
+}
+
+.quick-stat-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 0.65rem;
+  text-align: center;
+}
+
+.quick-stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-family: 'Sora', sans-serif;
+  line-height: 1;
+}
+
+.quick-stat-value.accent {
+  color: #e03030;
+}
+
+.quick-stat-label {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 0.3rem;
+}
+
+/* ── HOT TONIGHT LIST ── */
+.hot-tonight-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hot-tonight-item {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.65rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.hot-tonight-item:hover {
+  background: rgba(224, 48, 48, 0.05);
+  border-color: rgba(224, 48, 48, 0.3);
+}
+
+.hot-tonight-time {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #e03030;
+  white-space: nowrap;
+  padding-top: 0.1rem;
+}
+
+.hot-tonight-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.hot-tonight-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  margin-bottom: 0.2rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.hot-tonight-bar {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 0.15rem;
+}
+
+.hot-tonight-price {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #e03030;
+}
+
+/* ── GENRE TAGS ── */
+.genre-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.genre-tag-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #2a2a2a;
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.genre-tag-btn:hover {
+  background: rgba(224, 48, 48, 0.1);
+  border-color: rgba(224, 48, 48, 0.4);
+  color: #e03030;
+}
+
+.genre-tag-count {
+  background: rgba(224, 48, 48, 0.2);
+  color: #e03030;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+/* ── PARTY WEATHER ── */
+.party-weather-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.party-weather-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.65rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.party-weather-item:hover {
+  background: rgba(224, 48, 48, 0.05);
+  border-color: rgba(224, 48, 48, 0.3);
+}
+
+.party-weather-city {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.party-weather-bars {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+/* ── INVITE FRIENDS CTA ── */
+.invite-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+/* ── RESPONSIVE ADJUSTMENTS ── */
+/* NOTE: 1400px rule MUST come before 1200px and 768px so it doesn't override them */
+@media (max-width: 1400px) {
+  .feed-layout-3col {
+    grid-template-columns: 200px 1fr 200px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .feed-layout-3col {
+    grid-template-columns: 1fr;
+  }
+  .feed-sidebar-left,
+  .feed-sidebar-right {
+    display: none !important;
+  }
+  .feed-page-container {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .feed-page-container {
+    padding: 0.75rem;
+  }
+  .feed-page-header {
+    margin-bottom: 1.25rem;
+  }
+  .feed-center-column {
+    gap: 0.75rem;
+  }
+}
