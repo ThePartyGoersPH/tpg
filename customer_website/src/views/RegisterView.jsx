@@ -78,6 +78,9 @@ function ResendLink({ email }) {
   );
 }
 
+const ID_TYPES = ['Driver\'s License', 'PhilSys National ID', 'Philippine Passport', 'UMID', 'PRC ID', 'Postal ID', 'Voter\'s ID', 'PhilHealth ID', 'SSS ID', 'Senior Citizen ID'];
+const ID_TYPES_WITH_BACK = ID_TYPES;
+
 function calculateAge(dob) {
   if (!dob) return 0;
   const today = new Date();
@@ -136,12 +139,29 @@ function RegisterView() {
   };
 
   const [step, setStep] = useState(1);
+  const [wizardStep, setWizardStep] = useState(1);
+  const [submitted, setSubmitted] = useState(false);
+
   const [form, setForm] = useState({
     first_name: '', last_name: '', email: '',
     password: '', phone_number: '', date_of_birth: ''
   });
   const [confirmPassword, setConfirmPassword] = useState('');
   const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [idType, setIdType] = useState('');
+  const [idNumber, setIdNumber] = useState('');
+  const [frontImage, setFrontImage] = useState(null);
+  const [backImage, setBackImage] = useState(null);
+  const [selfieImage, setSelfieImage] = useState(null);
+  const [frontPreview, setFrontPreview] = useState(null);
+  const [backPreview, setBackPreview] = useState(null);
+  const [selfiePreview, setSelfiePreview] = useState(null);
+  const [consent, setConsent] = useState(false);
+  const [privacyConsent, setPrivacyConsent] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const frontRef = useRef(null);
+  const backRef = useRef(null);
+  const selfieRef = useRef(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [fieldsReadonly, setFieldsReadonly] = useState({
@@ -208,6 +228,23 @@ function RegisterView() {
 
   const onChange = (key, val) => setForm(p => ({ ...p, [key]: val }));
 
+  const handleImage = (file, setFile, setPreview) => {
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Only JPEG, PNG, or WebP images are allowed.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Each image must be 5 MB or smaller.');
+      return;
+    }
+    setFile(file);
+    setPreview(URL.createObjectURL(file));
+    setError('');
+  };
+
+  const needsBack = ID_TYPES_WITH_BACK.includes(idType);
+
   // Arriving from a Google ACCOUNT_NOT_FOUND redirect: prefill the verified
   // details so only the remaining fields need filling in.
   useEffect(() => {
@@ -240,6 +277,8 @@ function RegisterView() {
   const showEmailError = touched.email || submitAttempted;
   const showPasswordError = touched.password || submitAttempted;
   const showPhoneError = touched.phone_number || submitAttempted;
+const showFirstNameError = touched.first_name || submitAttempted;
+const showLastNameError = touched.last_name || submitAttempted;
   const canSubmit =
     ageConfirmed &&
     !dobError &&
@@ -253,7 +292,13 @@ function RegisterView() {
     pwCheck.ok &&
     emailFormatOk &&
     !emailBusy &&
-    !emailTaken;
+    !emailTaken &&
+    idType &&
+    frontImage &&
+    selfieImage &&
+    (!needsBack || backImage) &&
+    consent &&
+    privacyConsent;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -264,23 +309,40 @@ function RegisterView() {
     }
     setError('');
     setSubmitting(true);
+    setUploadProgress(0);
     try {
-      await register({
-        ...form,
-        first_name: form.first_name.trim(),
-        last_name: form.last_name.trim(),
-        email: form.email.trim(),
-        phone_number: form.phone_number.trim(),
+      const formData = new FormData();
+      formData.append('first_name', form.first_name.trim());
+      formData.append('last_name', form.last_name.trim());
+      formData.append('email', form.email.trim());
+      formData.append('password', form.password);
+      if (form.phone_number) formData.append('phone_number', form.phone_number.trim());
+      formData.append('date_of_birth', form.date_of_birth);
+      formData.append('id_type', idType);
+      if (idNumber) formData.append('id_number', idNumber);
+      formData.append('id_front', frontImage);
+      if (needsBack && backImage) formData.append('id_back', backImage);
+      formData.append('id_selfie', selfieImage);
+      formData.append('consent', String(consent));
+      formData.append('privacy_consent', String(privacyConsent));
+
+      await apiClient.post('/auth/register', formData, {
+        timeout: 20000,
+        onUploadProgress: (e) => {
+          if (e.total) setUploadProgress(Math.round((e.loaded / e.total) * 100));
+        },
       });
-      setStep(2);
+      setSubmitted(true);
     } catch (err) {
-      setError(err?.response?.data?.message || 'Registration failed. Please try again.');
+      const data = err?.response?.data;
+      setError(data?.message || err?.message || 'Registration failed. Please try again.');
     } finally {
       setSubmitting(false);
+      setUploadProgress(0);
     }
   };
 
-  if (step === 2) {
+  if (submitted) {
     return (
       <div className="auth-view">
         <div className="glass-card auth-card animate-in">
@@ -342,6 +404,7 @@ function RegisterView() {
               onChange={e => onChange('first_name', e.target.value)}
               maxLength={100}
               onFocus={() => setFieldsReadonly(p => ({ ...p, first_name: false }))}
+              onBlur={() => markTouched('first_name')}
               readOnly={fieldsReadonly.first_name}
               autoComplete="off"
               required
@@ -353,16 +416,17 @@ function RegisterView() {
               onChange={e => onChange('last_name', e.target.value)}
               maxLength={100}
               onFocus={() => setFieldsReadonly(p => ({ ...p, last_name: false }))}
+              onBlur={() => markTouched('last_name')}
               readOnly={fieldsReadonly.last_name}
               autoComplete="off"
               required
             />
           </div>
-          {(firstNameError || lastNameError) && (
+          {(showFirstNameError && firstNameError) || (showLastNameError && lastNameError) ? (
             <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '-0.4rem', marginBottom: 0 }}>
-              {firstNameError || lastNameError}
+              {showFirstNameError && firstNameError ? firstNameError : lastNameError}
             </p>
-          )}
+          ) : null}
           <input
             className="glass-input"
             type="email"
@@ -554,6 +618,71 @@ function RegisterView() {
               {ageConfirmed && <CheckCircle size={14} color="#22c55e" style={{ flexShrink: 0 }} />}
             </label>
           </div>
+
+          {/* ID verification section */}
+          <div style={{ marginTop: '0.5rem' }}>
+            <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Verify your age and identity</h3>
+            <select className="glass-input" value={idType} onChange={e => setIdType(e.target.value)} onBlur={() => markTouched('id_type')} required>
+              <option value="">Select ID type</option>
+              {ID_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <input className="glass-input" placeholder="ID number (optional)" value={idNumber} onChange={e => setIdNumber(e.target.value)} style={{ marginTop: '0.5rem' }} />
+            <div style={{ marginTop: '0.75rem' }}>
+              <label>ID Front Photo (required)</label>
+              <input ref={frontRef} type="file" accept="image/*" capture="environment" onChange={(e) => handleImage(e.target.files[0], setFrontImage, setFrontPreview)} style={{ display: 'none' }} />
+              {frontPreview ? (
+                <div className="preview">
+                  <img src={frontPreview} alt="ID front" style={{ maxWidth: '200px' }} />
+                  <button type="button" onClick={() => frontRef.current?.click()}>Replace</button>
+                </div>
+              ) : (
+                <button type="button" className="button secondary" onClick={() => frontRef.current?.click()}>Upload Front Photo</button>
+              )}
+            </div>
+            {needsBack && (
+              <div style={{ marginTop: '0.75rem' }}>
+                <label>ID Back Photo (required)</label>
+                <input ref={backRef} type="file" accept="image/*" capture="environment" onChange={(e) => handleImage(e.target.files[0], setBackImage, setBackPreview)} style={{ display: 'none' }} />
+                {backPreview ? (
+                  <div className="preview">
+                    <img src={backPreview} alt="ID back" style={{ maxWidth: '200px' }} />
+                    <button type="button" onClick={() => backRef.current?.click()}>Replace</button>
+                  </div>
+                ) : (
+                  <button type="button" className="button secondary" onClick={() => backRef.current?.click()}>Upload Back Photo</button>
+                )}
+              </div>
+            )}
+            <div style={{ marginTop: '0.75rem' }}>
+              <label>Selfie holding ID (required)</label>
+              <input ref={selfieRef} type="file" accept="image/*" capture="user" onChange={(e) => handleImage(e.target.files[0], setSelfieImage, setSelfiePreview)} style={{ display: 'none' }} />
+              {selfiePreview ? (
+                <div className="preview">
+                  <img src={selfiePreview} alt="Selfie" style={{ maxWidth: '200px' }} />
+                  <button type="button" onClick={() => selfieRef.current?.click()}>Replace</button>
+                </div>
+              ) : (
+                <button type="button" className="button secondary" onClick={() => selfieRef.current?.click()}>Upload Selfie</button>
+              )}
+            </div>
+            <div className="tips" style={{ marginTop: '0.5rem' }}>
+              <p><strong>Tips:</strong> All 4 corners visible, text readable, not expired, no glare, no screenshots.</p>
+            </div>
+            <label className="checkbox" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+              I confirm I am 18+ and the ID provided is mine.
+            </label>
+            <label className="checkbox" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <input type="checkbox" checked={privacyConsent} onChange={(e) => setPrivacyConsent(e.target.checked)} />
+              I consent to the collection and processing of my ID for age and identity verification under the Data Privacy Act (RA 10173).
+            </label>
+          </div>
+
+          {uploadProgress > 0 && submitting && (
+            <p style={{ fontSize: '0.8rem' }}>Uploading... {uploadProgress}%</p>
+          )}
+
+
 
           {error && <p className="error-text">{error}</p>}
 
