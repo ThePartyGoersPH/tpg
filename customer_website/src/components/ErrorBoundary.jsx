@@ -23,24 +23,33 @@ export default class ErrorBoundary extends Component {
       const err = this.state.error;
       const msg = err?.message || String(err);
       const stack = err?.stack || '';
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       return (
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           minHeight: '60vh', padding: '2rem', textAlign: 'center',
-          background: 'var(--color-bg-base, #0c0a08)', color: 'var(--color-text-primary, #fff)',
+          background: isDark ? 'var(--color-bg-base, #0f0f0f)' : 'var(--color-bg-base, #f5f5f5)',
+          color: isDark ? '#fff' : 'var(--color-text-primary, #1a1a1a)',
         }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
-          <h2 style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, margin: '0 0 0.5rem' }}>
+          <h2 style={{
+            fontFamily: "'Sora', sans-serif", fontWeight: 700, margin: '0 0 0.5rem',
+            color: isDark ? '#fff' : 'var(--color-text-primary, #1a1a1a)',
+          }}>
             Something went wrong
           </h2>
-          <p style={{ color: 'var(--color-text-muted, #888)', fontSize: '0.85rem', maxWidth: 560, margin: '0 0 0.5rem', wordBreak: 'break-word' }}>
+          <p style={{
+            color: isDark ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted, #555)',
+            fontSize: '0.85rem', maxWidth: 560, margin: '0 0 0.5rem', wordBreak: 'break-word',
+          }}>
             {msg}
           </p>
           {stack && (
             <pre style={{
-              textAlign: 'left', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)',
+              textAlign: 'left', fontSize: '0.7rem',
+              color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--color-text-muted, #555)',
               maxWidth: 600, maxHeight: 150, overflow: 'auto', whiteSpace: 'pre-wrap',
-              background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: 8,
+              background: 'var(--color-bg-elevated, rgba(0,0,0,0.05))', padding: '0.5rem', borderRadius: 8,
               marginBottom: '1rem',
             }}>
               {stack}

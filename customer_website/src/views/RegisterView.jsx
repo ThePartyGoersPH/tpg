@@ -26,6 +26,28 @@ function useCountdown(initial = 0) {
   };
 
   useEffect(() => () => clearInterval(timerRef.current), []);
+
+  // Sync wizard step with URL ?step= param (browser back/forward)
+  // Listen for browser back/forward button
+  useEffect(() => {
+    const handlePopState = () => {
+      const step = getStepFromUrl();
+      if (step !== wizardStep) {
+        setWizardStep(step);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [wizardStep]);
+
+  // Focus first field of each step
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const firstInput = document.querySelector('.glass-card input, .glass-card select, .glass-card button');
+      if (firstInput) firstInput.focus();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [wizardStep]);
   return { seconds, start };
 }
 
@@ -80,7 +102,7 @@ function ResendLink({ email }) {
 }
 
 const ID_TYPES = ['Driver\'s License', 'PhilSys National ID', 'Philippine Passport', 'UMID', 'PRC ID', 'Postal ID', 'Voter\'s ID', 'PhilHealth ID', 'SSS ID', 'Senior Citizen ID'];
-const ID_TYPES_WITH_BACK = ID_TYPES;
+const ID_TYPES_WITH_BACK = ID_TYPES.filter(t => t !== 'Philippine Passport');
 
 function calculateAge(dob) {
   if (!dob) return 0;
@@ -108,6 +130,51 @@ function RegisterView() {
   const [googleError, setGoogleError] = useState('');
   const [googleNotice, setGoogleNotice] = useState('');
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
+  const [form, setForm] = useState({
+    first_name: '', last_name: '', email: '',
+    password: '', phone_number: '', date_of_birth: ''
+  });
+  const [idType, setIdType] = useState('');
+  const [idNumber, setIdNumber] = useState('');
+  const [consent, setConsent] = useState(false);
+  const [privacyConsent, setPrivacyConsent] = useState(false);
+  const [step, setStep] = useState(1);
+  const [submitted, setSubmitted] = useState(false);
+  const [stepGuardMsg, setStepGuardMsg] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [frontImage, setFrontImage] = useState(null);
+  const [backImage, setBackImage] = useState(null);
+  const [selfieImage, setSelfieImage] = useState(null);
+  const [frontPreview, setFrontPreview] = useState(null);
+  const [ocrHints, setOcrHints] = useState(null);
+  const [ocrScanning, setOcrScanning] = useState(false);
+  const [ocrError, setOcrError] = useState(null);
+  const [backPreview, setBackPreview] = useState(null);
+  const [selfiePreview, setSelfiePreview] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const frontRef = useRef(null);
+  const backRef = useRef(null);
+  const selfieRef = useRef(null);
+  const firstNameRef = useRef(null);
+  const lastNameRef = useRef(null);
+  const emailRef = useRef(null);
+  const phoneRef = useRef(null);
+  const passwordRef = useRef(null);
+  const confirmRef = useRef(null);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [fieldsReadonly, setFieldsReadonly] = useState({
+    first_name: true, last_name: true, email: true,
+    password: true, confirm: true, phone: true
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [emailCheck, setEmailCheck] = useState({ status: 'idle' });
+  const emailCheckAbort = useRef(null);
+  const emailCheckTimer = useRef(null);
+  const [touched, setTouched] = useState({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const handleGoogleSuccess = async (credentialResponse) => {
     setGoogleError('');
@@ -139,50 +206,120 @@ function RegisterView() {
     }
   };
 
-  const [step, setStep] = useState(1);
-  const [wizardStep, setWizardStep] = useState(1);
-  const [submitted, setSubmitted] = useState(false);
+  const getStepFromUrl = () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const step = parseInt(params.get('step') || '1', 10);
+      return Math.min(4, Math.max(1, isNaN(step) ? 1 : step));
+    } catch (e) {
+      return 1;
+    }
+  };
+  const [wizardStep, setWizardStep] = useState(getStepFromUrl());
 
-  const [form, setForm] = useState({
-    first_name: '', last_name: '', email: '',
-    password: '', phone_number: '', date_of_birth: ''
-  });
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [ageConfirmed, setAgeConfirmed] = useState(false);
-  const [idType, setIdType] = useState('');
-  const [idNumber, setIdNumber] = useState('');
-  const [frontImage, setFrontImage] = useState(null);
-  const [backImage, setBackImage] = useState(null);
-  const [selfieImage, setSelfieImage] = useState(null);
-  const [frontPreview, setFrontPreview] = useState(null);
-  const [backPreview, setBackPreview] = useState(null);
-  const [selfiePreview, setSelfiePreview] = useState(null);
-  const [consent, setConsent] = useState(false);
-  const [privacyConsent, setPrivacyConsent] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const frontRef = useRef(null);
-  const backRef = useRef(null);
-  const selfieRef = useRef(null);
-  const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [fieldsReadonly, setFieldsReadonly] = useState({
-    first_name: true, last_name: true, email: true,
-    password: true, confirm: true, phone: true
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // Persist non-sensitive fields across refresh (never password or images)
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('tpg_register_form');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.form) setForm(prev => ({ ...prev, ...parsed.form, password: '' }));
+        if (parsed.idType) setIdType(parsed.idType);
+        if (parsed.idNumber) setIdNumber(parsed.idNumber);
+        if (parsed.consent !== undefined) setConsent(parsed.consent);
+        if (parsed.privacyConsent !== undefined) setPrivacyConsent(parsed.privacyConsent);
+      }
+    } catch (e) {}
+  }, []);
 
-  // Live email availability: idle | invalid | checking | available | taken | taken-unverified | error
-  const [emailCheck, setEmailCheck] = useState({ status: 'idle' });
-  const emailCheckAbort = useRef(null);
-  const emailCheckTimer = useRef(null);
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('tpg_register_form', JSON.stringify({
+        form: { first_name: form.first_name, last_name: form.last_name, email: form.email, phone_number: form.phone_number, date_of_birth: form.date_of_birth },
+        idType,
+        idNumber,
+        consent,
+        privacyConsent,
+      }));
+    } catch (e) {}
+  }, [form.first_name, form.last_name, form.email, form.phone_number, form.date_of_birth, idType, idNumber, consent, privacyConsent]);
 
-  // Show field errors only after touch or a submit attempt.
-  const [touched, setTouched] = useState({});
-  const [submitAttempted, setSubmitAttempted] = useState(false);
-  const markTouched = (key) => setTouched((p) => (p[key] ? p : { ...p, [key]: true }));
-
+  const needsBack = ID_TYPES_WITH_BACK.includes(idType);
   const emailFormatOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
+  const age = calculateAge(form.date_of_birth);
+  const dobError = form.date_of_birth && age < 18
+    ? `You must be at least 18 years old. (You are ${age})`
+    : '';
+  const firstNameError = validateName(form.first_name, 'First name');
+  const lastNameError = validateName(form.last_name, 'Last name');
+  const phoneCheck = normalizeCustomerPhone(form.phone_number);
+  const phoneError = form.phone_number.trim() ? (phoneCheck.error || '') : '';
+  const pwCheck = validatePasswordStrength(form.password, {
+    name: `${form.first_name} ${form.last_name}`,
+    email: form.email,
+  });
+  const passwordMismatch = confirmPassword && form.password !== confirmPassword;
+  const emailTaken = emailCheck.status === 'taken' || emailCheck.status === 'taken-unverified';
+  const emailBusy = emailCheck.status === 'checking';
+  const showEmailError = touched.email || submitAttempted;
+  const showPasswordError = touched.password || submitAttempted;
+  const showPhoneError = touched.phone_number || submitAttempted;
+const showFirstNameError = touched.first_name || submitAttempted;
+const showLastNameError = touched.last_name || submitAttempted;
+  const canSubmit =
+    ageConfirmed &&
+    !dobError &&
+    !firstNameError &&
+    !lastNameError &&
+    !phoneError &&
+    form.date_of_birth &&
+    !submitting &&
+    !passwordMismatch &&
+    confirmPassword &&
+    pwCheck.ok &&
+    emailFormatOk &&
+    !emailBusy &&
+    !emailTaken &&
+    idType &&
+    frontImage &&
+    selfieImage &&
+    (!needsBack || backImage) &&
+    consent &&
+    privacyConsent;
+
+  const step1Valid =
+    !firstNameError &&
+    !lastNameError &&
+    emailFormatOk &&
+    !emailBusy &&
+    !emailTaken &&
+    !phoneError &&
+    pwCheck.ok &&
+    !passwordMismatch &&
+    confirmPassword;
+  const step2Valid = !!form.date_of_birth && !dobError && ageConfirmed;
+  const step3Valid = !!idType && !!frontImage && (!needsBack || !!backImage) && !!selfieImage;
+  const step4Valid = consent && privacyConsent;
+
+  // Step guard: redirect to first incomplete step if required data is missing
+  useEffect(() => {
+    let target = 1;
+    if (step1Valid) target = 2;
+    if (step1Valid && step2Valid) target = 3;
+    if (step1Valid && step2Valid && step3Valid) target = 4;
+    if (wizardStep > target) {
+      setStepGuardMsg('Please complete the previous steps.');
+      setWizardStep(target);
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('step', String(target));
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {}
+    } else {
+      setStepGuardMsg('');
+    }
+  }, [wizardStep, step1Valid, step2Valid, step3Valid]);
+
 
   useEffect(() => {
     if (!emailFormatOk) {
@@ -244,7 +381,61 @@ function RegisterView() {
     setError('');
   };
 
-  const needsBack = ID_TYPES_WITH_BACK.includes(idType);
+  // OCR scan when front image changes (non-blocking)
+  useEffect(() => {
+    if (!frontImage || !idType) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setOcrScanning(true);
+      setOcrError(null);
+      setOcrHints(null);
+      try {
+        const formData = new FormData();
+        formData.append('file', frontImage);
+        formData.append('type', 'id');
+        formData.append('id_type', idType);
+        if (form.first_name) formData.append('name', `${form.first_name} ${form.last_name}`.trim());
+        if (form.date_of_birth) formData.append('dob', form.date_of_birth);
+        const res = await apiClient.post('/api/ocr/extract', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          signal: controller.signal,
+          timeout: 20000,
+        });
+        if (cancelled) return;
+        const data = res.data?.data || {};
+        const fields = data.fields || {};
+        const hints = data.hints || [];
+        setOcrHints(hints);
+        // Pre-fill empty fields only (suggestions)
+        setForm((prev) => {
+          const next = { ...prev };
+          if (fields.fullName && !prev.first_name && !prev.last_name) {
+            const parts = String(fields.fullName).trim().split(/\s+/);
+            if (parts.length > 1) {
+              next.first_name = parts.slice(0, -1).join(' ');
+              next.last_name = parts[parts.length - 1];
+            } else {
+              next.first_name = parts[0] || prev.first_name;
+            }
+          }
+          if (fields.birthdate && !prev.date_of_birth) next.date_of_birth = fields.birthdate;
+          return next;
+        });
+        if (fields.idNumber && !idNumber) setIdNumber(fields.idNumber);
+        if (data.lowConfidence) setOcrError(true); else setOcrError(false);
+      } catch (err) {
+        if (cancelled) return;
+        if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') return;
+        setOcrError(true);
+        setOcrHints(null);
+      } finally {
+        if (!cancelled) setOcrScanning(false);
+      }
+    }, 500); // debounce
+    return () => { cancelled = true; controller.abort(); clearTimeout(timer); };
+  }, [frontImage, idType]);
+
 
   // Arriving from a Google ACCOUNT_NOT_FOUND redirect: prefill the verified
   // details so only the remaining fields need filling in.
@@ -260,69 +451,39 @@ function RegisterView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewParams?.fromGoogle]);
 
-  const age = calculateAge(form.date_of_birth);
-  const dobError = form.date_of_birth && age < 18
-    ? `You must be at least 18 years old. (You are ${age})`
-    : '';
-  const firstNameError = validateName(form.first_name, 'First name');
-  const lastNameError = validateName(form.last_name, 'Last name');
-  const phoneCheck = normalizeCustomerPhone(form.phone_number);
-  const phoneError = form.phone_number.trim() ? (phoneCheck.error || '') : '';
-  const pwCheck = validatePasswordStrength(form.password, {
-    name: `${form.first_name} ${form.last_name}`,
-    email: form.email,
-  });
-  const passwordMismatch = confirmPassword && form.password !== confirmPassword;
-  const emailTaken = emailCheck.status === 'taken' || emailCheck.status === 'taken-unverified';
-  const emailBusy = emailCheck.status === 'checking';
-  const showEmailError = touched.email || submitAttempted;
-  const showPasswordError = touched.password || submitAttempted;
-  const showPhoneError = touched.phone_number || submitAttempted;
-const showFirstNameError = touched.first_name || submitAttempted;
-const showLastNameError = touched.last_name || submitAttempted;
-  const canSubmit =
-    ageConfirmed &&
-    !dobError &&
-    !firstNameError &&
-    !lastNameError &&
-    !phoneError &&
-    form.date_of_birth &&
-    !submitting &&
-    !passwordMismatch &&
-    confirmPassword &&
-    pwCheck.ok &&
-    emailFormatOk &&
-    !emailBusy &&
-    !emailTaken &&
-    idType &&
-    frontImage &&
-    selfieImage &&
-    (!needsBack || backImage) &&
-    consent &&
-    privacyConsent;
-
-  const step1Valid =
-    !firstNameError &&
-    !lastNameError &&
-    emailFormatOk &&
-    !emailBusy &&
-    !emailTaken &&
-    !phoneError &&
-    pwCheck.ok &&
-    !passwordMismatch &&
-    confirmPassword;
-  const step2Valid = !!form.date_of_birth && !dobError && ageConfirmed;
-  const step3Valid = !!idType && !!frontImage && (!needsBack || !!backImage) && !!selfieImage;
-  const step4Valid = consent && privacyConsent;
+  const updateUrlStep = (step) => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('step', String(step));
+      window.history.pushState({}, '', url.toString());
+    } catch (e) {}
+  };
 
   const goNext = () => {
     setSubmitAttempted(true);
-    if (wizardStep === 1 && !step1Valid) return;
+    if (wizardStep === 1) {
+      setTouched((t) => ({ ...t, first_name: true, last_name: true, email: true, phone_number: true, password: true }));
+      if (!step1Valid) {
+        if (firstNameError) firstNameRef.current?.focus();
+        else if (lastNameError) lastNameRef.current?.focus();
+        else if (!emailFormatOk || emailBusy || emailTaken) emailRef.current?.focus();
+        else if (phoneError) phoneRef.current?.focus();
+        else if (!pwCheck.ok) passwordRef.current?.focus();
+        else if (passwordMismatch || !confirmPassword) confirmRef.current?.focus();
+        return;
+      }
+    }
     if (wizardStep === 2 && !step2Valid) return;
     if (wizardStep === 3 && !step3Valid) return;
-    setWizardStep((s) => Math.min(4, s + 1));
+    const next = Math.min(4, wizardStep + 1);
+    setWizardStep(next);
+    updateUrlStep(next);
   };
-  const goBack = () => setWizardStep((s) => Math.max(1, s - 1));
+  const goBack = () => {
+    const prev = Math.max(1, wizardStep - 1);
+    setWizardStep(prev);
+    updateUrlStep(prev);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -412,26 +573,66 @@ const showLastNameError = touched.last_name || submitAttempted;
 
   return (
     <div className="auth-view">
-      <form className="glass-card auth-card" onSubmit={handleSubmit} autoComplete="off">
+      <form className="glass-card auth-card" onSubmit={handleSubmit} autoComplete="off" onKeyDown={(e) => {
+        if (e.key === 'Enter' && wizardStep < 4 && e.target.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          goNext();
+        }
+      }}>
         <div className="glass-card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div className="land-live-badge" style={{ marginBottom: '0.25rem', alignSelf: 'flex-start' }}>
-            <span className="land-live-dot" />
-            <span>NEW CUSTOMER</span>
-          </div>
-          <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>CREATE <span style={{ color: 'var(--color-red-primary)' }}>ACCOUNT</span></h1>
+          <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-primary)', letterSpacing: '-0.5px', textAlign: 'left' }}>Create your account</h1>
+          <p style={{ textAlign: 'left', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>Complete all 4 steps to register.</p>
+          {stepGuardMsg && (
+            <p style={{ fontSize: '0.85rem', color: '#f59e0b', textAlign: 'left', margin: '0.25rem 0' }}>{stepGuardMsg}</p>
+          )}
 
-          <div style={{ display: 'flex', gap: '0.5rem', width: '100%', alignItems: 'center' }} aria-live="polite">
-            {[1,2,3,4].map((n) => (
-              <div key={n} style={{ flex: 1, height: 6, borderRadius: 999, background: n <= wizardStep ? 'var(--color-red-primary)' : 'var(--color-border)' }} />
-            ))}
+          {/* Circle stepper */}
+          <div className="wizard-stepper wizard-stepper-circles" aria-live="polite" style={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '0.5rem' }}>
+            {['Account', 'Age', 'Identity', 'Review'].map((label, i) => {
+              const step = i + 1;
+              const done = wizardStep > step;
+              const current = wizardStep === step;
+              return (
+                <div key={step} style={{ display: 'flex', alignItems: 'center', flex: step < 4 ? 1 : 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', minWidth: 48 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: '50%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontWeight: 700, fontSize: '0.85rem',
+                      background: done ? '#22c55e' : current ? 'var(--color-red-primary)' : 'var(--color-bg-elevated)',
+                      color: done || current ? '#fff' : 'var(--color-text-muted)',
+                      border: done || current ? 'none' : '2px solid var(--color-border)',
+                      transition: 'all 0.2s ease',
+                    }}>
+                      {done ? '✓' : step}
+                    </div>
+                    <span style={{ fontSize: '0.7rem', fontWeight: current ? 700 : 400, color: current ? 'var(--color-red-primary)' : 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                      {label}
+                    </span>
+                  </div>
+                  {step < 4 && (
+                    <div style={{ flex: 1, height: 2, background: wizardStep > step ? '#22c55e' : 'var(--color-border)', margin: '0 0.5rem', marginBottom: '1.2rem', transition: 'background 0.3s ease' }} />
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Step {wizardStep} of 4</p>
+
+          {/* Mobile stepper text */}
+          <p className="wizard-stepper-text" style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', textAlign: 'center', marginBottom: '0.25rem', display: 'none' }}>Step {wizardStep} of 4</p>
+
+          {/* Full-width progress bar */}
+          <div style={{ width: '100%', height: 8, borderRadius: 999, background: 'var(--color-border)', overflow: 'hidden', marginBottom: '0.25rem' }}>
+            <div style={{ width: `${(wizardStep / 4) * 100}%`, height: '100%', borderRadius: 999, background: 'var(--color-red-primary)', transition: 'width 0.3s ease' }} />
+          </div>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', textAlign: 'left' }}>Step {wizardStep} of 4</p>
 
           {wizardStep === 1 && (
             <>
               <div className="g g-2">
             <input
               className="glass-input"
+              ref={firstNameRef}
               placeholder="First name"
               value={form.first_name}
               onChange={e => onChange('first_name', e.target.value)}
@@ -444,6 +645,7 @@ const showLastNameError = touched.last_name || submitAttempted;
             />
             <input
               className="glass-input"
+              ref={lastNameRef}
               placeholder="Last name"
               value={form.last_name}
               onChange={e => onChange('last_name', e.target.value)}
@@ -463,6 +665,7 @@ const showLastNameError = touched.last_name || submitAttempted;
           <input
             className="glass-input"
             type="email"
+            ref={emailRef}
             placeholder="Email"
             value={form.email}
             onChange={e => onChange('email', e.target.value)}
@@ -472,6 +675,29 @@ const showLastNameError = touched.last_name || submitAttempted;
             autoComplete="off"
             required
           />
+          <div>
+            <input
+              className="glass-input"
+              type="tel"
+              inputMode="numeric"
+              placeholder="Phone number (optional)"
+              value={form.phone_number}
+              onChange={e => onChange('phone_number', sanitizePhoneInput(e.target.value))}
+              onBlur={() => markTouched('phone_number')}
+              maxLength={11}
+              onFocus={() => setFieldsReadonly(p => ({ ...p, phone: false }))}
+              readOnly={fieldsReadonly.phone}
+              autoComplete="off"
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '-0.4rem' }} aria-live="polite">
+              <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>
+                {showPhoneError && phoneError ? phoneError : ''}
+              </span>
+              <span style={{ fontSize: '0.72rem', color: form.phone_number.length === 11 ? '#22c55e' : 'var(--color-text-muted)' }}>
+                {form.phone_number.length}/11
+              </span>
+            </div>
+          </div>
           <div aria-live="polite">
             {showEmailError && emailCheck.status === 'checking' && (
               <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '-0.4rem', marginBottom: 0 }}>Checking…</p>
@@ -501,7 +727,7 @@ const showLastNameError = touched.last_name || submitAttempted;
             <input
               className="glass-input password-input"
               type={showPassword ? 'text' : 'password'}
-              placeholder="Password (min 8 chars)"
+              placeholder="Password"
               value={form.password}
               onChange={e => onChange('password', e.target.value)}
               onFocus={() => setFieldsReadonly(p => ({ ...p, password: false }))}
@@ -590,34 +816,13 @@ const showLastNameError = touched.last_name || submitAttempted;
               )
             ) : null}
           </div>
-          <input
-            className="glass-input"
-            type="tel"
-            inputMode="numeric"
-            placeholder="Phone number (optional, 09xxxxxxxxx)"
-            value={form.phone_number}
-            onChange={e => onChange('phone_number', sanitizePhoneInput(e.target.value))}
-            onBlur={() => markTouched('phone_number')}
-            maxLength={11}
-            onFocus={() => setFieldsReadonly(p => ({ ...p, phone: false }))}
-            readOnly={fieldsReadonly.phone}
-            autoComplete="off"
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '-0.4rem' }} aria-live="polite">
-            <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>
-              {showPhoneError && phoneError ? phoneError : ''}
-            </span>
-            <span style={{ fontSize: '0.72rem', color: form.phone_number.length === 11 ? '#22c55e' : 'var(--color-text-muted)' }}>
-              {form.phone_number.length}/11
-            </span>
-          </div>
-
             </>
           )}
 
           {/* Birthday */}
           {wizardStep === 2 && (
             <>
+          <div className="g g-2">
           <div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.4rem' }}>
               <Calendar size={13} /> Date of Birth
@@ -633,6 +838,18 @@ const showLastNameError = touched.last_name || submitAttempted;
             {dobError && (
               <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem', marginBottom: 0 }}>{dobError}</p>
             )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-elevated)', borderRadius: 10, padding: '0.85rem' }}>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: 0 }}>Your age</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.25rem 0', color: form.date_of_birth && calculateAge(form.date_of_birth) >= 18 ? '#22c55e' : '#ef4444' }}>
+                {form.date_of_birth ? calculateAge(form.date_of_birth) : '—'}
+              </p>
+              <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', margin: 0 }}>
+                {form.date_of_birth ? (calculateAge(form.date_of_birth) >= 18 ? '18+ ✓' : 'Under 18') : 'Enter DOB'}
+              </p>
+            </div>
+          </div>
           </div>
 
           {/* 18+ notice + checkbox */}
@@ -663,75 +880,283 @@ const showLastNameError = touched.last_name || submitAttempted;
           {/* ID verification section */}
           {wizardStep === 3 && (
             <>
-          <div style={{ marginTop: '0.5rem' }}>
-            <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Verify your age and identity</h3>
-            <select className="glass-input" value={idType} onChange={e => setIdType(e.target.value)} onBlur={() => markTouched('id_type')} required>
-              <option value="">Select ID type</option>
-              {ID_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <input className="glass-input" placeholder="ID number (optional)" value={idNumber} onChange={e => setIdNumber(e.target.value)} style={{ marginTop: '0.5rem' }} />
-            <div style={{ marginTop: '0.75rem' }}>
-              <label>ID Front Photo (required)</label>
-              <input ref={frontRef} type="file" accept="image/*" capture="environment" onChange={(e) => handleImage(e.target.files[0], setFrontImage, setFrontPreview)} style={{ display: 'none' }} />
-              {frontPreview ? (
-                <div className="preview">
-                  <img src={frontPreview} alt="ID front" style={{ maxWidth: '200px' }} />
-                  <button type="button" onClick={() => frontRef.current?.click()}>Replace</button>
-                </div>
-              ) : (
-                <button type="button" className="button secondary" onClick={() => frontRef.current?.click()}>Upload Front Photo</button>
-              )}
+          <div className="g g-2">
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.4rem' }}>ID type</label>
+              <select className="glass-input" value={idType} onChange={e => setIdType(e.target.value)} onBlur={() => markTouched('id_type')} required>
+                <option value="">Select ID type</option>
+                {ID_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
             </div>
-            {needsBack && (
-              <div style={{ marginTop: '0.75rem' }}>
-                <label>ID Back Photo (required)</label>
-                <input ref={backRef} type="file" accept="image/*" capture="environment" onChange={(e) => handleImage(e.target.files[0], setBackImage, setBackPreview)} style={{ display: 'none' }} />
-                {backPreview ? (
-                  <div className="preview">
-                    <img src={backPreview} alt="ID back" style={{ maxWidth: '200px' }} />
-                    <button type="button" onClick={() => backRef.current?.click()}>Replace</button>
-                  </div>
-                ) : (
-                  <button type="button" className="button secondary" onClick={() => backRef.current?.click()}>Upload Back Photo</button>
-                )}
-              </div>
-            )}
-            <div style={{ marginTop: '0.75rem' }}>
-              <label>Selfie holding ID (required)</label>
-              <input ref={selfieRef} type="file" accept="image/*" capture="user" onChange={(e) => handleImage(e.target.files[0], setSelfieImage, setSelfiePreview)} style={{ display: 'none' }} />
-              {selfiePreview ? (
-                <div className="preview">
-                  <img src={selfiePreview} alt="Selfie" style={{ maxWidth: '200px' }} />
-                  <button type="button" onClick={() => selfieRef.current?.click()}>Replace</button>
-                </div>
-              ) : (
-                <button type="button" className="button secondary" onClick={() => selfieRef.current?.click()}>Upload Selfie</button>
-              )}
-            </div>
-            <div className="tips" style={{ marginTop: '0.5rem' }}>
-              <p><strong>Tips:</strong> All 4 corners visible, text readable, not expired, no glare, no screenshots.</p>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.4rem' }}>ID number (optional)</label>
+              <input className="glass-input" placeholder="ID number" value={idNumber} onChange={e => setIdNumber(e.target.value)} />
+              <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.25rem', marginBottom: 0 }}>Only the last 4 characters are stored.</p>
             </div>
           </div>
+
+          <div className="g g-2">
+            {/* ID Front upload box */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>ID Front Photo</label>
+                <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: 999, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', fontWeight: 600 }}>Required</span>
+              </div>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => frontRef.current?.click()}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); frontRef.current?.click(); } }}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--color-red-primary)'; }}
+                onDragLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; }}
+                onDrop={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--color-border)'; if (e.dataTransfer.files[0]) handleImage(e.dataTransfer.files[0], setFrontImage, setFrontPreview); }}
+                style={{
+                  border: '2px dashed var(--color-border)',
+                  borderRadius: 12,
+                  minHeight: 160,
+                  aspectRatio: '16/10',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  background: 'var(--color-bg-elevated)',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  transition: 'border-color 0.2s',
+                }}
+              >
+                <input ref={frontRef} type="file" accept="image/*" capture="environment" onChange={(e) => handleImage(e.target.files[0], setFrontImage, setFrontPreview)} style={{ display: 'none' }} />
+                {frontPreview ? (
+                  <>
+                    <img src={frontPreview} alt="ID front" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
+                    <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(34,197,94,0.9)', color: '#fff', fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: 999, fontWeight: 600 }}>Uploaded</div>
+                    <div style={{ position: 'absolute', bottom: 8, left: 8, right: 8, display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); frontRef.current?.click(); }} style={{ fontSize: '0.75rem', padding: '0.3rem 0.8rem', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>Replace</button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setFrontImage(null); setFrontPreview(null); }} style={{ fontSize: '0.75rem', padding: '0.3rem 0.8rem', background: 'rgba(239,68,68,0.8)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>Remove</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="1.5" style={{ marginBottom: '0.5rem' }}>
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0, textAlign: 'center' }}>Tap to upload or take a photo</p>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', margin: '0.25rem 0 0', opacity: 0.7 }}>JPG, PNG or WEBP, max 5 MB</p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* ID Back upload box */}
+            {needsBack ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>ID Back Photo</label>
+                  <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: 999, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', fontWeight: 600 }}>Required</span>
+                </div>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => backRef.current?.click()}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); backRef.current?.click(); } }}
+                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--color-red-primary)'; }}
+                  onDragLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; }}
+                  onDrop={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--color-border)'; if (e.dataTransfer.files[0]) handleImage(e.dataTransfer.files[0], setBackImage, setBackPreview); }}
+                  style={{
+                    border: '2px dashed var(--color-border)',
+                    borderRadius: 12,
+                    minHeight: 160,
+                    aspectRatio: '16/10',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    background: 'var(--color-bg-elevated)',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    transition: 'border-color 0.2s',
+                  }}
+                >
+                  <input ref={backRef} type="file" accept="image/*" capture="environment" onChange={(e) => handleImage(e.target.files[0], setBackImage, setBackPreview)} style={{ display: 'none' }} />
+                  {backPreview ? (
+                    <>
+                      <img src={backPreview} alt="ID back" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
+                      <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(34,197,94,0.9)', color: '#fff', fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: 999, fontWeight: 600 }}>Uploaded</div>
+                      <div style={{ position: 'absolute', bottom: 8, left: 8, right: 8, display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); backRef.current?.click(); }} style={{ fontSize: '0.75rem', padding: '0.3rem 0.8rem', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>Replace</button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setBackImage(null); setBackPreview(null); }} style={{ fontSize: '0.75rem', padding: '0.3rem 0.8rem', background: 'rgba(239,68,68,0.8)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>Remove</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="1.5" style={{ marginBottom: '0.5rem' }}>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0, textAlign: 'center' }}>Tap to upload or take a photo</p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', margin: '0.25rem 0 0', opacity: 0.7 }}>JPG, PNG or WEBP, max 5 MB</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, opacity: 0.5 }}>ID Back Photo</label>
+                </div>
+                <div style={{
+                  border: '2px dashed var(--color-border)',
+                  borderRadius: 12,
+                  minHeight: 160,
+                  aspectRatio: '16/10',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'var(--color-bg-elevated)',
+                  opacity: 0.4,
+                }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0, textAlign: 'center' }}>ID Back (not needed for this ID)</p>
+                </div>
+              </div>
+            )}
+
+            {/* Selfie upload box */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Selfie holding ID</label>
+                <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: 999, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', fontWeight: 600 }}>Required</span>
+              </div>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => selfieRef.current?.click()}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selfieRef.current?.click(); } }}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--color-red-primary)'; }}
+                onDragLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; }}
+                onDrop={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--color-border)'; if (e.dataTransfer.files[0]) handleImage(e.dataTransfer.files[0], setSelfieImage, setSelfiePreview); }}
+                style={{
+                  border: '2px dashed var(--color-border)',
+                  borderRadius: 12,
+                  minHeight: 160,
+                  aspectRatio: '16/10',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  background: 'var(--color-bg-elevated)',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  transition: 'border-color 0.2s',
+                }}
+              >
+                <input ref={selfieRef} type="file" accept="image/*" capture="user" onChange={(e) => handleImage(e.target.files[0], setSelfieImage, setSelfiePreview)} style={{ display: 'none' }} />
+                {selfiePreview ? (
+                  <>
+                    <img src={selfiePreview} alt="Selfie" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
+                    <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(34,197,94,0.9)', color: '#fff', fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: 999, fontWeight: 600 }}>Uploaded</div>
+                    <div style={{ position: 'absolute', bottom: 8, left: 8, right: 8, display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); selfieRef.current?.click(); }} style={{ fontSize: '0.75rem', padding: '0.3rem 0.8rem', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>Replace</button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setSelfieImage(null); setSelfiePreview(null); }} style={{ fontSize: '0.75rem', padding: '0.3rem 0.8rem', background: 'rgba(239,68,68,0.8)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>Remove</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="1.5" style={{ marginBottom: '0.5rem' }}>
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0, textAlign: 'center' }}>Tap to upload or take a photo</p>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', margin: '0.25rem 0 0', opacity: 0.7 }}>JPG, PNG or WEBP, max 5 MB</p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Tips card */}
+            <div style={{ background: 'var(--color-bg-elevated)', borderRadius: 10, padding: '1rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <p style={{ fontWeight: 600, marginBottom: '0.5rem', fontSize: '0.9rem' }}>Tips for a good photo</p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.8rem', color: 'var(--color-text-muted)', lineHeight: 1.8 }}>
+                <li>✓ All 4 corners visible</li>
+                <li>✓ Text readable</li>
+                <li>✓ Not expired</li>
+                <li>✓ No glare</li>
+                <li>✓ No screenshots</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Privacy note */}
+          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', padding: '0.75rem', background: 'var(--color-bg-elevated)', borderRadius: 8, lineHeight: 1.6 }}>
+            <strong>Privacy:</strong> Your ID is used only for age and identity verification, reviewed by authorized admins, read automatically on our own server to help fill in your details, and deleted after the retention period under RA 10173.
+          </div>
+
+          {/* Consent checkbox */}
+          <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', cursor: 'pointer' }}>
+            <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 3, accentColor: '#f59e0b', transform: 'scale(1.35)', transformOrigin: 'top left' }} />
+            <span style={{ fontSize: '0.85rem' }}>I consent to the collection and processing of my ID for age and identity verification under the Data Privacy Act (RA 10173).</span>
+          </label>
+
+          {/* Scan status (three states) */}
+          {(ocrScanning || (ocrHints && ocrHints.length > 0) || ocrError) && (
+            <div style={{ background: 'var(--color-bg-elevated)', borderRadius: 10, padding: '1rem', borderLeft: '4px solid ' + (ocrScanning ? 'var(--color-border)' : ocrError ? '#f59e0b' : '#22c55e') }}>
+              {ocrScanning && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><span style={{ width: 16, height: 16, border: '2px solid var(--color-border)', borderTopColor: 'var(--color-red-primary)', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} /><p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: 0 }}>Scanning your ID...</p></div>
+              )}
+              {ocrError && !ocrScanning && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><span style={{ color: '#f59e0b', fontWeight: 700 }}>⚠</span><p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: 0 }}>We couldn't scan it now, you can still continue.</p></div>
+              )}
+              {!ocrScanning && ocrHints && ocrHints.length > 0 && (
+                <>
+                  {ocrHints.map((hint, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', marginBottom: '0.25rem' }}>
+                      <span style={{ color: hint.status === 'pass' ? '#22c55e' : hint.status === 'warn' ? '#f59e0b' : '#ef4444' }}>
+                        {hint.status === 'pass' ? '✓' : hint.status === 'warn' ? '⚠' : '✗'}
+                      </span>
+                      <span>{hint.message}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
 
             </>
           )}
 
           {wizardStep === 4 && (
             <>
-              <div style={{ background: 'var(--color-bg-elevated)', borderRadius: 10, padding: '1rem' }}>
-                <h3>Review</h3>
-                <p>{form.first_name} {form.last_name}</p>
-                <p>{form.email}</p>
-                <p>{form.phone_number}</p>
-                <p>DOB: {form.date_of_birth} (age {calculateAge(form.date_of_birth)})</p>
-                <p>ID: {idType} • {idNumber ? '••••' + idNumber.slice(-4) : 'not provided'}</p>
+              <div className="g g-2">
+                <div style={{ background: 'var(--color-bg-elevated)', borderRadius: 10, padding: '1rem' }}>
+                  <h3 style={{ marginBottom: '0.5rem' }}>Your details</h3>
+                  <p style={{ margin: '0.25rem 0' }}><strong>Name:</strong> {form.first_name} {form.last_name}</p>
+                  <p style={{ margin: '0.25rem 0' }}><strong>Email:</strong> {form.email}</p>
+                  <p style={{ margin: '0.25rem 0' }}><strong>Phone:</strong> {form.phone_number || 'Not provided'}</p>
+                  <p style={{ margin: '0.25rem 0' }}><strong>DOB:</strong> {form.date_of_birth} (age {calculateAge(form.date_of_birth)})</p>
+                </div>
+                <div style={{ background: 'var(--color-bg-elevated)', borderRadius: 10, padding: '1rem' }}>
+                  <h3 style={{ marginBottom: '0.5rem' }}>Your ID</h3>
+                  <p style={{ margin: '0.25rem 0' }}><strong>Type:</strong> {idType}</p>
+                  <p style={{ margin: '0.25rem 0' }}><strong>Number:</strong> {idNumber ? '••••' + idNumber.slice(-4) : 'not provided'}</p>
+                  {frontPreview && (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <img src={frontPreview} alt="ID front" style={{ maxWidth: '120px', borderRadius: 8 }} />
+                    </div>
+                  )}
+                </div>
               </div>
               <label className="checkbox" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ transform: 'scale(1.25)', transformOrigin: 'top left' }} />
                 I confirm I am 18+ and the ID provided is mine.
               </label>
               <label className="checkbox" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <input type="checkbox" checked={privacyConsent} onChange={(e) => setPrivacyConsent(e.target.checked)} />
+                <input type="checkbox" checked={privacyConsent} onChange={(e) => setPrivacyConsent(e.target.checked)} style={{ transform: 'scale(1.25)', transformOrigin: 'top left' }} />
                 I consent to the collection and processing of my ID for age and identity verification under the Data Privacy Act (RA 10173).
               </label>
             </>
@@ -745,12 +1170,12 @@ const showLastNameError = touched.last_name || submitAttempted;
 
           {error && <p className="error-text">{error}</p>}
 
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', position: 'sticky', bottom: 0, background: 'var(--color-bg-card, var(--color-bg))', padding: '0.75rem 0', zIndex: 10 }}>
             {wizardStep > 1 && (
-              <button type="button" className="button secondary" onClick={goBack}>Back</button>
+              <button type="button" className="btn btn-outline" onClick={goBack} style={{ flex: '0 0 auto', minWidth: 80 }}>Back</button>
             )}
             {wizardStep < 4 && (
-              <button type="button" className="btn btn-red" onClick={goNext} disabled={wizardStep===1?!step1Valid:wizardStep===2?!step2Valid:!step3Valid}>Next</button>
+              <button type="button" className="btn btn-red" style={{ flex: 1 }} onClick={goNext} disabled={wizardStep===1?!step1Valid:wizardStep===2?!step2Valid:!step3Valid}>Next</button>
             )}
           </div>
 
