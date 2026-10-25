@@ -7965,3 +7965,5 @@ div:hover > .story-tap-zone {
 .menu-locked .pkg-card.pkg-bundled {
   opacity: 1;
 }
+.google-signin-container { width: 100%; overflow: visible; }
+.google-signin-container iframe, .g_id_signin { width: 100% !important; min-width: 240px; }
