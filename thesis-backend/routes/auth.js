@@ -2,6 +2,8 @@ const express = require("express");
 const rateLimit = require("express-rate-limit");
 const router = express.Router();
 const pool = require("../config/database");
+const config = require("../config/env");
+const multer = require("multer");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
@@ -1022,9 +1024,24 @@ router.post("/login", async (req, res) => {
 });
 
 // CUSTOMER REGISTER (sets role_id too)
-router.post("/register", ipRouteLimit("register"), async (req, res) => {
+// ID upload multer (memory storage for encryption)
+const idUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Only JPEG, PNG, or WebP images are allowed'));
+  }
+});
+
+router.post("/register", ipRouteLimit("register"), idUpload.fields([
+  { name: 'id_front', maxCount: 1 },
+  { name: 'id_back', maxCount: 1 },
+  { name: 'id_selfie', maxCount: 1 },
+]), async (req, res) => {
   try {
-    const { first_name, last_name, email, password, phone_number, date_of_birth } = req.body || {};
+    const { first_name, last_name, email, password, phone_number, date_of_birth, id_type, id_number } = req.body || {};
 
     if (email === undefined || password === undefined) {
       return res.status(400).json({
@@ -1139,8 +1156,8 @@ router.post("/register", ipRouteLimit("register"), async (req, res) => {
       `INSERT INTO users
        (first_name, last_name, email, password, phone_number, date_of_birth, role, role_id, is_verified, is_active, bar_id,
         profile_picture, email_verification_token, email_verification_expires, email_verification_otp, email_otp_expires,
-        approval_status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'customer', ?, 0, 1, NULL, ?, ?, ?, ?, ?, 'pending', NOW(), NOW())`,
+        approval_status, id_verification_status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'customer', ?, 0, 1, NULL, ?, ?, ?, ?, ?, 'approved', 'approved', NOW(), NOW())`,
       [
        firstNameValidation.value,
        lastNameValidation.value,
@@ -1151,6 +1168,71 @@ router.post("/register", ipRouteLimit("register"), async (req, res) => {
        customerRoleId,
        DEFAULT_AVATAR, verificationToken, tokenExpires, hashEmailOtp(verificationOtp), otpExpires]
     );
+
+    // Save ID files (encrypted) if uploaded
+    const idType = req.body?.id_type || '';
+    const idNumber = req.body?.id_number || '';
+    const files = req.files || {};
+    const frontFile = files.id_front?.[0];
+    const backFile = files.id_back?.[0];
+    const selfieFile = files.id_selfie?.[0];
+
+    if (frontFile && selfieFile) {
+      try {
+        const crypto = require('crypto');
+        const fs = require('fs');
+        const path = require('path');
+        const config = require('../config/env');
+        const storagePath = config.ID_STORAGE_PATH;
+        const encKey = config.ID_ENCRYPTION_KEY;
+
+        const idDir = path.join(storagePath, 'ids', String(result.insertId));
+        fs.mkdirSync(idDir, { recursive: true, mode: 0o700 });
+
+        // Simple encryption (AES-256-GCM) for ID images
+        function encryptFile(buffer) {
+          const iv = crypto.randomBytes(12);
+          const cipher = crypto.createCipheriv('aes-256-gcm', encKey, iv);
+          const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
+          const authTag = cipher.getAuthTag();
+          return Buffer.concat([iv, authTag, encrypted]);
+        }
+
+        const frontPath = path.join(idDir, 'front.enc');
+        const selfiePath = path.join(idDir, 'selfie.enc');
+        fs.writeFileSync(frontPath, encryptFile(frontFile.buffer));
+        fs.writeFileSync(selfiePath, encryptFile(selfieFile.buffer));
+
+        let backPath = null;
+        if (backFile) {
+          backPath = path.join(idDir, 'back.enc');
+          fs.writeFileSync(backPath, encryptFile(backFile.buffer));
+        }
+
+        // Store only last 4 chars of ID number + hash
+        const last4 = idNumber ? idNumber.slice(-4) : null;
+        const hashKey = config.ID_HASH_KEY || 'default-hash-key';
+        const idHash = idNumber ? crypto.createHmac('sha256', hashKey).update(idNumber).digest('hex') : null;
+
+        // Create ID submission record
+        await pool.query(
+          `INSERT INTO id_submissions (user_id, id_type, id_number_last4, id_number_hash, front_image_path, back_image_path, selfie_image_path, status, attempt_number)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'approved', 1)`,
+          [result.insertId, idType, last4, idHash, frontPath, backPath, selfiePath]
+        );
+
+        // Update user's id fields
+        await pool.query(
+          `UPDATE users SET id_verification_status = 'approved', id_type = ?, id_last4 = ?, id_hash = ?, id_submitted_at = NOW() WHERE id = ?`,
+          [idType, last4, idHash, result.insertId]
+        );
+
+        console.log('ID submission saved for user:', result.insertId);
+      } catch (idErr) {
+        console.error('ID SAVE ERROR:', idErr);
+        // Don't fail registration — ID can be resubmitted
+      }
+    }
 
     // Send verification email (non-blocking — don't fail registration if email fails)
     try {
@@ -1922,7 +2004,6 @@ router.post("/reset-password", async (req, res) => {
 });
 
 // ─── UPLOAD PROFILE PICTURE (all roles) ───
-const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 

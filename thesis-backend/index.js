@@ -20,6 +20,8 @@ const { uploadFallback, ensureDefaults } = require("./middlewares/uploadFallback
 // Import routes
 const adminRoutes = require("./routes/admin");
 const authRoutes = require("./routes/auth");
+const ocrRoutes = require("./routes/ocr");
+const idScanRoutes = require("./routes/idScan");
 const ownerRoutes = require("./routes/owner");
 const hrRoutes = require("./routes/hr");
 const hrPermissionsRoutes = require("./routes/hrPermissions");
@@ -253,6 +255,13 @@ app.use((req, res, next) => {
   next();
 });
 app.use("/uploads", express.static("uploads"));
+// Block access to private uploads (ID images, keys) — must never be served publicly
+app.use((req, res, next) => {
+  if (/^\/(private-uploads|ids|keys)(\/|$)/.test(req.path)) {
+    return res.status(404).json({ success: false, message: "Not found" });
+  }
+  next();
+});
 app.use(uploadFallback); // Serve default avatar for missing profile images (prevents 404 spam)
 
 const PORT = process.env.PORT || 3000;
@@ -415,6 +424,8 @@ app.use("/auth/reset-password", authLimiter);
 app.use("/auth/google", authLimiter);
 // Session checks (/me, /verify-email, etc.) use the generous limiter
 app.use("/auth", authSessionLimiter, authRoutes);
+app.use("/api/ocr", ocrRoutes);
+app.use("/auth", idScanRoutes);
 app.use("/owner", ownerRoutes);
 app.use("/hr", hrRoutes);
 app.use("/hr", hrPermissionsRoutes);
@@ -561,6 +572,18 @@ if (require.main === module && !isTestEnv) {
 app.use((err, req, res, next) => {
   console.error("[ERROR]", err.stack || err.message || err);
   if (res.headersSent) return next(err);
+
+  // Multer error handling (file too large, wrong type, etc.)
+  if (err && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ success: false, message: 'File too large. Maximum 5 MB per image.' });
+  }
+  if (err && err.code === 'LIMIT_UNEXPECTED_FILE') {
+    return res.status(400).json({ success: false, message: 'Unexpected file field. Allowed: id_front, id_back, id_selfie.' });
+  }
+  if (err && err.message && err.message.includes('Only JPEG, PNG, or WebP')) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+
   res.status(err.status || 500).json({
     success: false,
     message: err.expose || err.public ? err.message : "Server error",

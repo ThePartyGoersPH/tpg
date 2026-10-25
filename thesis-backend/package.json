@@ -11,7 +11,8 @@
     "test:smoke": "node --test tests/api-security-smoke.test.cjs",
     "migrate": "node scripts/migrate.js",
     "migrate:status": "node scripts/migrate-status.js",
-    "test:email": "node scripts/test-mail.js"
+    "test:email": "node scripts/test-mail.js",
+    "test:ocr": "node scripts/test-ocr.js"
   },
   "keywords": [],
   "author": "",
