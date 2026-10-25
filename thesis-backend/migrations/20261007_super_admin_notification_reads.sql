@@ -8,7 +8,8 @@
 --     'feedback-3', 'pending-payouts', 'flagged-posts',
 --     'flagged-comments')
 --   - Keys are synthetic and stable while the underlying item
---     is still pending; rows for actioned (disappeared) items
+--     is still pending;
+rows for actioned (disappeared) items
 --     are harmless leftovers
 -- ==========================================================
 

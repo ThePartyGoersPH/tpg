@@ -1,22 +1,16 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { withBase } from '../utils/basePath';
+import { absoluteHomeForRole } from '../utils/portalAccess';
 
-// Production: the site and the API share one domain, with nginx proxying
-// the /api/ prefix to the backend (prefix stripped). Local dev talks to
-// the backend directly at its root.
-function resolveApiBaseUrl() {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl) return envUrl;
-  if (typeof window !== 'undefined') {
-    const { hostname, origin } = window.location;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') return 'http://localhost:3000';
-    return `${origin}/api`;
-  }
-  return 'https://thepartygoers.partygoers.online/api';
-}
-
-export const API_BASE_URL = resolveApiBaseUrl();
+// Single source of truth for the API origin. Never fall back to a third-party
+// host: a dead fallback makes every request hang (the classic "Signing in…"
+// spinner). Local dev points at the Vite proxy/backend; production derives
+// from the page origin so any domain (or subpath deploy) just works.
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL
+  || (import.meta.env.DEV
+    ? 'http://localhost:3000'
+    : `${window.location.origin}/api`);
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -28,7 +22,7 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('tpg_manager_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -58,6 +52,17 @@ function toastOnce(message) {
   toast.error(message);
 }
 
+function roleFromStoredToken() {
+  try {
+    const token = localStorage.getItem('tpg_manager_token');
+    if (!token) return '';
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return payload?.role || '';
+  } catch {
+    return '';
+  }
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -66,14 +71,21 @@ apiClient.interceptors.response.use(
     const silentError = Boolean(error.config?.silentError);
 
     if (status === 401) {
-      localStorage.removeItem('token');
-      if (window.location.pathname !== withBase('/login')) {
-        window.location.href = withBase('/login');
+      localStorage.removeItem('tpg_manager_token');
+      // Basename-aware: never leave the portal root, and never redirect for
+      // auth-endpoint failures (a failed login must stay on the page).
+      // Matches the Router basename (dev '/' vs production '/manager').
+      const base = import.meta.env.BASE_URL || '/';
+      const appRoot = base === '/' ? '' : base.replace(/\/$/, '');
+      const onLoginPage = window.location.pathname.endsWith('/login');
+      const isAuthCall = String(error.config?.url || '').includes('/auth/');
+      if (!onLoginPage && !isAuthCall) {
+        window.location.href = `${appRoot}/login`;
       }
     } else if (status === 402) {
       // Subscription plan limit reached — show server message
       toastOnce(message);
-    } else if (!silentError && status === 403) {
+    } else if (!silentError && status === 403 && error.response?.data?.code !== 'FORBIDDEN_PORTAL') {
       // Only surface the alarming permission toast for explicit user actions
       // (mutations like Save). Background/auto GET 403s are silenced so pages
       // can degrade gracefully (hide/disable that section) without alarming the user.
@@ -83,6 +95,13 @@ apiClient.interceptors.response.use(
       }
     } else if (!silentError && status !== 409) {
       toastOnce(message);
+    }
+
+    // Wrong-portal sessions are bounced to the role's own home with a toast.
+    // The backend is the enforcer; this just saves the user from dead screens.
+    if (status === 403 && error.response?.data?.code === 'FORBIDDEN_PORTAL') {
+      toastOnce("You don't have access to that portal");
+      window.location.href = absoluteHomeForRole(roleFromStoredToken());
     }
 
     return Promise.reject(error);

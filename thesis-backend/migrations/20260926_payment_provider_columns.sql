@@ -34,17 +34,14 @@ SET @cols := (
       AND c.COLUMN_NAME = SUBSTRING_INDEX(SUBSTRING_INDEX(candidates.col, '`', 2), '`', -1)
   )
 );
-
 SET @sql := IF(
   @cols IS NULL,
   'SELECT 1',
   CONCAT('ALTER TABLE `bars` ', @cols)
 );
-
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
-
 -- ── payment_transactions: provider + settlement references ─────────────────
 SET @cols := (
   SELECT GROUP_CONCAT(col ORDER BY seq SEPARATOR ', ')
@@ -64,17 +61,14 @@ SET @cols := (
       AND c.COLUMN_NAME = SUBSTRING_INDEX(SUBSTRING_INDEX(candidates.col, '`', 2), '`', -1)
   )
 );
-
 SET @sql := IF(
   @cols IS NULL,
   'SELECT 1',
   CONCAT('ALTER TABLE `payment_transactions` ', @cols)
 );
-
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
-
 -- ── indexes for the provider lookups ───────────────────────────────────────
 SET @idx_exists := (
   SELECT COUNT(*)
@@ -83,17 +77,14 @@ SET @idx_exists := (
     AND TABLE_NAME = 'payment_transactions'
     AND INDEX_NAME = 'idx_payment_transactions_source'
 );
-
 SET @idx_sql := IF(
   @idx_exists = 0,
   'ALTER TABLE `payment_transactions` ADD INDEX `idx_payment_transactions_source` (`paymongo_source_id`)',
   'SELECT 1'
 );
-
 PREPARE stmt FROM @idx_sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
-
 SET @idx_exists := (
   SELECT COUNT(*)
   FROM information_schema.STATISTICS
@@ -101,13 +92,11 @@ SET @idx_exists := (
     AND TABLE_NAME = 'payment_transactions'
     AND INDEX_NAME = 'idx_payment_transactions_session'
 );
-
 SET @idx_sql := IF(
   @idx_exists = 0,
   'ALTER TABLE `payment_transactions` ADD INDEX `idx_payment_transactions_session` (`paymongo_checkout_session_id`)',
   'SELECT 1'
 );
-
 PREPARE stmt FROM @idx_sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;

@@ -551,7 +551,7 @@ const Payroll = () => {
                     <td className="table-cell">{fmtWorked(p.total_work_minutes)}</td>
                     <td className="table-cell" style={{ color: '#4ade80' }}>{fmtMoney(p.overtime_pay || 0)}</td>
                     <td className="table-cell" style={{ color: '#ff6666' }}>{fmtMoney(p.undertime_deduction || 0)}</td>
-                    <td className="table-cell font-bold" style={{ color: '#CC0000' }}>{fmtMoney(p.gross_pay || p.adjusted_gross_pay || 0)}</td>
+                    <td className="table-cell font-bold" style={{ color: '#CC0000' }}>{fmtMoney(p.adjusted_gross_pay || p.gross_pay || 0)}</td>
                   </tr>
                 ))}
               </tbody>

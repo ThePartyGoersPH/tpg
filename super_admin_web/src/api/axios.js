@@ -1,24 +1,15 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { withBase } from '../utils/basePath';
+import { absoluteHomeForRole } from '../utils/portalAccess';
 
-// Production: the site and the API share one domain, with nginx proxying
-// the /api/ prefix to the backend (prefix stripped). Local dev talks to
-// the backend directly at its root.
-function resolveApiBaseUrl() {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl) return envUrl;
-  if (typeof window !== 'undefined') {
-    const { hostname, origin } = window.location;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') return 'http://localhost:3000';
-    return `${origin}/api`;
-  }
-  return 'https://thepartygoers.partygoers.online/api';
-}
-
-const API_BASE_URL = resolveApiBaseUrl();
-
-export { API_BASE_URL };
+// Env only — never a third-party host (a dead fallback hangs every request).
+// Local dev hits the backend directly; production derives from the page origin.
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL
+  || import.meta.env.VITE_API_URL
+  || (import.meta.env.DEV
+    ? 'http://localhost:3000'
+    : `${window.location.origin}/api`);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -29,7 +20,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('tpg_admin_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -40,14 +31,37 @@ api.interceptors.request.use(
   }
 );
 
+function roleFromStoredToken() {
+  try {
+    const token = localStorage.getItem('tpg_admin_token');
+    if (!token) return '';
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return payload?.role || '';
+  } catch {
+    return '';
+  }
+}
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    if (error.response?.status === 403 && error.response?.data?.code === 'FORBIDDEN_PORTAL') {
+      toast.error("You don't have access to that portal", { id: 'portal-redirect' });
+      window.location.href = absoluteHomeForRole(roleFromStoredToken());
+      return Promise.reject(error);
+    }
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      if (window.location.pathname !== withBase('/login')) {
-        window.location.href = withBase('/login');
+      // Hand session teardown to the store (single source of truth) instead
+      // of wiping storage + hard-reloading here — that combination caused
+      // full-page reload loops against the async persist rehydration.
+      // The route guard reacts to the store change with ONE React-side
+      // redirect to /login. Lazy import avoids a module cycle (the store
+      // imports the api layer for its session check).
+      try {
+        const { useAuthStore } = await import('../stores/authStore');
+        useAuthStore.getState().logout();
+      } catch {
+        // store unavailable — fall through; caller still gets the rejection
       }
     }
     return Promise.reject(error);

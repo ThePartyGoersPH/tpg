@@ -1,6 +1,15 @@
--- Migration: Extend business_registrations for city/barangay, bar types, and selfie-with-ID
-
-ALTER TABLE `business_registrations`
-  ADD COLUMN IF NOT EXISTS `business_barangay` VARCHAR(100) DEFAULT NULL AFTER `business_city`,
-  ADD COLUMN IF NOT EXISTS `bar_types` TEXT DEFAULT NULL AFTER `business_description`,
-  ADD COLUMN IF NOT EXISTS `selfie_with_id` VARCHAR(500) DEFAULT NULL AFTER `business_permit`;
+SET @cx106 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'business_barangay');
+SET @sx106 := IF(@cx106 = 0, 'ALTER TABLE business_registrations ADD COLUMN `business_barangay` VARCHAR(100) DEFAULT NULL AFTER `business_city`', 'SELECT 1');
+PREPARE stx106 FROM @sx106;
+EXECUTE stx106;
+DEALLOCATE PREPARE stx106;
+SET @cx107 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'bar_types');
+SET @sx107 := IF(@cx107 = 0, 'ALTER TABLE business_registrations ADD COLUMN `bar_types` TEXT DEFAULT NULL AFTER `business_description`', 'SELECT 1');
+PREPARE stx107 FROM @sx107;
+EXECUTE stx107;
+DEALLOCATE PREPARE stx107;
+SET @cx108 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'selfie_with_id');
+SET @sx108 := IF(@cx108 = 0, 'ALTER TABLE business_registrations ADD COLUMN `selfie_with_id` VARCHAR(500) DEFAULT NULL AFTER `business_permit`', 'SELECT 1');
+PREPARE stx108 FROM @sx108;
+EXECUTE stx108;
+DEALLOCATE PREPARE stx108;

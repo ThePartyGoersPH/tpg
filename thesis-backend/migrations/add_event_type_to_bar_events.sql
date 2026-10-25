@@ -1,15 +1,15 @@
--- Migration: Add event_type to bar_events table
--- Date: 2026-03-30
--- Purpose: Support event type categorization (PROMPT 4.5)
-
--- Add event_type column to bar_events table
-ALTER TABLE `bar_events` 
-ADD COLUMN `event_type` VARCHAR(100) DEFAULT NULL COMMENT 'Event type: Stand-up Comedy, Open Mic, Live Band, DJ Night, Ladies Night, Custom' AFTER `title`;
-
--- Add index for filtering by event type
-ALTER TABLE `bar_events`
-ADD INDEX `idx_event_type` (`event_type`);
-
--- Also add to archive table for consistency
-ALTER TABLE `bar_events_archive` 
-ADD COLUMN `event_type` VARCHAR(100) DEFAULT NULL COMMENT 'Event type: Stand-up Comedy, Open Mic, Live Band, DJ Night, Ladies Night, Custom' AFTER `title`;
+SET @cx574 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bar_events' AND COLUMN_NAME = 'event_type');
+SET @sx574 := IF(@cx574 = 0, 'ALTER TABLE bar_events ADD COLUMN event_type VARCHAR(100) DEFAULT NULL COMMENT ''Event type: Stand-up Comedy, Open Mic, Live Band, DJ Night, Ladies Night, Custom'' AFTER `title`', 'SELECT 1');
+PREPARE stx574 FROM @sx574;
+EXECUTE stx574;
+DEALLOCATE PREPARE stx574;
+SET @cx575 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bar_events' AND INDEX_NAME = 'idx_event_type');
+SET @sx575 := IF(@cx575 = 0, 'ALTER TABLE bar_events ADD INDEX idx_event_type (`event_type`)', 'SELECT 1');
+PREPARE stx575 FROM @sx575;
+EXECUTE stx575;
+DEALLOCATE PREPARE stx575;
+SET @cx576 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bar_events_archive' AND COLUMN_NAME = 'event_type');
+SET @sx576 := IF(@cx576 = 0, 'ALTER TABLE bar_events_archive ADD COLUMN event_type VARCHAR(100) DEFAULT NULL COMMENT ''Event type: Stand-up Comedy, Open Mic, Live Band, DJ Night, Ladies Night, Custom'' AFTER `title`', 'SELECT 1');
+PREPARE stx576 FROM @sx576;
+EXECUTE stx576;
+DEALLOCATE PREPARE stx576;

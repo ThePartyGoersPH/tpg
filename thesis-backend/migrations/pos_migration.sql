@@ -3,29 +3,25 @@
 -- ============================================================
 
 -- 1. New POS permissions
-INSERT IGNORE INTO permissions (code, description) VALUES
-  ('POS_ACCESS', 'Access the POS system'),
-  ('POS_CREATE_ORDER', 'Create POS orders'),
-  ('POS_VIEW_ORDERS', 'View POS order history'),
-  ('POS_VOID_ORDER', 'Void/cancel POS orders');
-
+INSERT IGNORE INTO permissions (name, module, action, description) VALUES
+  ('POS_ACCESS', 'pos', 'access', 'Access the POS system'),
+  ('POS_CREATE_ORDER', 'pos', 'create_order', 'Create POS orders'),
+  ('POS_VIEW_ORDERS', 'pos', 'view_orders', 'View POS order history'),
+  ('POS_VOID_ORDER', 'pos', 'void_order', 'Void/cancel POS orders'),
+  ('INVENTORY_READ', 'inventory', 'read', 'Read inventory for POS menu'),
+  ('MENU_READ', 'menu', 'read', 'Read menu for POS ordering');
 -- 2. Grant POS permissions to BAR_OWNER (role_id=7) and STAFF (role_id=5) and CASHIER (role_id=8)
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 7, id FROM permissions WHERE code IN ('POS_ACCESS','POS_CREATE_ORDER','POS_VIEW_ORDERS','POS_VOID_ORDER');
-
+SELECT 7, id FROM permissions WHERE name IN ('POS_ACCESS','POS_CREATE_ORDER','POS_VIEW_ORDERS','POS_VOID_ORDER');
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 5, id FROM permissions WHERE code IN ('POS_ACCESS','POS_CREATE_ORDER','POS_VIEW_ORDERS');
-
+SELECT 5, id FROM permissions WHERE name IN ('POS_ACCESS','POS_CREATE_ORDER','POS_VIEW_ORDERS');
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 8, id FROM permissions WHERE code IN ('POS_ACCESS','POS_CREATE_ORDER','POS_VIEW_ORDERS');
-
+SELECT 8, id FROM permissions WHERE name IN ('POS_ACCESS','POS_CREATE_ORDER','POS_VIEW_ORDERS');
 -- Also grant INVENTORY_READ and MENU_READ to STAFF and CASHIER so they can fetch menu/inventory
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 5, id FROM permissions WHERE code IN ('INVENTORY_READ','MENU_READ');
-
+SELECT 5, id FROM permissions WHERE name IN ('INVENTORY_READ','MENU_READ');
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT 8, id FROM permissions WHERE code IN ('INVENTORY_READ','MENU_READ');
-
+SELECT 8, id FROM permissions WHERE name IN ('INVENTORY_READ','MENU_READ');
 -- 3. POS Orders table
 CREATE TABLE IF NOT EXISTS pos_orders (
   id INT PRIMARY KEY AUTO_INCREMENT,
@@ -51,7 +47,6 @@ CREATE TABLE IF NOT EXISTS pos_orders (
   INDEX idx_pos_orders_bar_date (bar_id, created_at),
   INDEX idx_pos_orders_status (bar_id, status)
 );
-
 -- 4. POS Order Items table
 CREATE TABLE IF NOT EXISTS pos_order_items (
   id INT PRIMARY KEY AUTO_INCREMENT,

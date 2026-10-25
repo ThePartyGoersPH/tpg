@@ -35,13 +35,18 @@ SET @has_idx_bar_archived := (
 
 SET @sql_idx_bar_archived := IF(
   @has_idx_bar_archived = 0,
-  'CREATE INDEX idx_bar_events_bar_archived ON bar_events (bar_id, archived_at)',
-  'SELECT 1'
-);
+  'SET @cx2015 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bar_events' AND INDEX_NAME = 'idx_bar_events_bar_archived');
+SET @sx2015 := IF(@cx2015 = 0, 'SET @cx3007 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bar_events' AND INDEX_NAME = 'idx_bar_events_bar_archived');
+SET @sx3007 := IF(@cx3007 = 0, 'CREATE INDEX idx_bar_events_bar_archived ON bar_events (bar_id, archived_at)'''', ''''SELECT 1'''' )'', ''SELECT 1'')', 'SELECT 1');
+PREPARE stx3007 FROM @sx3007;
+EXECUTE stx3007;
+DEALLOCATE PREPARE stx3007;
+PREPARE stx2015 FROM @sx2015;
+EXECUTE stx2015;
+DEALLOCATE PREPARE stx2015;
 PREPARE stmt_idx_bar_archived FROM @sql_idx_bar_archived;
 EXECUTE stmt_idx_bar_archived;
 DEALLOCATE PREPARE stmt_idx_bar_archived;
-
 SET @has_idx_archived_at := (
   SELECT COUNT(*)
   FROM information_schema.STATISTICS
@@ -49,12 +54,13 @@ SET @has_idx_archived_at := (
     AND TABLE_NAME = 'bar_events'
     AND INDEX_NAME = 'idx_bar_events_archived_at'
 );
-
 SET @sql_idx_archived_at := IF(
   @has_idx_archived_at = 0,
-  'CREATE INDEX idx_bar_events_archived_at ON bar_events (archived_at)',
-  'SELECT 1'
-);
+  'SET @cx2016 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bar_events' AND INDEX_NAME = 'idx_bar_events_archived_at');
+SET @sx2016 := IF(@cx2016 = 0, 'CREATE INDEX idx_bar_events_archived_at ON bar_events (archived_at)'', ''SELECT 1'' )', 'SELECT 1');
+PREPARE stx2016 FROM @sx2016;
+EXECUTE stx2016;
+DEALLOCATE PREPARE stx2016;
 PREPARE stmt_idx_archived_at FROM @sql_idx_archived_at;
 EXECUTE stmt_idx_archived_at;
 DEALLOCATE PREPARE stmt_idx_archived_at;

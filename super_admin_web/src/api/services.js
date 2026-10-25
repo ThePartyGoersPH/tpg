@@ -1,5 +1,11 @@
 import api from './axios';
 
+// ─── SESSION ─────────────────────────────────────────────────────────
+// Single lightweight session check used once at app boot.
+export const authAPI = {
+  me: () => api.get('/super-admin/me'),
+};
+
 // ─── DASHBOARD ───────────────────────────────────────────────────────
 export const dashboardAPI = {
   getSummary: () => api.get('/super-admin/dashboard/summary'),
@@ -61,6 +67,16 @@ export const usersAPI = {
   delete: (id) => api.delete(`/super-admin/users/${id}`),
   getPermissions: (id) => api.get(`/super-admin/users/${id}/permissions`),
   updatePermissions: (id, data) => api.patch(`/super-admin/users/${id}/permissions`, data),
+};
+
+// ─── CUSTOMER APPROVALS ──────────────────────────────────────────────
+export const customerApprovalsAPI = {
+  list: (params) => api.get('/super-admin/customer-approvals', { params }),
+  stats: () => api.get('/super-admin/customer-approvals/stats'),
+  approve: (id, data) => api.post(`/super-admin/customer-approvals/${id}/approve`, data),
+  reject: (id, data) => api.post(`/super-admin/customer-approvals/${id}/reject`, data),
+  bulk: (data) => api.post('/super-admin/customer-approvals/bulk', data),
+  resend: (id) => api.post(`/super-admin/customer-approvals/${id}/resend-email`),
 };
 
 // ─── CUSTOMER BANNING ────────────────────────────────────────────────

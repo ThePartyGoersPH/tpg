@@ -1,16 +1,18 @@
--- Migration: Add photo support to bar_videos and photo limits to subscription_plans
--- Date: 2026-09-04
-
--- 1. Add media_type and caption columns to bar_videos
-ALTER TABLE bar_videos
-  ADD COLUMN IF NOT EXISTS media_type ENUM('video','photo') NOT NULL DEFAULT 'video' AFTER label,
-  ADD COLUMN IF NOT EXISTS caption VARCHAR(200) DEFAULT NULL AFTER media_type;
-
--- 2. Add max_photos column to subscription_plans
-ALTER TABLE subscription_plans
-  ADD COLUMN IF NOT EXISTS max_photos INT DEFAULT NULL COMMENT 'NULL = unlimited' AFTER max_promotions;
-
--- 3. Set photo limits per tier
+SET @cx158 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bar_videos' AND COLUMN_NAME = 'media_type');
+SET @sx158 := IF(@cx158 = 0, 'ALTER TABLE bar_videos ADD COLUMN media_type ENUM(''video'',''photo'') NOT NULL DEFAULT ''video'' AFTER label', 'SELECT 1');
+PREPARE stx158 FROM @sx158;
+EXECUTE stx158;
+DEALLOCATE PREPARE stx158;
+SET @cx159 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bar_videos' AND COLUMN_NAME = 'caption');
+SET @sx159 := IF(@cx159 = 0, 'ALTER TABLE bar_videos ADD COLUMN caption VARCHAR(200) DEFAULT NULL AFTER media_type', 'SELECT 1');
+PREPARE stx159 FROM @sx159;
+EXECUTE stx159;
+DEALLOCATE PREPARE stx159;
+SET @cx160 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'subscription_plans' AND COLUMN_NAME = 'max_photos');
+SET @sx160 := IF(@cx160 = 0, 'ALTER TABLE subscription_plans ADD COLUMN max_photos INT DEFAULT NULL COMMENT ''NULL = unlimited'' AFTER max_promotions', 'SELECT 1');
+PREPARE stx160 FROM @sx160;
+EXECUTE stx160;
+DEALLOCATE PREPARE stx160;
 UPDATE subscription_plans SET max_photos = 5   WHERE name = 'free';
 UPDATE subscription_plans SET max_photos = 20  WHERE name = 'basic';
 UPDATE subscription_plans SET max_photos = NULL WHERE name = 'premium';

@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS bar_posts (
   INDEX idx_bar_posts_status (status),
   INDEX idx_bar_posts_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Bar post likes table
 CREATE TABLE IF NOT EXISTS bar_post_likes (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -33,7 +32,6 @@ CREATE TABLE IF NOT EXISTS bar_post_likes (
   INDEX idx_post_likes_post (post_id),
   INDEX idx_post_likes_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Bar post comments table
 CREATE TABLE IF NOT EXISTS bar_post_comments (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -52,7 +50,6 @@ CREATE TABLE IF NOT EXISTS bar_post_comments (
   INDEX idx_post_comments_parent (parent_comment_id),
   INDEX idx_post_comments_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Bar comment reactions table (for emoji reactions on comments)
 CREATE TABLE IF NOT EXISTS bar_comment_reactions (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -66,7 +63,6 @@ CREATE TABLE IF NOT EXISTS bar_comment_reactions (
   INDEX idx_comment_reactions_comment (comment_id),
   INDEX idx_comment_reactions_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Bar comment replies table
 CREATE TABLE IF NOT EXISTS bar_comment_replies (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -83,7 +79,6 @@ CREATE TABLE IF NOT EXISTS bar_comment_replies (
   INDEX idx_comment_replies_user (user_id),
   INDEX idx_comment_replies_parent (parent_reply_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Bar reply reactions table
 CREATE TABLE IF NOT EXISTS bar_reply_reactions (
   id INT AUTO_INCREMENT PRIMARY KEY,

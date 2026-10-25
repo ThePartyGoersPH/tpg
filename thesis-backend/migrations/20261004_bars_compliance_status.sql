@@ -15,7 +15,6 @@ SET @col_status := (
     AND TABLE_NAME = 'bars'
     AND COLUMN_NAME = 'compliance_status'
 );
-
 -- ── 1. compliance_status ─────────────────────────────────────
 SET @sql := IF(
   @col_status = 0,
@@ -25,7 +24,6 @@ SET @sql := IF(
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
-
 -- ── 2. rejection reason (shown to the bar owner) ─────────────
 SET @col_reason := (
   SELECT COUNT(*)
@@ -42,7 +40,6 @@ SET @sql := IF(
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
-
 -- ── 3. submission timestamp (drives the approval queue order) ─
 SET @col_submitted := (
   SELECT COUNT(*)
@@ -59,7 +56,6 @@ SET @sql := IF(
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
-
 -- ── 4/5. reviewer bookkeeping (mirrors reviewed_by/reviewed_at) ─
 SET @col_reviewer := (
   SELECT COUNT(*)
@@ -76,11 +72,11 @@ SET @sql := IF(
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
-
 -- ── Backfill ─────────────────────────────────────────────────
 -- Runs only on the first execution (when compliance_status was just
 -- created). Bars that already existed were published before this gate
--- existed, so keep them visible; the DEFAULT 'incomplete' applies to
+-- existed, so keep them visible;
+the DEFAULT 'incomplete' applies to
 -- every bar registered from now on.
 SET @backfill := IF(
   @col_status = 0,

@@ -1,8 +1,15 @@
--- Migration: Add admin reply support to platform_feedback
--- Allows Super Admin to reply to customer platform feedback.
--- Safe: only adds 3 new nullable columns; does not alter any existing column.
-
-ALTER TABLE `platform_feedback`
-  ADD COLUMN `admin_reply`  TEXT          DEFAULT NULL            COMMENT 'Super admin reply to this feedback'         AFTER `comment`,
-  ADD COLUMN `replied_at`   TIMESTAMP     NULL      DEFAULT NULL  COMMENT 'When the admin replied'                    AFTER `admin_reply`,
-  ADD COLUMN `replied_by`   INT(11)       DEFAULT NULL            COMMENT 'FK to users.id of the admin who replied'   AFTER `replied_at`;
+SET @cx501 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'platform_feedback' AND COLUMN_NAME = 'admin_reply');
+SET @sx501 := IF(@cx501 = 0, 'ALTER TABLE platform_feedback ADD COLUMN admin_reply TEXT          DEFAULT NULL            COMMENT ''Super admin reply to this feedback''         AFTER `comment`', 'SELECT 1');
+PREPARE stx501 FROM @sx501;
+EXECUTE stx501;
+DEALLOCATE PREPARE stx501;
+SET @cx502 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'platform_feedback' AND COLUMN_NAME = 'replied_at');
+SET @sx502 := IF(@cx502 = 0, 'ALTER TABLE platform_feedback ADD COLUMN replied_at TIMESTAMP     NULL      DEFAULT NULL  COMMENT ''When the admin replied''                    AFTER `admin_reply`', 'SELECT 1');
+PREPARE stx502 FROM @sx502;
+EXECUTE stx502;
+DEALLOCATE PREPARE stx502;
+SET @cx503 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'platform_feedback' AND COLUMN_NAME = 'replied_by');
+SET @sx503 := IF(@cx503 = 0, 'ALTER TABLE platform_feedback ADD COLUMN replied_by INT(11)       DEFAULT NULL            COMMENT ''FK to users.id of the admin who replied''   AFTER `replied_at`', 'SELECT 1');
+PREPARE stx503 FROM @sx503;
+EXECUTE stx503;
+DEALLOCATE PREPARE stx503;

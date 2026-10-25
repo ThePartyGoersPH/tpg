@@ -87,7 +87,8 @@ async function requireAuth(req, res, next) {
     // Fetch user with role info from database
     const pool = require("../config/database");
     const [rows] = await pool.query(
-      `SELECT u.id, u.email, u.role, u.role_id, u.bar_id, u.is_active,
+      `SELECT u.id, u.email, u.role, u.role_id, u.bar_id, u.is_active, u.is_verified,
+              u.approval_status, u.approval_rejection_reason,
               r.name AS role_name
        FROM users u
        LEFT JOIN roles r ON r.id = u.role_id
@@ -103,11 +104,72 @@ async function requireAuth(req, res, next) {
       });
     }
 
+    // PORTAL SEPARATION (config/portalAccess.js is the source of truth).
+    // Mount-switched hard gates so no role can use another portal's API, no
+    // matter which app issued the token. Mixed-audience routers (/auth,
+    // /social, /public, /reservations, …) are intentionally NOT listed here —
+    // their endpoints enforce their own role rules.
+    try {
+      const { norm: normRole, MANAGER_PORTAL_ROLES } = require("../config/portalAccess");
+      const mount = String(req.baseUrl || "");
+      const role = normRole(rows[0].role || rows[0].role_name);
+      const isManagerMount =
+        mount === "/admin"
+          ? false
+          : ["/owner", "/branches", "/pos", "/api"].some(
+              (p) => mount === p || mount.startsWith(`${p}/`)
+            );
+      if (mount === "/admin" && role !== "super_admin" && role !== "admin") {
+        return res.status(403).json({
+          success: false,
+          code: "FORBIDDEN_PORTAL",
+          message: "Your account cannot access this portal.",
+        });
+      }
+      if (isManagerMount && !MANAGER_PORTAL_ROLES.includes(role)) {
+        return res.status(403).json({
+          success: false,
+          code: "FORBIDDEN_PORTAL",
+          message: "Your account cannot access this portal.",
+        });
+      }
+    } catch (_) {
+      // Portal config unavailable — fail open so a config load error can
+      // never take down authentication; endpoint RBAC still applies.
+    }
+
     // SECURITY: Block inactive/deactivated users from all API access
     if (!rows[0].is_active) {
       return res.status(403).json({
         success: false,
         message: "Account is deactivated. Contact your administrator.",
+      });
+    }
+
+    // SECURITY: Block pending/rejected customers holding stale tokens.
+    // Customer-only effect (staff/owners/admins pass through untouched),
+    // and intentionally audit-free to avoid log spam.
+    try {
+      const { checkCustomerApproval } = require("../utils/customerApproval");
+      const approvalBlock = checkCustomerApproval(rows[0]);
+      if (approvalBlock) {
+        return res.status(403).json({ success: false, ...approvalBlock });
+      }
+    } catch (_) {
+      // Approval columns predate older schemas — fail open here so legacy
+      // databases keep working; login-time gates still enforce approval.
+    }
+
+    // Email verification gate: customers whose email was never confirmed get
+    // NO platform access on any method — login already refuses them, and any
+    // stale token dies here. Customer-only effect; staff/owners/admins are
+    // untouched. (Bans below still block outright.)
+    if (String(rows[0].role || "").trim().toLowerCase() === "customer" && !Number(rows[0].is_verified || 0)) {
+      return res.status(403).json({
+        success: false,
+        code: "EMAIL_NOT_VERIFIED",
+        email: rows[0].email,
+        message: "Please verify your email before using the platform. Enter the verification code we sent you, or request a new one."
       });
     }
 
@@ -170,6 +232,8 @@ async function requireAuth(req, res, next) {
           }
         }
       }
+      // NOTE: super admins are intentionally NOT honored here — they may not
+      // use the bar owner portal at all (see config/portalAccess.js).
     }
 
     // Enforce bar-side bans/suspensions (applies to bar-side roles, including active sessions)

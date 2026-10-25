@@ -2,7 +2,6 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import jsQR from 'jsqr';
 import { Camera, CameraOff, Keyboard, Search, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { reservationApi } from '../api/reservationApi';
-import { withBase } from '../utils/basePath';
 import Swal from 'sweetalert2';
 
 const SCAN_REGION_ID = 'qr-reader';
@@ -319,7 +318,7 @@ export default function QRCheckin() {
       buttonsStyling: true,
       customClass: { popup: 'swal-dark-popup', confirmButton: 'swal-confirm-btn' },
     }).then((result) => {
-      if (resStatus === 'pending' && result.isConfirmed) window.location.href = withBase('/reservations');
+      if (resStatus === 'pending' && result.isConfirmed) window.location.href = ((import.meta.env.BASE_URL || '/') === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')) + '/reservations';
     });
 
     alertDialogOpen.current = false;

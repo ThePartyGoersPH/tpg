@@ -11,7 +11,7 @@ import {
   setRequiredPermits,
 } from '../utils/registrationChecklist';
 
-const API_URL = API_BASE_URL;
+const API_URL = API_BASE_URL.replace(/\/api$/, '');
 
 const CLASSIFICATIONS = ['Bar', 'Resto-Bar', 'Pub', 'Nightclub', 'Sports Bar', 'Cocktail Bar', 'Other'];
 

@@ -8,8 +8,6 @@ process.env.TZ = 'UTC';
 console.log('[ENV CHECK] GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'SET ✅' : 'MISSING ❌');
 
 const express = require("express");
-// Load and validate all configuration (exits on failure)
-const config = require("./config/env");
 const http = require("http");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -21,7 +19,6 @@ const { uploadFallback, ensureDefaults } = require("./middlewares/uploadFallback
 
 // Import routes
 const adminRoutes = require("./routes/admin");
-const systemReadinessRoutes = require("./routes/systemReadiness");
 const authRoutes = require("./routes/auth");
 const ownerRoutes = require("./routes/owner");
 const hrRoutes = require("./routes/hr");
@@ -101,6 +98,12 @@ const INSECURE_PROD_HTTP_ORIGINS = [
 ];
 
 const allowInsecureHttpOrigins = String(process.env.ALLOW_INSECURE_HTTP_ORIGINS || '').toLowerCase() === 'true';
+// Explicit allowlist from env (comma-separated, trimmed). This is the knob
+// for new domains: CORS_ORIGINS=https://thepartygoers.partygoers.online
+const envOrigins = String(process.env.CORS_ORIGINS || process.env.CORS_EXTRA_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 const extraOrigins = String(process.env.CORS_EXTRA_ORIGINS || '')
   .split(',')
   .map((origin) => origin.trim())
@@ -110,23 +113,43 @@ const corsOriginList = [
   ...BASE_PROD_ORIGINS,
   ...LOCAL_DEV_ORIGINS,
   ...(allowInsecureHttpOrigins ? INSECURE_PROD_HTTP_ORIGINS : []),
-  ...extraOrigins,
+  ...envOrigins,
+  ...extraOrigins.filter((o) => !envOrigins.includes(o)),
 ];
 
 const socketOriginList = [
   ...BASE_PROD_ORIGINS,
   ...LOCAL_DEV_ORIGINS,
   ...(allowInsecureHttpOrigins ? INSECURE_PROD_HTTP_ORIGINS : []),
-  ...extraOrigins,
+  ...envOrigins,
+  ...extraOrigins.filter((o) => !envOrigins.includes(o)),
 ];
 
-// Behind Nginx/Cloudflare in production: trust first proxy so rate limiting
-// and req.ip use X-Forwarded-For correctly.
-app.set("trust proxy", Number(process.env.TRUST_PROXY || 1));
+// Behind nginx/Cloudflare in production, the first proxy must be trusted so
+// rate limiting and req.ip use X-Forwarded-For. TRUST_PROXY=false (or 0)
+// disables it for direct local runs; anything else (including unset) keeps
+// the historical default of trusting one hop.
+const trustProxyRaw = String(process.env.TRUST_PROXY ?? '1').trim().toLowerCase();
+const trustProxyOn = !['false', '0', 'no', 'off', ''].includes(trustProxyRaw);
+if (trustProxyOn) {
+  app.set("trust proxy", Number.isFinite(Number(trustProxyRaw)) && Number(trustProxyRaw) > 1 ? Number(trustProxyRaw) : 1);
+}
+
+// Startup line: environment at a glance, values only — never secrets.
+console.log(
+  `[ENV] NODE_ENV=${process.env.NODE_ENV || 'development'} ` +
+  `APP_URL=${process.env.APP_URL || '(default production)'} ` +
+  `CORS_ORIGINS=${corsOriginList.length ? corsOriginList.join(',') : '(none)'} ` +
+  `TRUST_PROXY=${trustProxyOn ? 'on' : 'off'} ` +
+  `MAIL=${String(process.env.MAIL_ENABLED || '').toLowerCase() === 'true' ? 'enabled' : 'console-only'}`
+);
 
 // ── Security headers (helmet) ──────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow serving uploads cross-origin
+  // GIS (Google button / One Tap) renders cross-origin popups and iframes:
+  // disowning them with same-origin breaks the handshake, so allow popups.
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -135,9 +158,13 @@ app.use(helmet({
       fontSrc: ["'self'", 'https:', 'data:'],
       formAction: ["'self'", 'https:'],
       frameAncestors: ["'none'"],
+      // Google Identity Services hosts (button iframe + script). These matter
+      // when Express itself serves the SPA (local dev); nginx-served static
+      // files carry no CSP header anyway.
+      frameSrc: ["'self'", 'https://accounts.google.com'],
       imgSrc: ["'self'", 'https:', 'data:'],
       objectSrc: ["'none'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", 'https://accounts.google.com'],
       scriptSrcAttr: ["'none'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https:'],
       upgradeInsecureRequests: [],
@@ -213,6 +240,18 @@ app.use("/webhook/stripe", stripeWebhookRoutes);
 app.use("/api/payments", posPaymentsRoutes);
 app.use(express.json({ limit: '2mb' }));
 app.use(sanitizeInput); // strip null bytes, trim strings, enforce length limits
+// Authenticated API responses are per-user and token-scoped. Express's default
+// ETag lets browsers revalidate by URL only (no Vary: Authorization), which can
+// replay a stale/wrong-user body (or a 304 with an empty body) after a token
+// change. Force no-store so every request is answered fresh.
+app.use((req, res, next) => {
+  if (!req.path.startsWith("/uploads")) {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+  }
+  next();
+});
 app.use("/uploads", express.static("uploads"));
 app.use(uploadFallback); // Serve default avatar for missing profile images (prevents 404 spam)
 
@@ -248,11 +287,20 @@ io.use((socket, next) => {
 app.set('io', io);
 
 // Routes
-app.use("/health", (req, res) => {
-  res.json({
-    ok: true,
-    message: "API is running",
-  });
+// Health: liveness + DB reachability. nginx exposes this as GET /api/health.
+// A DB outage answers 503 {ok:false} fast instead of the app looking "up".
+app.use("/health", async (req, res) => {
+  try {
+    const pool = require("./config/database");
+    await Promise.race([
+      pool.query("SELECT 1"),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("db health timeout")), 3000)),
+    ]);
+    res.json({ ok: true, db: "up", message: "API is running" });
+  } catch (err) {
+    console.error("[HEALTH] db check failed:", err.message);
+    res.status(503).json({ ok: false, db: "down", message: "Database unreachable" });
+  }
 });
 
 // PayMongo payment callback pages (shown after redirect)
@@ -353,7 +401,6 @@ if (enableDbTestEndpoint) {
 
 // API Routes
 app.use("/admin", adminRoutes);
-app.use("/api/admin", systemReadinessRoutes);
 app.use("/super-admin", superAdminRoutes);
 app.use("/bar-registration", barRegistrationRoutes);
 app.use("/tps", tpsRoutes);
@@ -382,7 +429,7 @@ app.use("/public", publicBarsRoutes);
 app.use("/public", reviewsRoutes);
 app.use("/public", reservationRoutes);
 // Customer reservation actions + Owner reservation management share same file paths above
-app.use("/", require("./middlewares/requireApprovedCustomer"), reservationRoutes);
+app.use("/", reservationRoutes);
 app.use("/", dssRoutes);
 app.use("/", inventoryRoutes);
 app.use("/hr", require("./routes/hrAuditLogs"));
@@ -407,7 +454,7 @@ app.use("/owner-reviews", ownerReviewsRoutes);
 // Multi-branch management
 app.use("/branches", branchesRoutes);
 // Payment processing (customer orders/reservations)
-app.use("/payments", require("./middlewares/requireApprovedCustomer"), paymentsRoutes);
+app.use("/payments", paymentsRoutes);
 // Marketplace (PayMongo Platforms child-merchant onboarding)
 app.use("/marketplace", marketplaceRoutes);
 // Subscription payment processing
@@ -425,19 +472,11 @@ app.use("/feed-widgets", feedWidgetsRoutes);
 // Platform statistics
 app.use("/stats", statsRoutes);
 // Customer web ordering (tax-aware)
-app.use("/customer-orders", require("./middlewares/requireApprovedCustomer"), customerOrdersRoutes);
+app.use("/customer-orders", customerOrdersRoutes);
 // Permit expiry monitoring (super admin)
 app.use("/permit-monitoring", permitMonitoringRoutes);
 
-// Multer / upload error handler -> JSON
-app.use((err, req, res, next) => {
-  if (err && err.name === 'MulterError') {
-    if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ success: false, message: 'File too large. Max 5 MB per file.' });
-    return res.status(400).json({ success: false, message: err.message || 'Upload error.' });
-  }
-  if (err) return res.status(400).json({ success: false, message: err.message || 'Bad request.' });
-  next();
-});
+// ── Serve customer website (built SPA) ──
 const path = require('path');
 const customerDist = path.join(__dirname, '..', 'customer_website', 'dist');
 app.use(express.static(customerDist));
@@ -516,5 +555,16 @@ if (require.main === module && !isTestEnv) {
   });
   server.listen(PORT, () => console.log("Server running on port " + PORT));
 }
+
+// Final safety net: any async handler that throws (or a next(err) nobody
+// caught) must still produce JSON — never a hung socket / bare HTML error.
+app.use((err, req, res, next) => {
+  console.error("[ERROR]", err.stack || err.message || err);
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.expose || err.public ? err.message : "Server error",
+  });
+});
 
 module.exports = { app, server };

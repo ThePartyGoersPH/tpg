@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS mobile_push_tokens (
   KEY idx_mobile_push_user_active (user_id, is_active),
   CONSTRAINT fk_mobile_push_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS mobile_notification_push_log (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   notification_id INT NOT NULL,

@@ -723,9 +723,6 @@ function App() {
           <ViewRenderer />
         </ErrorBoundary>
       </main>
-      <div style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--color-text-muted)', padding: '0.5rem', opacity: 0.6 }}>
-        Build: {__COMMIT_HASH__}
-      </div>
       <NotificationsPanel open={notifOpen} onClose={() => { setNotifOpen(false); fetchUnread(); }} onNavigate={navigate} />
       <LiveNotificationToast
         notification={liveNotification}

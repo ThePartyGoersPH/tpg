@@ -7,14 +7,11 @@
     "dev": "npm run free-port && nodemon index.js",
     "free-port": "lsof -ti tcp:3000 | xargs kill -9 2>/dev/null || true",
     "start": "node index.js",
-    "check-env": "node scripts/check-env.js",
-    "smoke:local": "node scripts/smoke-test.js http://localhost:3000",
-    "smoke:prod": "node scripts/smoke-test.js https://thepartygoers.partygoers.online",
     "test": "node --test tests/**/*.test.cjs",
     "test:smoke": "node --test tests/api-security-smoke.test.cjs",
     "migrate": "node scripts/migrate.js",
     "migrate:status": "node scripts/migrate-status.js",
-    "purge-ids": "node scripts/purge-ids.js"
+    "test:email": "node scripts/test-mail.js"
   },
   "keywords": [],
   "author": "",
@@ -38,7 +35,6 @@
     "pdfkit": "^0.17.2",
     "qrcode": "^1.5.4",
     "resend": "^6.9.4",
-    "sharp": "^0.35.5",
     "socket.io": "^4.8.3",
     "stripe": "^22.6.2"
   },

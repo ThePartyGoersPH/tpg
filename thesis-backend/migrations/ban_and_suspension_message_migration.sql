@@ -12,17 +12,14 @@ SET @col_exists := (
     AND TABLE_NAME = 'users'
     AND COLUMN_NAME = 'ban_reason'
 );
-
 SET @col_sql := IF(
   @col_exists = 0,
   "ALTER TABLE `users` ADD COLUMN `ban_reason` varchar(500) DEFAULT NULL AFTER `banned_by`",
   'SELECT 1'
 );
-
 PREPARE stmt FROM @col_sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
-
 -- bars.suspension_message
 SET @col_exists := (
   SELECT COUNT(*)
@@ -31,13 +28,11 @@ SET @col_exists := (
     AND TABLE_NAME = 'bars'
     AND COLUMN_NAME = 'suspension_message'
 );
-
 SET @col_sql := IF(
   @col_exists = 0,
   "ALTER TABLE `bars` ADD COLUMN `suspension_message` text DEFAULT NULL AFTER `lifecycle_status`",
   'SELECT 1'
 );
-
 PREPARE stmt FROM @col_sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;

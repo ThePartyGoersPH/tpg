@@ -88,6 +88,28 @@ async function sendTodayReservationReminders() {
             ]
           );
 
+          // Mirror email at most ~once a day per reservation (checked via the
+          // audit trail), so the 4-hour scheduler never spams the inbox.
+          try {
+            const [[mailed]] = await pool.query(
+              `SELECT id FROM platform_audit_logs
+               WHERE action = 'EMAIL_SENT'
+                 AND entity_id = ?
+                 AND details LIKE '%"event":"reservation_reminder"%'
+                 AND created_at >= DATE_SUB(NOW(), INTERVAL 20 HOUR)
+               LIMIT 1`,
+              [reservation.customer_user_id]
+            );
+            if (!mailed) {
+              const { notifyCustomer } = require("./notifyCustomer");
+              const tableInfo = reservation.table_number ? ` at Table #${reservation.table_number}` : '';
+              await notifyCustomer(reservation.customer_user_id, "reservation_reminder", {
+                barName: reservation.bar_name,
+                when: `today at ${formattedTime}${tableInfo}`,
+              });
+            }
+          } catch (_) {}
+
           sentCount++;
           console.log(`[RESERVATION REMINDERS] Sent reminder for reservation #${reservation.id} (${hoursUntil}h until)`);
         }

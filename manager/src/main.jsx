@@ -9,18 +9,16 @@ import './index.css';
 // Global error handler to catch unhandled errors
 window.addEventListener('error', (event) => {
   console.error(' Global error caught:', event.error);
-  event.preventDefault();
 });
 
 window.addEventListener('unhandledrejection', (event) => {
   console.error(' Unhandled promise rejection:', event.reason);
-  event.preventDefault();
 });
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <BrowserRouter basename={import.meta.env.BASE_URL === '/' ? undefined : import.meta.env.BASE_URL.replace(/\/$/, '')}>
         <App />
         <Toaster
           position="top-right"

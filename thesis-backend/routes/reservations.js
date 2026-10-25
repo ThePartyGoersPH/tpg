@@ -4,6 +4,7 @@ const router = express.Router();
 const pool = require("../config/database");
 const requireAuth = require("../middlewares/requireAuth");
 const requireRole = require("../middlewares/requireRole");
+const { requireBarOrderAccess } = require("../middlewares/requireBarOrder");
 const requirePermission = require("../middlewares/requirePermission");
 const { USER_ROLES } = require("../config/constants");
 const { logAudit, auditContext } = require("../utils/audit");
@@ -833,7 +834,7 @@ router.get("/bars/:id/available-tables", async (req, res) => {
 router.post(
   "/reservations",
   requireAuth,
-  requireRole([USER_ROLES.CUSTOMER]),
+  requireBarOrderAccess({ getBarId: (req) => req.body?.bar_id }),
   async (req, res) => {
     const conn = await pool.getConnection();
     try {
@@ -951,6 +952,15 @@ router.post(
           if (!deliveryName || !deliveryPhone || !deliveryAddress) {
             return res.status(400).json({ success: false, message: "Delivery name, phone, and address are required" });
           }
+          const { normalizeCustomerPhone } = require("../utils/phonePolicy");
+          const deliveryPhoneCheck = normalizeCustomerPhone(deliveryPhone, {
+            required: true,
+            fieldLabel: "Delivery phone",
+          });
+          if (deliveryPhoneCheck.error) {
+            return res.status(400).json({ success: false, message: deliveryPhoneCheck.error });
+          }
+          deliveryPhone = deliveryPhoneCheck.value;
           deliveryFee = barFf ? Math.max(0, Number(barFf.delivery_fee) || 0) : 0;
         }
         // Alcohol is restricted to table bookings: check menu items by
@@ -1324,7 +1334,9 @@ router.post(
         const barName = barInfo[0]?.name || "the bar";
         const formattedDate = new Date(`${normalizedReservationDate}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const formattedTime = formatTo12HourTime(normalizedReservationTime);
-        
+        const whenText = `${formattedDate} at ${formattedTime}`;
+        const stateText = initialStatus === 'approved' ? 'confirmed' : 'submitted and is pending approval';
+
         await pool.query(
           `INSERT INTO notifications (user_id, type, title, message, reference_id, reference_type, is_read, created_at)
            VALUES (?, ?, ?, ?, ?, ?, 0, NOW())`,
@@ -1332,12 +1344,20 @@ router.post(
             customerId,
             'reservation_confirmed',
             'Reservation Confirmed',
-            `Your reservation at ${barName} for ${formattedDate} at ${formattedTime} has been ${initialStatus === 'approved' ? 'confirmed' : 'submitted and is pending approval'}.`,
+            `Your reservation at ${barName} for ${whenText} has been ${stateText}.`,
             ins.insertId,
             'reservation'
           ]
         );
         shouldTriggerPush = true;
+
+        // Mirror email, best-effort: never blocks the booking.
+        try {
+          const { notifyCustomer } = require("../utils/notifyCustomer");
+          await notifyCustomer(customerId, "reservation_submitted", {
+            barName, when: whenText, status: stateText,
+          });
+        } catch (_) {}
       } catch (notifErr) {
         console.error("Failed to create reservation notification:", notifErr);
       }
@@ -1900,7 +1920,17 @@ router.post(
 router.patch(
   "/reservations/:id/cancel",
   requireAuth,
-  requireRole([USER_ROLES.CUSTOMER]),
+  requireBarOrderAccess({
+    getBarId: async (req) => {
+      const id = Number(req.params.id);
+      if (!id) return NaN;
+      const [[row]] = await pool.query(
+        "SELECT bar_id FROM reservations WHERE id = ? LIMIT 1",
+        [id]
+      );
+      return row?.bar_id;
+    },
+  }),
   async (req, res) => {
     try {
       const customerId = req.user.id;
@@ -1925,6 +1955,23 @@ router.patch(
          WHERE id=? AND customer_user_id=?`,
         [id, customerId]
       );
+
+      // Cancellation mail, best-effort: never blocks the cancel.
+      try {
+        const { notifyCustomer } = require("../utils/notifyCustomer");
+        const [[info]] = await pool.query(
+          `SELECT r.reservation_date, r.reservation_time, b.name AS bar_name
+           FROM reservations r LEFT JOIN bars b ON b.id = r.bar_id
+           WHERE r.id = ? LIMIT 1`,
+          [id]
+        );
+        const when = info?.reservation_date
+          ? `${new Date(`${info.reservation_date}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}${info.reservation_time ? ` at ${String(info.reservation_time).slice(0, 5)}` : ''}`
+          : '';
+        await notifyCustomer(customerId, "reservation_cancelled", {
+          barName: info?.bar_name || "the bar", when,
+        });
+      } catch (_) {}
 
       return res.json({ success: true, message: "Reservation cancelled" });
     } catch (err) {
@@ -2378,6 +2425,16 @@ router.patch(
             action: "navigate",
             targetRoute: "/reservations",
           });
+
+          // Mirror email, best-effort: never blocks the status change.
+          try {
+            const { notifyCustomer } = require("../utils/notifyCustomer");
+            await notifyCustomer(customerUserId, "reservation_status", {
+              barName,
+              status: nextStatus,
+              when: scheduleSuffix.replace(/^[\s()]+|[\s()]+$/g, ""),
+            });
+          } catch (_) {}
 
           // Also notify the bar team of the status change (not just new reservations)
           try {

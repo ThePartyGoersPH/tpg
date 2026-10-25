@@ -2,7 +2,6 @@
 -- Root cause: existing FK points to bar_reviews(id), but owner response flow uses reviews(id)
 
 SET @db := DATABASE();
-
 -- 1) Ensure reviews table exists
 CREATE TABLE IF NOT EXISTS reviews (
   id INT AUTO_INCREMENT PRIMARY KEY,

@@ -1,41 +1,19 @@
 # Dependencies
 node_modules/
 
-# Environment files (secrets)
+# Environment variables (contain real secrets - NEVER commit)
 .env
-.env.local
-.env.development
-.env.production
-.env.*.local
+.env.*
+!.env.example
 
-# Private uploads and keys
-private-uploads/
-private_uploads/
-uploads/ids/
-*.key
-*.pem
-*.p12
-vision-sa.json
-service-account*.json
-
-# Build output
-dist/
-build/
+# Uploads (user-generated content)
+uploads/
 
 # Logs
-logs/
 *.log
 npm-debug.log*
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Test coverage
-coverage/
+".env" 

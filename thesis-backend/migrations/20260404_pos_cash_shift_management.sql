@@ -2,7 +2,6 @@
 -- Adds shift balancing, cash movement tracking, and order-to-shift linkage.
 
 SET @db_name := DATABASE();
-
 -- 1) shifts table
 CREATE TABLE IF NOT EXISTS `shifts` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

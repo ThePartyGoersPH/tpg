@@ -54,6 +54,86 @@ export async function confirmDestructive({ title, text, confirmText = 'Delete', 
   return result.isConfirmed;
 }
 
+const REJECT_QUICK_PICKS = [
+  'Incomplete or fake details',
+  'Under 18',
+  'Duplicate account',
+  'Other',
+];
+
+/**
+ * Rejection dialog: required reason textarea (5-300 chars) plus quick picks.
+ * Resolves the trimmed reason string, or null when cancelled.
+ */
+export async function promptRejectReason({ title = 'Reject this registration?', name = '' }) {
+  ensureStyle();
+  const result = await Swal.fire({
+    ...base,
+    title,
+    html:
+      (name ? `<p style="margin:0 0 10px;">${name}</p>` : '') +
+      `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">` +
+      REJECT_QUICK_PICKS.map(
+        (p) => `<button type="button" data-pick="${p}" style="font-size:11px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.1);cursor:pointer;">${p}</button>`
+      ).join('') +
+      `</div>`,
+    input: 'textarea',
+    inputPlaceholder: 'Reason (required, 5-300 characters)…',
+    inputAttributes: { maxlength: 300, 'aria-label': 'Rejection reason' },
+    showCancelButton: true,
+    confirmButtonText: 'Reject',
+    cancelButtonText: 'Cancel',
+    reverseButtons: true,
+    focusCancel: true,
+    showLoaderOnConfirm: true,
+    didOpen: () => {
+      const popup = Swal.getPopup();
+      const ta = Swal.getInput();
+      popup?.querySelectorAll('[data-pick]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (ta) {
+            ta.value = btn.getAttribute('data-pick') === 'Other' ? '' : btn.getAttribute('data-pick');
+            ta.focus();
+          }
+        });
+      });
+    },
+    preConfirm: (value) => {
+      const reason = String(value || '').trim();
+      if (reason.length < 5 || reason.length > 300) {
+        Swal.showValidationMessage('Please give a reason between 5 and 300 characters.');
+        return false;
+      }
+      return reason;
+    },
+  });
+  return result.isConfirmed ? String(result.value || '').trim() : null;
+}
+
+/**
+ * Optional-note dialog for approvals. Resolves the trimmed note
+ * (empty string when skipped), or null when cancelled.
+ */
+export async function promptApproveNote({ title = 'Approve this registration?', name = '' }) {
+  ensureStyle();
+  const result = await Swal.fire({
+    ...base,
+    title,
+    html: name ? `<p style="margin:0 0 10px;">${name}</p>` : '',
+    input: 'textarea',
+    inputPlaceholder: 'Optional note for the customer (up to 300 characters)…',
+    inputAttributes: { maxlength: 300, 'aria-label': 'Approval note (optional)' },
+    showCancelButton: true,
+    confirmButtonText: 'Approve',
+    cancelButtonText: 'Cancel',
+    reverseButtons: true,
+    focusCancel: true,
+    showLoaderOnConfirm: true,
+    preConfirm: (value) => String(value || '').trim().slice(0, 300),
+  });
+  return result.isConfirmed ? String(result.value || '').trim().slice(0, 300) : null;
+}
+
 const toastMixin = () =>
   Swal.mixin({
     toast: true,

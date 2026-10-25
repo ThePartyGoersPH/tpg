@@ -13,13 +13,11 @@ CREATE TABLE IF NOT EXISTS `reservation_tables` (
   INDEX `idx_reservation_tables_reservation` (`reservation_id`),
   INDEX `idx_reservation_tables_table` (`table_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Migrate existing single-table reservations to junction table
 INSERT INTO `reservation_tables` (`reservation_id`, `table_id`)
 SELECT `id`, `table_id` 
 FROM `reservations` 
 WHERE `table_id` IS NOT NULL
 ON DUPLICATE KEY UPDATE `table_id` = VALUES(`table_id`);
-
 -- Note: We keep the table_id column in reservations for backward compatibility
--- but new multi-table reservations will use the reservation_tables junction table
+-- but new multi-table reservations will use the reservation_tables junction table;

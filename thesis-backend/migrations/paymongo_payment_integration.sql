@@ -1,11 +1,3 @@
--- ═══════════════════════════════════════════════════════════════════════════
--- PAYMONGO PAYMENT INTEGRATION MIGRATION
--- Purpose: Add payment processing for customer orders/reservations and subscriptions
--- ═══════════════════════════════════════════════════════════════════════════
-
--- ──────────────────────────────────────────────
--- 1. payment_transactions — unified payment tracking
--- ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS `payment_transactions` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `reference_id` VARCHAR(100) NOT NULL COMMENT 'Internal reference ID',
@@ -34,10 +26,6 @@ CREATE TABLE IF NOT EXISTS `payment_transactions` (
   KEY `idx_paymongo_intent` (`paymongo_payment_intent_id`),
   KEY `idx_paymongo_source` (`paymongo_source_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- ──────────────────────────────────────────────
--- 2. subscription_payments — dedicated subscription payment tracking
--- ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS `subscription_payments` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `subscription_id` INT(11) NOT NULL,
@@ -54,10 +42,6 @@ CREATE TABLE IF NOT EXISTS `subscription_payments` (
   CONSTRAINT `fk_subpay_subscription` FOREIGN KEY (`subscription_id`) REFERENCES `subscriptions` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_subpay_transaction` FOREIGN KEY (`payment_transaction_id`) REFERENCES `payment_transactions` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- ──────────────────────────────────────────────
--- 3. payouts — platform fee and bar owner payouts
--- ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS `payouts` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `bar_id` INT(11) NOT NULL,
@@ -84,10 +68,6 @@ CREATE TABLE IF NOT EXISTS `payouts` (
   CONSTRAINT `fk_payout_bar` FOREIGN KEY (`bar_id`) REFERENCES `bars` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_payout_transaction` FOREIGN KEY (`payment_transaction_id`) REFERENCES `payment_transactions` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- ──────────────────────────────────────────────
--- 4. webhook_events — PayMongo webhook event log
--- ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS `webhook_events` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `event_id` VARCHAR(255) NOT NULL COMMENT 'PayMongo event ID',
@@ -104,39 +84,48 @@ CREATE TABLE IF NOT EXISTS `webhook_events` (
   KEY `idx_event_type` (`event_type`),
   KEY `idx_processed` (`processed`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- ──────────────────────────────────────────────
--- 5. Update subscriptions table for PayMongo integration
--- ──────────────────────────────────────────────
-ALTER TABLE `subscriptions`
-  MODIFY COLUMN `status` ENUM('pending', 'active', 'cancelled', 'expired', 'past_due', 'rejected') NOT NULL DEFAULT 'pending',
-  ADD COLUMN IF NOT EXISTS `paymongo_payment_id` VARCHAR(255) NULL AFTER `payment_reference`,
-  ADD COLUMN IF NOT EXISTS `paymongo_source_id` VARCHAR(255) NULL AFTER `paymongo_payment_id`,
-  ADD COLUMN IF NOT EXISTS `checkout_url` TEXT NULL AFTER `paymongo_source_id`;
-
--- ──────────────────────────────────────────────
--- 6. Update bars table for GCash payout details
--- ──────────────────────────────────────────────
-ALTER TABLE `bars`
-  ADD COLUMN IF NOT EXISTS `gcash_number` VARCHAR(20) NULL COMMENT 'GCash mobile number for payouts' AFTER `accept_gcash`,
-  ADD COLUMN IF NOT EXISTS `gcash_account_name` VARCHAR(255) NULL COMMENT 'Registered GCash account name' AFTER `gcash_number`;
-
--- ──────────────────────────────────────────────
--- 7. Add payment tracking to POS orders (if table exists)
--- ──────────────────────────────────────────────
-ALTER TABLE `pos_orders`
-  ADD COLUMN IF NOT EXISTS `payment_transaction_id` INT(11) NULL AFTER `total_amount`,
-  ADD COLUMN IF NOT EXISTS `payment_status` ENUM('pending', 'paid', 'refunded', 'failed') NULL DEFAULT 'pending' AFTER `payment_transaction_id`,
-  ADD KEY IF NOT EXISTS `idx_pos_payment_transaction` (`payment_transaction_id`);
-
--- ──────────────────────────────────────────────
--- 8. Create platform settings table for fee configuration
--- ──────────────────────────────────────────────
-
--- Check if table exists and drop if needed (only if schema is different)
--- If you have existing data, backup first!
+ALTER TABLE subscriptions MODIFY COLUMN `status` ENUM('pending', 'active', 'cancelled', 'expired', 'past_due', 'rejected') NOT NULL DEFAULT 'pending';
+SET @cx196 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'subscriptions' AND COLUMN_NAME = 'paymongo_payment_id');
+SET @sx196 := IF(@cx196 = 0, 'ALTER TABLE subscriptions ADD COLUMN `paymongo_payment_id` VARCHAR(255) NULL AFTER `payment_reference`', 'SELECT 1');
+PREPARE stx196 FROM @sx196;
+EXECUTE stx196;
+DEALLOCATE PREPARE stx196;
+SET @cx197 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'subscriptions' AND COLUMN_NAME = 'paymongo_source_id');
+SET @sx197 := IF(@cx197 = 0, 'ALTER TABLE subscriptions ADD COLUMN `paymongo_source_id` VARCHAR(255) NULL AFTER `paymongo_payment_id`', 'SELECT 1');
+PREPARE stx197 FROM @sx197;
+EXECUTE stx197;
+DEALLOCATE PREPARE stx197;
+SET @cx198 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'subscriptions' AND COLUMN_NAME = 'checkout_url');
+SET @sx198 := IF(@cx198 = 0, 'ALTER TABLE subscriptions ADD COLUMN `checkout_url` TEXT NULL AFTER `paymongo_source_id`', 'SELECT 1');
+PREPARE stx198 FROM @sx198;
+EXECUTE stx198;
+DEALLOCATE PREPARE stx198;
+SET @cx199 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND COLUMN_NAME = 'gcash_number');
+SET @sx199 := IF(@cx199 = 0, 'ALTER TABLE bars ADD COLUMN `gcash_number` VARCHAR(20) NULL COMMENT ''GCash mobile number for payouts'' AFTER `accept_gcash`', 'SELECT 1');
+PREPARE stx199 FROM @sx199;
+EXECUTE stx199;
+DEALLOCATE PREPARE stx199;
+SET @cx200 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND COLUMN_NAME = 'gcash_account_name');
+SET @sx200 := IF(@cx200 = 0, 'ALTER TABLE bars ADD COLUMN `gcash_account_name` VARCHAR(255) NULL COMMENT ''Registered GCash account name'' AFTER `gcash_number`', 'SELECT 1');
+PREPARE stx200 FROM @sx200;
+EXECUTE stx200;
+DEALLOCATE PREPARE stx200;
+SET @cx201 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pos_orders' AND COLUMN_NAME = 'payment_transaction_id');
+SET @sx201 := IF(@cx201 = 0, 'ALTER TABLE pos_orders ADD COLUMN `payment_transaction_id` INT(11) NULL AFTER `total_amount`', 'SELECT 1');
+PREPARE stx201 FROM @sx201;
+EXECUTE stx201;
+DEALLOCATE PREPARE stx201;
+SET @cx202 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pos_orders' AND COLUMN_NAME = 'payment_status');
+SET @sx202 := IF(@cx202 = 0, 'ALTER TABLE pos_orders ADD COLUMN `payment_status` ENUM(''pending'', ''paid'', ''refunded'', ''failed'') NULL DEFAULT ''pending'' AFTER `payment_transaction_id`', 'SELECT 1');
+PREPARE stx202 FROM @sx202;
+EXECUTE stx202;
+DEALLOCATE PREPARE stx202;
+SET @cx203 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pos_orders' AND INDEX_NAME = 'idx_pos_payment_transaction');
+SET @sx203 := IF(@cx203 = 0, 'ALTER TABLE pos_orders ADD KEY `idx_pos_payment_transaction` (`payment_transaction_id`)', 'SELECT 1');
+PREPARE stx203 FROM @sx203;
+EXECUTE stx203;
+DEALLOCATE PREPARE stx203;
 DROP TABLE IF EXISTS `platform_settings`;
-
 CREATE TABLE `platform_settings` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `setting_key` VARCHAR(100) NOT NULL,
@@ -147,26 +136,29 @@ CREATE TABLE `platform_settings` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_setting_key` (`setting_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- Insert default platform settings
 INSERT INTO `platform_settings` (`setting_key`, `setting_value`, `description`)
 VALUES 
   ('platform_fee_percentage', '5.00', 'Platform fee percentage for customer payments'),
   ('paymongo_public_key', '', 'PayMongo public API key'),
   ('paymongo_secret_key', '', 'PayMongo secret API key'),
   ('paymongo_webhook_secret', '', 'PayMongo webhook signing secret');
-
--- ──────────────────────────────────────────────
--- 9. Add indexes for performance
--- ──────────────────────────────────────────────
-ALTER TABLE `payment_transactions`
-  ADD INDEX IF NOT EXISTS `idx_created_at` (`created_at`),
-  ADD INDEX IF NOT EXISTS `idx_paid_at` (`paid_at`);
-
-ALTER TABLE `payouts`
-  ADD INDEX IF NOT EXISTS `idx_created_at` (`created_at`),
-  ADD INDEX IF NOT EXISTS `idx_processed_at` (`processed_at`);
-
--- ═══════════════════════════════════════════════════════════════════════════
--- MIGRATION COMPLETE
--- ═══════════════════════════════════════════════════════════════════════════
+SET @cx204 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payment_transactions' AND INDEX_NAME = 'idx_created_at');
+SET @sx204 := IF(@cx204 = 0, 'ALTER TABLE payment_transactions ADD INDEX `idx_created_at` (`created_at`)', 'SELECT 1');
+PREPARE stx204 FROM @sx204;
+EXECUTE stx204;
+DEALLOCATE PREPARE stx204;
+SET @cx205 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payment_transactions' AND INDEX_NAME = 'idx_paid_at');
+SET @sx205 := IF(@cx205 = 0, 'ALTER TABLE payment_transactions ADD INDEX `idx_paid_at` (`paid_at`)', 'SELECT 1');
+PREPARE stx205 FROM @sx205;
+EXECUTE stx205;
+DEALLOCATE PREPARE stx205;
+SET @cx21 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payouts' AND INDEX_NAME = 'idx_created_at');
+SET @sx21 := IF(@cx21 = 0, 'ALTER TABLE payouts ADD INDEX `idx_created_at` (`created_at`)', 'SELECT 1');
+PREPARE stx21 FROM @sx21;
+EXECUTE stx21;
+DEALLOCATE PREPARE stx21;
+SET @cx22 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payouts' AND INDEX_NAME = 'idx_processed_at');
+SET @sx22 := IF(@cx22 = 0, 'ALTER TABLE payouts ADD INDEX `idx_processed_at` (`processed_at`)', 'SELECT 1');
+PREPARE stx22 FROM @sx22;
+EXECUTE stx22;
+DEALLOCATE PREPARE stx22;

@@ -1,6 +1,7 @@
 -- Migration: reservation_items
 -- Tracks which menu items were added per reservation (for best-seller DSS)
--- Safe: only adds a new table; does NOT modify any existing tables used by the POS app.
+-- Safe: only adds a new table;
+does NOT modify any existing tables used by the POS app.
 
 CREATE TABLE IF NOT EXISTS `reservation_items` (
   `id`             int(11)        NOT NULL AUTO_INCREMENT,

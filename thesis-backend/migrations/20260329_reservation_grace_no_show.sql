@@ -1,12 +1,21 @@
--- Migration: Reservation grace period tracking + no-show support
-
-ALTER TABLE `reservations`
-  ADD COLUMN IF NOT EXISTS `checked_in_at` DATETIME DEFAULT NULL AFTER `paid_at`,
-  ADD COLUMN IF NOT EXISTS `no_show_at` DATETIME DEFAULT NULL AFTER `checked_in_at`;
-
-ALTER TABLE `reservations`
-  ADD INDEX IF NOT EXISTS `idx_reservations_checked_in_at` (`checked_in_at`),
-  ADD INDEX IF NOT EXISTS `idx_reservations_no_show_at` (`no_show_at`);
-
-ALTER TABLE `reservations`
-  MODIFY COLUMN `status` ENUM('pending','approved','rejected','cancelled','confirmed','paid','checked_in','completed','no_show') NOT NULL DEFAULT 'pending';
+SET @cx112 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'checked_in_at');
+SET @sx112 := IF(@cx112 = 0, 'ALTER TABLE reservations ADD COLUMN `checked_in_at` DATETIME DEFAULT NULL AFTER `paid_at`', 'SELECT 1');
+PREPARE stx112 FROM @sx112;
+EXECUTE stx112;
+DEALLOCATE PREPARE stx112;
+SET @cx113 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'no_show_at');
+SET @sx113 := IF(@cx113 = 0, 'ALTER TABLE reservations ADD COLUMN `no_show_at` DATETIME DEFAULT NULL AFTER `checked_in_at`', 'SELECT 1');
+PREPARE stx113 FROM @sx113;
+EXECUTE stx113;
+DEALLOCATE PREPARE stx113;
+SET @cx8 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND INDEX_NAME = 'idx_reservations_checked_in_at');
+SET @sx8 := IF(@cx8 = 0, 'ALTER TABLE reservations ADD INDEX `idx_reservations_checked_in_at` (`checked_in_at`)', 'SELECT 1');
+PREPARE stx8 FROM @sx8;
+EXECUTE stx8;
+DEALLOCATE PREPARE stx8;
+SET @cx9 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND INDEX_NAME = 'idx_reservations_no_show_at');
+SET @sx9 := IF(@cx9 = 0, 'ALTER TABLE reservations ADD INDEX `idx_reservations_no_show_at` (`no_show_at`)', 'SELECT 1');
+PREPARE stx9 FROM @sx9;
+EXECUTE stx9;
+DEALLOCATE PREPARE stx9;
+ALTER TABLE reservations MODIFY COLUMN `status` ENUM('pending','approved','rejected','cancelled','confirmed','paid','checked_in','completed','no_show') NOT NULL DEFAULT 'pending';

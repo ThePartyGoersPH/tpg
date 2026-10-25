@@ -1,7 +1,5 @@
--- Migration: Takeout master switch for bars
--- Date: 2026-10-06
--- Purpose: Takeout / Food Order is only offered when the venue is a
--- restobar AND the owner explicitly enables takeout (plus at least one of
--- store pickup / delivery). Opt-in: defaults to OFF.
-ALTER TABLE `bars`
-  ADD COLUMN IF NOT EXISTS `is_takeout_enabled` tinyint(1) NOT NULL DEFAULT 0;
+SET @cx174 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND COLUMN_NAME = 'is_takeout_enabled');
+SET @sx174 := IF(@cx174 = 0, 'ALTER TABLE bars ADD COLUMN `is_takeout_enabled` tinyint(1) NOT NULL DEFAULT 0', 'SELECT 1');
+PREPARE stx174 FROM @sx174;
+EXECUTE stx174;
+DEALLOCATE PREPARE stx174;

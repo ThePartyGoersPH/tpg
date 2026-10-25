@@ -3,11 +3,11 @@
 -- Description: Ensures POS permissions are properly assigned for role-based access
 
 -- Insert POS permissions if they don't exist
-INSERT IGNORE INTO `permissions` (`id`, `code`, `description`, `created_at`) VALUES
-(65, 'POS_ACCESS', 'Access the POS system', NOW()),
-(66, 'POS_CREATE_ORDER', 'Create POS orders', NOW()),
-(67, 'POS_VIEW_ORDERS', 'View POS order history', NOW()),
-(68, 'POS_VOID_ORDER', 'Void/cancel POS orders', NOW());
+INSERT IGNORE INTO `permissions` (`id`, `name`, `module`, `action`, `description`, `created_at`) VALUES
+(65, 'POS_ACCESS', 'pos', 'access', 'Access the POS system', NOW()),
+(66, 'POS_CREATE_ORDER', 'pos', 'create_order', 'Create POS orders', NOW()),
+(67, 'POS_VIEW_ORDERS', 'pos', 'view_orders', 'View POS order history', NOW()),
+(68, 'POS_VOID_ORDER', 'pos', 'void_order', 'Void/cancel POS orders', NOW());
 
 -- Assign POS permissions to BAR_OWNER role (role_id = 7)
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`) VALUES

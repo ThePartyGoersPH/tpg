@@ -8,11 +8,17 @@ ADD COLUMN `permit_expiry_date` DATE DEFAULT NULL COMMENT 'Business permit expir
 ADD COLUMN `permit_status` ENUM('valid', 'expiring_soon', 'expired') DEFAULT 'valid' COMMENT 'Permit status: valid, expiring_soon (30 days), expired',
 ADD COLUMN `permit_expiry_notified_at` TIMESTAMP NULL DEFAULT NULL COMMENT 'Last time expiry notification was sent',
 ADD COLUMN `permit_expired_flagged_at` TIMESTAMP NULL DEFAULT NULL COMMENT 'When permit was flagged as expired';
-
 -- Add indexes for efficient querying
-CREATE INDEX `idx_permit_expiry_date` ON `bars` (`permit_expiry_date`);
-CREATE INDEX `idx_permit_status` ON `bars` (`permit_status`);
-
+SET @cx2013 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND INDEX_NAME = 'idx_permit_expiry_date');
+SET @sx2013 := IF(@cx2013 = 0, 'CREATE INDEX `idx_permit_expiry_date` ON `bars` (`permit_expiry_date`)', 'SELECT 1');
+PREPARE stx2013 FROM @sx2013;
+EXECUTE stx2013;
+DEALLOCATE PREPARE stx2013;
+SET @cx2014 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND INDEX_NAME = 'idx_permit_status');
+SET @sx2014 := IF(@cx2014 = 0, 'CREATE INDEX `idx_permit_status` ON `bars` (`permit_status`)', 'SELECT 1');
+PREPARE stx2014 FROM @sx2014;
+EXECUTE stx2014;
+DEALLOCATE PREPARE stx2014;
 -- Create permit expiry notifications log table
 CREATE TABLE IF NOT EXISTS `permit_expiry_notifications` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,

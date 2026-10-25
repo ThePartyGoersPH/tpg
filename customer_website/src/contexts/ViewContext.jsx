@@ -49,15 +49,8 @@ function saveViewState(view, params = {}) {
 }
 
 function detectInitialView() {
-  let path = window.location.pathname;
+  const path = window.location.pathname;
   const search = window.location.search;
-  // Strip /customer/ prefix if present (for dev deployment at /customer/)
-  // and ensure leading slash is preserved for route matching
-  const customerPrefix = '/customer/';
-  if (path.startsWith(customerPrefix)) {
-    const remainder = path.slice(customerPrefix.length);
-    path = (remainder ? '/' + remainder : '/');
-  }
   const params = new URLSearchParams(search);
   const hasToken = Boolean(localStorage.getItem('tpg_customer_token'));
   const saved = hasToken ? readSavedViewState() : null;

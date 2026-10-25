@@ -7,6 +7,7 @@ const { assertBarId } = require("../utils/barScope");
 const { logAudit } = require("../utils/audit");
 const { createNotification } = require("../utils/notificationService");
 const { sendPurchaseOrderEmail } = require("../utils/emailService");
+const { findOwnAccountConflict, SELF_SUPPLIER_MESSAGE } = require("../utils/supplierValidation");
 
 // ─── Suppliers ───────────────────────────────────────────────────────────────
 router.get("/suppliers", requireAuth, requirePermission("procurement_view"), async (req, res) => {
@@ -25,6 +26,16 @@ router.post("/suppliers", requireAuth, requirePermission("procurement_create"), 
     const barId = assertBarId(req);
     const { name, contact_person, email, facebook_link, phone, address } = req.body;
     if (!name) return res.status(400).json({ success: false, message: "Supplier name required" });
+    const createConflict = await findOwnAccountConflict(
+      pool,
+      barId,
+      { email, phone, names: [name, contact_person] },
+      req.user.id
+    );
+    if (createConflict) {
+      return res.status(400).json({ success: false, message: SELF_SUPPLIER_MESSAGE, code: "SUPPLIER_SELF", details: { field: createConflict.field } });
+    }
+
     const [r] = await pool.query(
       "INSERT INTO suppliers (bar_id, name, contact_person, email, facebook_link, phone, address) VALUES (?,?,?,?,?,?,?)",
       [barId, name, contact_person || null, email || null, facebook_link || null, phone || null, address || null]
@@ -38,8 +49,21 @@ router.put("/suppliers/:id", requireAuth, requirePermission("procurement_create"
   try {
     const barId = assertBarId(req);
     const { name, contact_person, email, facebook_link, phone, address, is_active } = req.body;
-    const [existing] = await pool.query("SELECT id FROM suppliers WHERE id = ? AND bar_id = ?", [req.params.id, barId]);
+    const [existing] = await pool.query("SELECT id, name, contact_person, email, phone FROM suppliers WHERE id = ? AND bar_id = ?", [req.params.id, barId]);
     if (!existing.length) return res.status(404).json({ success: false, message: "Supplier not found" });
+    const mergedSupplier = {
+      email: req.body.email !== undefined ? req.body.email : existing[0].email,
+      phone: req.body.phone !== undefined ? req.body.phone : existing[0].phone,
+      names: [
+        req.body.name !== undefined ? req.body.name : existing[0].name,
+        req.body.contact_person !== undefined ? req.body.contact_person : existing[0].contact_person,
+      ],
+    };
+    const updateConflict = await findOwnAccountConflict(pool, barId, mergedSupplier, req.user.id);
+    if (updateConflict) {
+      return res.status(400).json({ success: false, message: SELF_SUPPLIER_MESSAGE, code: "SUPPLIER_SELF", details: { field: updateConflict.field } });
+    }
+
     await pool.query(
       "UPDATE suppliers SET name = COALESCE(?, name), contact_person = ?, email = ?, facebook_link = ?, phone = ?, address = ?, is_active = COALESCE(?, is_active), updated_at = NOW() WHERE id = ? AND bar_id = ?",
       [name || null, contact_person || null, email || null, facebook_link || null, phone || null, address || null, (is_active === undefined ? null : is_active ? 1 : 0), req.params.id, barId]
@@ -467,8 +491,16 @@ router.post("/purchase-orders/:id/notify", requireAuth, requirePermission("procu
       [poId, barId]
     );
     if (!po) return res.status(404).json({ success: false, message: "Purchase order not found" });
-    if (['rejected', 'cancelled'].includes(String(po.status))) {
-      return res.status(400).json({ success: false, message: `Cannot notify supplier for a ${po.status} order` });
+    // Supplier may only be notified once Finance has approved the PO.
+    const NOTIFYABLE_STATUSES = ['approved', 'partially_received', 'received'];
+    if (!NOTIFYABLE_STATUSES.includes(String(po.status))) {
+      const awaiting = ['draft', 'pending_approval'].includes(String(po.status));
+      return res.status(400).json({
+        success: false,
+        message: awaiting
+          ? "Purchase order must be approved by Finance before notifying the supplier"
+          : `Cannot notify supplier for a ${po.status} order`,
+      });
     }
     if (!po.supplier_id) {
       return res.status(400).json({ success: false, message: "This is a Walk-in order with no supplier contact — assign a supplier first" });

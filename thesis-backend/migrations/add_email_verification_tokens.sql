@@ -1,9 +1,15 @@
--- Migration: Add email verification token columns to users table
--- Run this once against your tpg database
-
-ALTER TABLE `users`
-  ADD COLUMN IF NOT EXISTS `email_verification_token` VARCHAR(255) DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `email_verification_expires` DATETIME DEFAULT NULL;
-
-ALTER TABLE `users`
-  ADD INDEX IF NOT EXISTS `idx_email_verification_token` (`email_verification_token`);
+SET @cx161 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'email_verification_token');
+SET @sx161 := IF(@cx161 = 0, 'ALTER TABLE users ADD COLUMN `email_verification_token` VARCHAR(255) DEFAULT NULL', 'SELECT 1');
+PREPARE stx161 FROM @sx161;
+EXECUTE stx161;
+DEALLOCATE PREPARE stx161;
+SET @cx162 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'email_verification_expires');
+SET @sx162 := IF(@cx162 = 0, 'ALTER TABLE users ADD COLUMN `email_verification_expires` DATETIME DEFAULT NULL', 'SELECT 1');
+PREPARE stx162 FROM @sx162;
+EXECUTE stx162;
+DEALLOCATE PREPARE stx162;
+SET @cx17 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND INDEX_NAME = 'idx_email_verification_token');
+SET @sx17 := IF(@cx17 = 0, 'ALTER TABLE users ADD INDEX `idx_email_verification_token` (`email_verification_token`)', 'SELECT 1');
+PREPARE stx17 FROM @sx17;
+EXECUTE stx17;
+DEALLOCATE PREPARE stx17;
