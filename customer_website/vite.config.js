@@ -1,8 +1,15 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { execSync } from 'child_process';
+
+let buildVersion = 'dev';
+try { buildVersion = execSync('git rev-parse --short HEAD').toString().trim(); } catch (e) {}
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'import.meta.env.VITE_BUILD_VERSION': JSON.stringify(buildVersion),
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,
