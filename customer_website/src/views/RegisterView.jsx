@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import '../styles/register-wizard.css';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../hooks/useAuth';
 import { useView } from '../hooks/useView';
@@ -300,6 +301,29 @@ const showLastNameError = touched.last_name || submitAttempted;
     consent &&
     privacyConsent;
 
+  const step1Valid =
+    !firstNameError &&
+    !lastNameError &&
+    emailFormatOk &&
+    !emailBusy &&
+    !emailTaken &&
+    !phoneError &&
+    pwCheck.ok &&
+    !passwordMismatch &&
+    confirmPassword;
+  const step2Valid = !!form.date_of_birth && !dobError && ageConfirmed;
+  const step3Valid = !!idType && !!frontImage && (!needsBack || !!backImage) && !!selfieImage;
+  const step4Valid = consent && privacyConsent;
+
+  const goNext = () => {
+    setSubmitAttempted(true);
+    if (wizardStep === 1 && !step1Valid) return;
+    if (wizardStep === 2 && !step2Valid) return;
+    if (wizardStep === 3 && !step3Valid) return;
+    setWizardStep((s) => Math.min(4, s + 1));
+  };
+  const goBack = () => setWizardStep((s) => Math.max(1, s - 1));
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitAttempted(true);
@@ -396,7 +420,16 @@ const showLastNameError = touched.last_name || submitAttempted;
           </div>
           <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>CREATE <span style={{ color: 'var(--color-red-primary)' }}>ACCOUNT</span></h1>
 
-          <div className="g g-2">
+          <div style={{ display: 'flex', gap: '0.5rem', width: '100%', alignItems: 'center' }} aria-live="polite">
+            {[1,2,3,4].map((n) => (
+              <div key={n} style={{ flex: 1, height: 6, borderRadius: 999, background: n <= wizardStep ? 'var(--color-red-primary)' : 'var(--color-border)' }} />
+            ))}
+          </div>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Step {wizardStep} of 4</p>
+
+          {wizardStep === 1 && (
+            <>
+              <div className="g g-2">
             <input
               className="glass-input"
               placeholder="First name"
@@ -579,7 +612,12 @@ const showLastNameError = touched.last_name || submitAttempted;
             </span>
           </div>
 
+            </>
+          )}
+
           {/* Birthday */}
+          {wizardStep === 2 && (
+            <>
           <div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.4rem' }}>
               <Calendar size={13} /> Date of Birth
@@ -619,7 +657,12 @@ const showLastNameError = touched.last_name || submitAttempted;
             </label>
           </div>
 
+            </>
+          )}
+
           {/* ID verification section */}
+          {wizardStep === 3 && (
+            <>
           <div style={{ marginTop: '0.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Verify your age and identity</h3>
             <select className="glass-input" value={idType} onChange={e => setIdType(e.target.value)} onBlur={() => markTouched('id_type')} required>
@@ -668,15 +711,31 @@ const showLastNameError = touched.last_name || submitAttempted;
             <div className="tips" style={{ marginTop: '0.5rem' }}>
               <p><strong>Tips:</strong> All 4 corners visible, text readable, not expired, no glare, no screenshots.</p>
             </div>
-            <label className="checkbox" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-              I confirm I am 18+ and the ID provided is mine.
-            </label>
-            <label className="checkbox" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-              <input type="checkbox" checked={privacyConsent} onChange={(e) => setPrivacyConsent(e.target.checked)} />
-              I consent to the collection and processing of my ID for age and identity verification under the Data Privacy Act (RA 10173).
-            </label>
           </div>
+
+            </>
+          )}
+
+          {wizardStep === 4 && (
+            <>
+              <div style={{ background: 'var(--color-bg-elevated)', borderRadius: 10, padding: '1rem' }}>
+                <h3>Review</h3>
+                <p>{form.first_name} {form.last_name}</p>
+                <p>{form.email}</p>
+                <p>{form.phone_number}</p>
+                <p>DOB: {form.date_of_birth} (age {calculateAge(form.date_of_birth)})</p>
+                <p>ID: {idType} • {idNumber ? '••••' + idNumber.slice(-4) : 'not provided'}</p>
+              </div>
+              <label className="checkbox" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                I confirm I am 18+ and the ID provided is mine.
+              </label>
+              <label className="checkbox" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <input type="checkbox" checked={privacyConsent} onChange={(e) => setPrivacyConsent(e.target.checked)} />
+                I consent to the collection and processing of my ID for age and identity verification under the Data Privacy Act (RA 10173).
+              </label>
+            </>
+          )}
 
           {uploadProgress > 0 && submitting && (
             <p style={{ fontSize: '0.8rem' }}>Uploading... {uploadProgress}%</p>
@@ -686,14 +745,25 @@ const showLastNameError = touched.last_name || submitAttempted;
 
           {error && <p className="error-text">{error}</p>}
 
-          <button
-            className="btn btn-red w-full"
-            type="submit"
-            disabled={!canSubmit}
-            style={{ opacity: canSubmit ? 1 : 0.45, cursor: canSubmit ? 'pointer' : 'not-allowed', transition: 'opacity 0.2s' }}
-          >
-            {submitting ? 'Creating account...' : 'Create Account'}
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+            {wizardStep > 1 && (
+              <button type="button" className="button secondary" onClick={goBack}>Back</button>
+            )}
+            {wizardStep < 4 && (
+              <button type="button" className="btn btn-red" onClick={goNext} disabled={wizardStep===1?!step1Valid:wizardStep===2?!step2Valid:!step3Valid}>Next</button>
+            )}
+          </div>
+
+          {wizardStep === 4 && (
+            <button
+              className="btn btn-red w-full"
+              type="submit"
+              disabled={!canSubmit}
+              style={{ opacity: canSubmit ? 1 : 0.45, cursor: canSubmit ? 'pointer' : 'not-allowed', transition: 'opacity 0.2s' }}
+            >
+              {submitting ? 'Creating account...' : 'Create Account'}
+            </button>
+          )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0.1rem 0' }}>
             <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
