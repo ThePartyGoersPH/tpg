@@ -38,3 +38,5 @@ Thumbs.db
 tmp_logo_checks/
 _deploy_customer_notifications/
 *.tgz
+fake_id_test.jpg
+private-uploads/

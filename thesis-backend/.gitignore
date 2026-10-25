@@ -17,3 +17,5 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 ".env" 
+thesis-backend/fake_id_*.jpg
+thesis-backend/private-uploads/
