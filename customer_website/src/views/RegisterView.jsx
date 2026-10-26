@@ -416,16 +416,33 @@ const showLastNameError = touched.last_name || submitAttempted;
         <div className="glass-card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="land-live-badge" style={{ marginBottom: '0.25rem', alignSelf: 'flex-start' }}>
             <span className="land-live-dot" />
-            <span>NEW CUSTOMER</span>
+            
           </div>
           <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>CREATE <span style={{ color: 'var(--color-red-primary)' }}>ACCOUNT</span></h1>
 
-          <div style={{ display: 'flex', gap: '0.5rem', width: '100%', alignItems: 'center' }} aria-live="polite">
-            {[1,2,3,4].map((n) => (
-              <div key={n} style={{ flex: 1, height: 6, borderRadius: 999, background: n <= wizardStep ? 'var(--color-red-primary)' : 'var(--color-border)' }} />
-            ))}
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>            <div style={{ display: 'inline-flex', gap: '1rem', margin: '0 auto' }}>              <div
+ style={{ width: 40, height: 40, borderRadius: 20, border: wizardStep >= 1 ? '4px solid var(--color-red-primary)' : '2px solid var(--color-border)', background: wizardStep >= 1 ? 'var(--color-red-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: wizardStep >= 1 ? 'white' : 'var(--color-text-muted)', fontWeight: wizardStep >= 1 ? 'bold' : 'normal', transition: 'all 0.2s ease' }}>
+                1
+              </div>
+              <div style={{ width: 24, height: 24, borderRadius: 12, border: wizardStep >= 2 ? '2px solid var(--color-border)' : 'none', background: 'white', margin: '0 auto 0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: wizardStep >= 2 ? 'var(--color-red-primary)' : 'var(--color-text-muted)', fontSize: '12px', fontWeight: 'bold', transition: 'all 0.2s ease' }}>
+                Age
+              </div>
+              <div
+ style={{ width: 40, height: 40, borderRadius: 20, border: wizardStep >= 3 ? '4px solid var(--color-red-primary)' : '2px solid var(--color-border)', background: wizardStep >= 3 ? 'var(--color-red-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: wizardStep >= 3 ? 'white' : 'var(--color-text-muted)', fontWeight: wizardStep >= 3 ? 'bold' : 'normal', transition: 'all 0.2s ease' }}>
+                Identity
+              </div>
+              <div
+ style={{ width: 40, height: 40, borderRadius: 20, border: wizardStep >= 4 ? '4px solid var(--color-red-primary)' : '2px solid var(--color-border)', background: wizardStep >= 4 ? 'var(--color-red-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: wizardStep >= 4 ? 'white' : 'var(--color-text-muted)', fontWeight: wizardStep >= 4 ? 'bold' : 'normal', transition: 'all 0.2s ease' }}>
+                Review
+              </div>
+            </div>
+            {/* Progress bar under stepper */}
+            <div style={{ width: 'calc(100% - 4rem)', height: 4, margin: '0.5rem auto 0', background: 'var(--color-bg-elevated)', borderRadius: 2, overflow: 'hidden' }}>
+              <div
+ style={{ width: wizardStep > 1 ? '25%' : '0', height: '100%', background: 'var(--color-red-primary)', transition: 'width 0.3s ease' }}
+              /></div>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>Step {wizardStep} of 4</p>
           </div>
-          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Step {wizardStep} of 4</p>
 
           {wizardStep === 1 && (
             <>
@@ -672,7 +689,7 @@ const showLastNameError = touched.last_name || submitAttempted;
             <input className="glass-input" placeholder="ID number (optional)" value={idNumber} onChange={e => setIdNumber(e.target.value)} style={{ marginTop: '0.5rem' }} />
             <div style={{ marginTop: '0.75rem' }}>
               <label>ID Front Photo (required)</label>
-              <input ref={frontRef} type="file" accept="image/*" capture="environment" onChange={(e) => handleImage(e.target.files[0], setFrontImage, setFrontPreview)} style={{ display: 'none' }} />
+              <input ref={frontRef} type="file" accept="image/*, image/jpeg, image/png, image/webp" onChange={(e) => handleImage(e.target.files[0], setFrontImage, setFrontPreview)} style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }} />
               {frontPreview ? (
                 <div className="preview">
                   <img src={frontPreview} alt="ID front" style={{ maxWidth: '200px' }} />
