@@ -1430,7 +1430,7 @@ const CUSTOMER_APPROVAL_SELECT = `
          u.date_of_birth,
          TIMESTAMPDIFF(YEAR, u.date_of_birth, CURDATE()) AS age,
          u.profile_picture, u.is_verified, u.created_at,
-         u.approval_status,
+         u.approval_status, u.id_authenticity_status, u.decision_note, u.reviewed_by_label,
          CONCAT(rev.first_name, ' ', rev.last_name) AS reviewed_by_name,
          u.approval_reviewed_at AS reviewed_at,
          u.approval_rejection_reason AS rejection_reason

@@ -1,2 +1,150 @@
-/* Register wizard layout helpers */
-.register-wizard { max-width: 760px; margin: 0 auto; padding: 1rem; }
+/*----- Wizard Container -----*/
+.glass-card.auth-card.register-card {
+  width: min(100% - 48px, 820px) !important;
+  max-width: min(100% - 48px, 820px) !important;
+  margin: 0 auto;
+  padding: 48px 64px;
+  background: var(--card-bg, #1A1A1D);
+  border: 1px solid var(--card-border, #2D2D30);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+}
+@media (max-width: 1023px) and (min-width: 640px) {
+  .glass-card.auth-card.register-card {
+    width: min(100% - 32px, 680px) !important;
+    max-width: min(100% - 32px, 680px) !important;
+    padding: 40px;
+  }
+}
+@media (max-width: 639px) {
+  .glass-card.auth-card.register-card {
+    width: calc(100% - 24px) !important;
+    max-width: calc(100% - 24px) !important;
+    padding: 24px 20px;
+  }
+}
+
+[data-theme="light"] .register-card {
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --card-border: rgba(0, 0, 0, 0.1);
+}
+
+/*----- Input fields inside register card -----*/
+.glass-card.auth-card.register-card .glass-input {
+  background: #121214;
+  border: 1px solid #2D2D30;
+  color: #ffffff;
+}
+.grid-two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Mobile: 1 column under 640px */
+@media (max-width: 640px) {
+  .grid-two-col {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Input/Select/Base styles */
+.input-base,
+.select-base,
+.textarea-base,
+.button-base {
+  width: 100%;
+  min-height: 52px;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: inherit;
+  background: var(--input-bg, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--input-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--input-radius, 10px);
+  transition: all 0.2s var(--transition-default, ease);
+  outline: none;
+}
+
+/* Input-base defaults */
+.input-base { --input-font-size: 0.875rem; }
+
+/* Focus ring - gold in BOTH themes */
+.input-base:focus,
+.select-base:focus,
+.textarea-base:focus {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+/* Light theme */
+[data-theme="light"] .input-base { --input-bg: rgba(0, 0, 0, 0.03); }
+
+/*-- Step validation message --*/
+.step-msg { margin-top: 0.5rem; font-size: 0.8rem; color: var(--step-msg-color, #f87171); }
+}
+
+/*-- Password strength bar --*/
+.password-strength { margin-top: 0.5rem; height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 4px; overflow: hidden; }
+.password-strength .bar { height: 100%; border-radius: 4px; background: #f59e0b; width: 0%; transition: width 0.3s; }
+
+/* Tips box */
+.tips {
+  font-size: 0.85rem;
+  color: var(--text-muted, #9ca3af);
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.05);
+  border-radius: 4px;
+  margin: 0.5rem 0;
+}
+
+/* Google button fill inner width */
+.register-google-btn {
+  width: 100%;
+}
+.register-google-btn > div,
+.register-google-btn iframe {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+.privacy-checkbox {
+  display: flex; align-items: flex-start; gap: 0.75rem; font-size: 0.875rem; line-height: 1.6; cursor: pointer; margin: 0.5rem 0;
+}
+.privacy-checkbox input[type="checkbox"] { margin-top: 0; width: 18px; height: 18px; flex-shrink: 0; accent-color: #f59e0b; }
+
+/* Light theme overrides */
+[data-theme="light"] .tips {
+  background: rgba(245, 158, 11, 0.08);
+  color: #6b7280;
+}
+/* Stepper Styles */
+.stepper { display:flex; align-items:flex-start; width:100%; margin:28px 0 20px; padding:0; list-style:none; }
+.stepper__step { display:flex; flex-direction:column; align-items:center; gap:10px; }
+.stepper__circle { box-sizing:border-box; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600; background:#fff; border:2px solid #D9D3CC; color:#8A827A; transition:all .25s ease; }
+.stepper__label { font-size:13px; color:#8A827A; white-space:nowrap; transition:color .25s ease; }
+
+/* the line stretches to fill ALL space between steps, so spacing is always even and it touches neither circle (12px gap) */
+.stepper__line { flex:1; height:2px; margin:17px 12px 0; background:#E8E4DF; border-radius:2px; position:relative; overflow:hidden; }
+.stepper__line::after { content:''; position:absolute; inset:0; background:#C07C42; transform:scaleX(0); transform-origin:left; transition:transform .35s ease; }
+.stepper__line--done::after { transform:scaleX(1); }
+
+.stepper__step--active .stepper__circle { background:#C07C42; border-color:#C07C42; color:#fff; box-shadow:0 0 0 5px rgba(192,124,66,.18); }
+.stepper__step--active .stepper__label { color:#C07C42; font-weight:700; }
+.stepper__step--done .stepper__circle { background:#C07C42; border-color:#C07C42; color:#fff; }
+.stepper__step--done .stepper__label { color:#5E574F; }
+
+/* Dark mode */
+[data-theme="dark"] .stepper__circle { background:transparent; border-color:#4A4540; color:#A39B92; }
+[data-theme="dark"] .stepper__line { background:#4A4540; }
+[data-theme="dark"] .stepper__step--active .stepper__circle { background:#C07C42; border-color:#C07C42; color:#fff; box-shadow:0 0 0 5px rgba(192,124,66,.25); }
+[data-theme="dark"] .stepper__step--active .stepper__label { color:#C07C42; font-weight:700; }
+[data-theme="dark"] .stepper__step--done .stepper__circle { background:#C07C42; border-color:#C07C42; color:#fff; }
+[data-theme="dark"] .stepper__step--done .stepper__label { color:#A39B92; }
+
+@media (max-width:480px) {
+  .stepper__circle { width:30px; height:30px; font-size:12px; }
+  .stepper__line { margin:14px 6px 0; }
+  .stepper__label { font-size:11px; }
+}

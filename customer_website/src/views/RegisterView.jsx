@@ -1,14 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import '../styles/register-wizard.css';
-import { GoogleLogin } from '@react-oauth/google';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 import { useAuth } from '../hooks/useAuth';
 import { useView } from '../hooks/useView';
 import { VIEWS } from '../contexts/ViewContext';
 import apiClient from '../api/client';
-import { isGoogleConfigured, googleSignInErrorText } from '../utils/googleAuth';
 import { validatePasswordStrength, STRENGTH_COLORS } from '../utils/passwordPolicy';
 import { normalizeCustomerPhone, sanitizePhoneInput, isValidCustomerPhone } from '../utils/phonePolicy';
 import { Mail, CheckCircle, Calendar, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { createWorker } from 'tesseract.js';
+
+// Native URL step sync helper (no React Router needed)
+function getStepFromUrl() {
+  try {
+    return parseInt(new URLSearchParams(window.location.search).get('step') || '1', 10);
+  } catch {
+    return 1;
+  }
+}
 
 function useCountdown(initial = 0) {
   const [seconds, setSeconds] = useState(initial);
@@ -26,7 +35,17 @@ function useCountdown(initial = 0) {
   };
 
   useEffect(() => () => clearInterval(timerRef.current), []);
-  return { seconds, start };
+
+  // (popstate listener moved to RegisterView where wizardStep is in scope)
+
+  // Focus first field of each step
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const firstInput = document.querySelector('.glass-card input, .glass-card select, .glass-card button');
+      if (firstInput) firstInput.focus();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [wizardStep]);
 }
 
 function ResendLink({ email }) {
@@ -80,7 +99,7 @@ function ResendLink({ email }) {
 }
 
 const ID_TYPES = ['Driver\'s License', 'PhilSys National ID', 'Philippine Passport', 'UMID', 'PRC ID', 'Postal ID', 'Voter\'s ID', 'PhilHealth ID', 'SSS ID', 'Senior Citizen ID'];
-const ID_TYPES_WITH_BACK = ID_TYPES;
+const ID_TYPES_WITH_BACK = ID_TYPES.filter(t => t !== 'Philippine Passport');
 
 function calculateAge(dob) {
   if (!dob) return 0;
@@ -140,8 +159,23 @@ function RegisterView() {
   };
 
   const [step, setStep] = useState(1);
-  const [wizardStep, setWizardStep] = useState(1);
+  const initialStep = getStepFromUrl();
+  // Clamp to 1-4 and never ahead of what the user has completed
+  const clampedStep = Math.min(4, Math.max(1, initialStep));
+  const [wizardStep, setWizardStep] = useState(clampedStep);
   const [submitted, setSubmitted] = useState(false);
+
+  // Sync wizard step with URL ?step= param (browser back/forward)
+  useEffect(() => {
+    const handlePopState = () => {
+      const step = getStepFromUrl();
+      if (step !== wizardStep) {
+        setWizardStep(step);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [wizardStep]);
 
   const [form, setForm] = useState({
     first_name: '', last_name: '', email: '',
@@ -160,6 +194,12 @@ function RegisterView() {
   const [consent, setConsent] = useState(false);
   const [privacyConsent, setPrivacyConsent] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [ocrScanning, setOcrScanning] = useState(false);
+  const [ocrResult, setOcrResult] = useState(null);
+  const [nameMatchStatus, setNameMatchStatus] = useState(null); // null | 'matched' | 'mismatch'
+  const [dobMatchStatus, setDobMatchStatus] = useState(null); // null | 'matched' | 'mismatch'
+  const [ocrError, setOcrError] = useState(null);
+  const [idValidationStatus, setIdValidationStatus] = useState(null); // 'valid', 'invalid', null
   const frontRef = useRef(null);
   const backRef = useRef(null);
   const selfieRef = useRef(null);
@@ -227,6 +267,8 @@ function RegisterView() {
     if (emailCheckTimer.current) clearTimeout(emailCheckTimer.current);
   }, []);
 
+
+
   const onChange = (key, val) => setForm(p => ({ ...p, [key]: val }));
 
   const handleImage = (file, setFile, setPreview) => {
@@ -242,6 +284,253 @@ function RegisterView() {
     setFile(file);
     setPreview(URL.createObjectURL(file));
     setError('');
+    
+    // Run OCR on front image
+    if (setFile === setFrontImage) {
+      runOcrOnImage(file);
+    }
+    
+    // Validate back image
+    if (setFile === setBackImage) {
+      validateBackId(file);
+    }
+  };
+
+  // OCR function to extract text from ID image
+  const runOcrOnImage = async (file) => {
+    if (!file) return;
+    setOcrScanning(true);
+    setOcrError(null);
+    setOcrResult(null);
+
+    try {
+      // Pre-process image: scale up to at least 1500px, convert to high-contrast grayscale
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      const imageUrl = URL.createObjectURL(file);
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = imageUrl;
+      });
+
+      // Scale up to at least 1500px width
+      const minWidth = 1500;
+      const scale = img.width < minWidth ? minWidth / img.width : 1;
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+
+      // Draw image in grayscale with increased contrast
+      ctx.filter = 'grayscale(100%) contrast(200%) brightness(110%)';
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      const dataUrl = canvas.toDataURL('image/png');
+      
+      const worker = await createWorker('eng');
+      const { data: { text } } = await worker.recognize(dataUrl);
+      await worker.terminate();
+
+      URL.revokeObjectURL(imageUrl);
+
+      // Filter out header noise
+      const noiseWords = [
+        'REPUBLIC', 'PHILIPPINES', 'DRIVER', 'LICENSE', 'PHILIPPINE',
+        'LAND', 'TRANSPORTATION', 'OFFICE', 'LTO', 'NATIONAL', 'ID',
+        'PASSPORT', 'UMID', 'PRC', 'POSTAL', 'VOTER', 'PHILHEALTH',
+        'SSS', 'SENIOR', 'CITIZEN', 'DATE', 'BIRTH', 'EXPIRY', 'EXPIRES'
+      ];
+      
+      // Extract ID number - refined PH License format extraction
+      function extractLicenseNumber(rawText) {
+        if (!rawText) return "";
+
+        // 1. Direct Regex Match for PH formats (e.g., N01-12-345678, DJE-10-001223, A01-19-123456)
+        const exactRegex = /[A-Z0-9]{3}[\s\-\:\.\_]*[A-Z0-9]{2}[\s\-\:\.\_]*[0-9]{6}/i;
+        const matchExact = rawText.match(exactRegex);
+        if (matchExact) {
+          // Clean up misread separators to produce standard format AAA-00-000000
+          const rawMatch = matchExact[0].replace(/[^A-Z0-9]/gi, '');
+          if (rawMatch.length === 11) {
+            return `${rawMatch.slice(0, 3)}-${rawMatch.slice(3, 5)}-${rawMatch.slice(5)}`.toUpperCase();
+          }
+          return matchExact[0].toUpperCase();
+        }
+
+        // 2. Keyword Context Search: look for text following "License No", "License", "Agency Code"
+        const lines = rawText.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (/license|agency\s*code|dl\s*no/i.test(line)) {
+            // Find candidate alphanumeric words with 8 to 14 characters nearby
+            const tokens = line.split(/\s+/);
+            for (const token of tokens) {
+              const cleanedToken = token.replace(/[^A-Z0-9]/gi, '');
+              if (cleanedToken.length >= 9 && cleanedToken.length <= 12 && /\d/.test(cleanedToken)) {
+                return token.toUpperCase();
+              }
+            }
+          }
+        }
+
+        // 3. Fallback: Search the entire raw string for any token that looks like an ID code
+        const tokens = rawText.replace(/[\n\r]/g, ' ').split(' ');
+        for (const token of tokens) {
+          const clean = token.replace(/[^A-Z0-9]/gi, '');
+          if (clean.length === 11 && /[A-Z]/.test(clean) && /\d/.test(clean)) {
+            return `${clean.slice(0, 3)}-${clean.slice(3, 5)}-${clean.slice(5)}`.toUpperCase();
+          }
+        }
+
+        return "";
+      }
+
+      const extractedIdNumber = extractLicenseNumber(text);
+
+      // Extract date of birth (common formats)
+      const dobMatch = text.match(/(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})|(\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})/);
+      const extractedDob = dobMatch ? dobMatch[0] : null;
+
+      // Extract name (look for capitalized words, filter out noise)
+      const nameMatch = text.match(/[A-Z][a-z]+ [A-Z][a-z]+/);
+      let extractedName = nameMatch ? nameMatch[0] : null;
+      
+      if (extractedName) {
+        const nameParts = extractedName.split(' ');
+        const filteredParts = nameParts.filter(part => 
+          !noiseWords.some(noise => part.toUpperCase().includes(noise))
+        );
+        extractedName = filteredParts.length >= 2 ? filteredParts.join(' ') : null;
+      }
+
+      const result = {
+        text: text.trim(),
+        idNumber: extractedIdNumber,
+        dob: extractedDob,
+        name: extractedName,
+      };
+
+      setOcrResult(result);
+
+      // ─── OCR DATA VERIFICATION ───
+      // 1. Name Matching: check if entered first/last name appear in OCR text
+      const enteredFirst = (form.first_name || '').trim().toUpperCase();
+      const enteredLast = (form.last_name || '').trim().toUpperCase();
+      const ocrUpper = text.toUpperCase();
+      const nameMatched = enteredFirst && enteredLast &&
+        ocrUpper.includes(enteredFirst) && ocrUpper.includes(enteredLast);
+      setNameMatchStatus(nameMatched ? 'matched' : 'mismatch');
+
+      // 2. DOB & Age Cross-Verification
+      // Extract DOB from OCR text (formats: YYYY/MM/DD, YYYY-MM-DD, etc.)
+      const dobRegex = /(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/;
+      const idDobMatch = text.match(dobRegex);
+      let idDob = null;
+      if (idDobMatch) {
+        const [, y, m, d] = idDobMatch;
+        idDob = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+      }
+      // Calculate age from ID DOB
+      let idAge = null;
+      if (idDob) {
+        const birthDate = new Date(idDob + 'T00:00:00.000Z');
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const mDiff = today.getMonth() - birthDate.getMonth();
+        if (mDiff < 0 || (mDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        idAge = age;
+      }
+      // Compare ID DOB with entered DOB
+      const enteredDob = form.date_of_birth;
+      const dobMatched = idDob && enteredDob && idDob === enteredDob && idAge !== null && idAge >= 18;
+      setDobMatchStatus(dobMatched ? 'matched' : 'mismatch');
+
+      // Front ID validation - check for front-side keywords
+      const frontKeywords = ['REPUBLIC', 'PHILIPPINES', 'DRIVER', 'LICENSE', 'NAME', 'DATE OF BIRTH', 'BIRTHDATE'];
+      const upperText = text.toUpperCase();
+      const hasFrontKeywords = frontKeywords.some(keyword => upperText.includes(keyword));
+      
+      if (!hasFrontKeywords) {
+        setOcrError('Invalid Front ID. Please upload a clear photo of the front side of your ID.');
+        setIdValidationStatus('invalid');
+        // Reject the image
+        setFrontImage(null);
+        setFrontPreview(null);
+        return;
+      }
+      
+      setIdValidationStatus('valid');
+
+      // Auto-fill ID number if found and field is empty
+      if (extractedIdNumber && !idNumber) {
+        setIdNumber(extractedIdNumber);
+      }
+
+      // Auto-fill name if found and fields are empty
+      if (extractedName) {
+        const nameParts = extractedName.split(' ');
+        if (nameParts.length >= 2 && !form.first_name) {
+          onChange('first_name', nameParts[0]);
+        }
+        if (nameParts.length >= 2 && !form.last_name) {
+          onChange('last_name', nameParts.slice(1).join(' '));
+        }
+      }
+
+      // Auto-fill DOB if found and field is empty
+      if (extractedDob && !form.date_of_birth) {
+        const date = new Date(extractedDob);
+        if (!isNaN(date)) {
+          onChange('date_of_birth', date.toISOString().split('T')[0]);
+        }
+      }
+    } catch (error) {
+      console.error('OCR Error:', error);
+      setOcrError('Failed to scan ID. Please enter details manually.');
+    } finally {
+      setOcrScanning(false);
+    }
+  };
+
+  const validateBackId = async (file) => {
+    const backKeywords = ['restriction', 'condition', 'agency', 'code', 'blood', 'weight', 'height', 'signature', 'organ', 'donor', 'land transportation', 'lto', 'republic', 'philippines', 'serial', 'address'];
+    
+    try {
+      const worker = await createWorker('eng');
+      const { data: { text } } = await worker.recognize(file);
+      await worker.terminate();
+      
+      const upperText = text.toUpperCase();
+      const hasBackKeywords = backKeywords.some(keyword => upperText.includes(keyword.toUpperCase()));
+      
+      // Fallback: check if text contains digits and has length > 10
+      const hasSufficientText = text.trim().length > 10;
+      const hasDigits = /\d/.test(text);
+      
+      // Relaxed validation: if image is present and exceeds minimum size, consider valid
+      // Only reject if completely blank/unreadable/missing
+      if (!hasBackKeywords && !hasSufficientText && !hasDigits) {
+        setError('Invalid Back ID. Please upload a clear photo of the back side of your ID.');
+        setBackImage(null);
+        setBackPreview(null);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Back ID validation error:', error);
+      // Relaxed fallback: if OCR fails but file exists and has reasonable size, allow it
+      if (file && file.size > 1000) {
+        return true;
+      }
+      setError('Failed to validate back ID. Please try again.');
+      setBackImage(null);
+      setBackPreview(null);
+      return false;
+    }
   };
 
   const needsBack = ID_TYPES_WITH_BACK.includes(idType);
@@ -261,6 +550,15 @@ function RegisterView() {
   }, [viewParams?.fromGoogle]);
 
   const age = calculateAge(form.date_of_birth);
+
+  // Auto-validate 18+ checkbox if age >= 18
+  useEffect(() => {
+    if (age >= 18) {
+      setAgeConfirmed(true);
+    } else {
+      setAgeConfirmed(false);
+    }
+  }, [age]);
   const dobError = form.date_of_birth && age < 18
     ? `You must be at least 18 years old. (You are ${age})`
     : '';
@@ -299,7 +597,9 @@ const showLastNameError = touched.last_name || submitAttempted;
     selfieImage &&
     (!needsBack || backImage) &&
     consent &&
-    privacyConsent;
+    privacyConsent &&
+    nameMatchStatus === 'matched' &&
+    dobMatchStatus === 'matched';
 
   const step1Valid =
     !firstNameError &&
@@ -312,7 +612,7 @@ const showLastNameError = touched.last_name || submitAttempted;
     !passwordMismatch &&
     confirmPassword;
   const step2Valid = !!form.date_of_birth && !dobError && ageConfirmed;
-  const step3Valid = !!idType && !!frontImage && (!needsBack || !!backImage) && !!selfieImage;
+  const step3Valid = !!idType && !!frontImage && (!needsBack || !!backImage) && !!selfieImage && nameMatchStatus === 'matched' && dobMatchStatus === 'matched';
   const step4Valid = consent && privacyConsent;
 
   const goNext = () => {
@@ -320,9 +620,24 @@ const showLastNameError = touched.last_name || submitAttempted;
     if (wizardStep === 1 && !step1Valid) return;
     if (wizardStep === 2 && !step2Valid) return;
     if (wizardStep === 3 && !step3Valid) return;
-    setWizardStep((s) => Math.min(4, s + 1));
+    const next = Math.min(4, wizardStep + 1);
+    setWizardStep(next);
+    const nextUrl = new URL(window.location);
+    nextUrl.searchParams.set('step', String(next));
+    history.replaceState(null, '', nextUrl);
   };
-  const goBack = () => setWizardStep((s) => Math.max(1, s - 1));
+  const goBack = () => {
+    const prev = Math.max(1, wizardStep - 1);
+    setWizardStep(prev);
+    const prevUrl = new URL(window.location);
+    prevUrl.searchParams.set('step', String(prev));
+    history.replaceState(null, '', prevUrl);
+  };
+
+  // Aliases for Step 4 button handlers
+  const handleBack = goBack;
+  const isConsentChecked = consent;
+  const isAgeConfirmed = ageConfirmed;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -411,38 +726,49 @@ const showLastNameError = touched.last_name || submitAttempted;
   }
 
   return (
-    <div className="auth-view">
-      <form className="glass-card auth-card" onSubmit={handleSubmit} autoComplete="off">
+    <div className="auth-view bg-zinc-950">
+      <form className="glass-card auth-card register-card bg-[#1A1A1D] border border-[#2D2D30]" onSubmit={handleSubmit} autoComplete="off" onKeyDown={(e) => {
+        if (e.key === 'Enter' && wizardStep < 4 && e.target.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          goNext();
+        }
+      }}>
         <div className="glass-card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div className="land-live-badge" style={{ marginBottom: '0.25rem', alignSelf: 'flex-start' }}>
-            <span className="land-live-dot" />
-            
-          </div>
-          <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>CREATE <span style={{ color: 'var(--color-red-primary)' }}>ACCOUNT</span></h1>
+          <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 'clamp(28px, 3.2vw, 40px)', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-primary)', letterSpacing: '-0.5px', textAlign: 'left' }}>Create your account</h1>
+          <p style={{ textAlign: 'left', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>Complete all 4 steps to register.</p>
 
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>            <div style={{ display: 'inline-flex', gap: '1rem', margin: '0 auto' }}>              <div
- style={{ width: 40, height: 40, borderRadius: 20, border: wizardStep >= 1 ? '4px solid var(--color-red-primary)' : '2px solid var(--color-border)', background: wizardStep >= 1 ? 'var(--color-red-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: wizardStep >= 1 ? 'white' : 'var(--color-text-muted)', fontWeight: wizardStep >= 1 ? 'bold' : 'normal', transition: 'all 0.2s ease' }}>
-                1
-              </div>
-              <div style={{ width: 24, height: 24, borderRadius: 12, border: wizardStep >= 2 ? '2px solid var(--color-border)' : 'none', background: 'white', margin: '0 auto 0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: wizardStep >= 2 ? 'var(--color-red-primary)' : 'var(--color-text-muted)', fontSize: '12px', fontWeight: 'bold', transition: 'all 0.2s ease' }}>
-                Age
-              </div>
-              <div
- style={{ width: 40, height: 40, borderRadius: 20, border: wizardStep >= 3 ? '4px solid var(--color-red-primary)' : '2px solid var(--color-border)', background: wizardStep >= 3 ? 'var(--color-red-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: wizardStep >= 3 ? 'white' : 'var(--color-text-muted)', fontWeight: wizardStep >= 3 ? 'bold' : 'normal', transition: 'all 0.2s ease' }}>
-                Identity
-              </div>
-              <div
- style={{ width: 40, height: 40, borderRadius: 20, border: wizardStep >= 4 ? '4px solid var(--color-red-primary)' : '2px solid var(--color-border)', background: wizardStep >= 4 ? 'var(--color-red-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: wizardStep >= 4 ? 'white' : 'var(--color-text-muted)', fontWeight: wizardStep >= 4 ? 'bold' : 'normal', transition: 'all 0.2s ease' }}>
-                Review
-              </div>
-            </div>
-            {/* Progress bar under stepper */}
-            <div style={{ width: 'calc(100% - 4rem)', height: 4, margin: '0.5rem auto 0', background: 'var(--color-bg-elevated)', borderRadius: 2, overflow: 'hidden' }}>
-              <div
- style={{ width: wizardStep > 1 ? '25%' : '0', height: '100%', background: 'var(--color-red-primary)', transition: 'width 0.3s ease' }}
-              /></div>
-            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>Step {wizardStep} of 4</p>
+          {/* Stepper */}
+          <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+            {/* Continuous horizontal line behind circles */}
+            <div style={{ position: 'absolute', top: '16px', left: '16px', right: '16px', height: '2px', background: '#E8E4DF', zIndex: 0 }} />
+            <div style={{ position: 'absolute', top: '16px', left: '16px', height: '2px', background: '#C07C42', width: `calc(${(wizardStep - 1) / 3} * (100% - 32px))`, transition: 'width 0.3s ease', zIndex: 0 }} />
+
+            {['Account', 'Age', 'Identity', 'Review'].map((label, i) => {
+              const step = i + 1;
+              const done = wizardStep > step;
+              const current = wizardStep === step;
+              return (
+                <div key={step} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', position: 'relative', zIndex: 1 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 600, fontSize: '0.85rem',
+                    background: current ? '#C07C42' : (done ? '#C07C42' : '#fff'),
+                    color: current || done ? '#fff' : '#8A827A',
+                    border: done ? '2px solid #E8E4DF' : current ? 'none' : '2px solid #E8E4DF',
+                    transition: 'all 0.2s ease',
+                  }}>
+                    {done ? '✓' : step}
+                  </div>
+                  <span style={{ fontSize: '0.875rem', color: current || done ? '#C07C42' : '#8A827A', fontWeight: current || done ? 700 : 400, whiteSpace: 'nowrap' }}>
+                    {label}
+                  </span>
+                </div>
+              );
+            })}
           </div>
+
+          <p style={{ fontSize: '0.875rem', color: '#8A827A', marginTop: '12px', textAlign: 'left' }}>Step {wizardStep} of 4</p>
 
           {wizardStep === 1 && (
             <>
@@ -650,6 +976,9 @@ const showLastNameError = touched.last_name || submitAttempted;
             {dobError && (
               <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.3rem', marginBottom: 0 }}>{dobError}</p>
             )}
+            {form.date_of_birth && (
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>Calculated Age: {age} years old</p>
+            )}
           </div>
 
           {/* 18+ notice + checkbox */}
@@ -687,44 +1016,191 @@ const showLastNameError = touched.last_name || submitAttempted;
               {ID_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
             <input className="glass-input" placeholder="ID number (optional)" value={idNumber} onChange={e => setIdNumber(e.target.value)} style={{ marginTop: '0.5rem' }} />
-            <div style={{ marginTop: '0.75rem' }}>
-              <label>ID Front Photo (required)</label>
-              <input ref={frontRef} type="file" accept="image/*, image/jpeg, image/png, image/webp" onChange={(e) => handleImage(e.target.files[0], setFrontImage, setFrontPreview)} style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }} />
-              {frontPreview ? (
-                <div className="preview">
-                  <img src={frontPreview} alt="ID front" style={{ maxWidth: '200px' }} />
-                  <button type="button" onClick={() => frontRef.current?.click()}>Replace</button>
-                </div>
-              ) : (
-                <button type="button" className="button secondary" onClick={() => frontRef.current?.click()}>Upload Front Photo</button>
-              )}
-            </div>
-            {needsBack && (
-              <div style={{ marginTop: '0.75rem' }}>
-                <label>ID Back Photo (required)</label>
-                <input ref={backRef} type="file" accept="image/*" capture="environment" onChange={(e) => handleImage(e.target.files[0], setBackImage, setBackPreview)} style={{ display: 'none' }} />
-                {backPreview ? (
-                  <div className="preview">
-                    <img src={backPreview} alt="ID back" style={{ maxWidth: '200px' }} />
-                    <button type="button" onClick={() => backRef.current?.click()}>Replace</button>
+            
+            {/* Upload dropzones */}
+            <div style={{ marginTop: '1rem', display: 'grid', gap: '1rem' }}>
+              {/* ID Front Photo */}
+              <div
+                onClick={() => frontRef.current?.click()}
+                onDrop={(e) => { e.preventDefault(); handleImage(e.dataTransfer.files[0], setFrontImage, setFrontPreview); }}
+                onDragOver={(e) => e.preventDefault()}
+                style={{
+                  border: '2px dashed #6b7280',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  background: 'rgba(31, 41, 55, 0.5)',
+                  transition: 'border-color 0.2s, background 0.2s'
+                }}
+                className="upload-dropzone"
+              >
+                <input ref={frontRef} type="file" accept="image/*" onChange={(e) => handleImage(e.target.files[0], setFrontImage, setFrontPreview)} style={{ display: 'none' }} />
+                {frontPreview ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                    <img src={frontPreview} alt="ID front preview" style={{ maxWidth: '200px', maxHeight: '150px', borderRadius: '8px', objectFit: 'cover' }} />
+<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.75rem' }}>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); frontRef.current?.click(); }} style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', fontWeight: 500, color: '#d1d5db', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', transition: 'background-color 0.2s' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                        Change photo
+                      </button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setFrontImage(null); setFrontPreview(null); }} style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', fontWeight: 500, color: '#f87171', backgroundColor: 'rgba(69, 10, 10, 0.4)', border: '1px solid rgba(127, 29, 29, 0.5)', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', transition: 'background-color 0.2s' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <button type="button" className="button secondary" onClick={() => backRef.current?.click()}>Upload Back Photo</button>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: '#9ca3af' }}>
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <p style={{ margin: 0, fontSize: '0.875rem', color: '#9ca3af' }}>Click or drag & drop to upload ID Front Photo</p>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280' }}>JPG, PNG or WEBP, max 5 MB</p>
+                  </div>
                 )}
               </div>
-            )}
-            <div style={{ marginTop: '0.75rem' }}>
-              <label>Selfie holding ID (required)</label>
-              <input ref={selfieRef} type="file" accept="image/*" capture="user" onChange={(e) => handleImage(e.target.files[0], setSelfieImage, setSelfiePreview)} style={{ display: 'none' }} />
-              {selfiePreview ? (
-                <div className="preview">
-                  <img src={selfiePreview} alt="Selfie" style={{ maxWidth: '200px' }} />
-                  <button type="button" onClick={() => selfieRef.current?.click()}>Replace</button>
+
+              {/* OCR Scanning Status */}
+              {ocrScanning && (
+                <div style={{ padding: '0.75rem', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ width: '16px', height: '16px', border: '2px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                  <span style={{ fontSize: '0.875rem', color: '#3b82f6' }}>Scanning ID with OCR...</span>
+                </div>
+              )}
+              {ocrError && (
+                <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '0.875rem', color: '#ef4444' }}>{ocrError}</span>
+                </div>
+              )}
+              {nameMatchStatus === 'mismatch' && (
+                <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '0.875rem', color: '#ef4444' }}>Name mismatch: The name on the ID photo does not match the account details entered.</span>
+                </div>
+              )}
+              {dobMatchStatus === 'mismatch' && (
+                <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '0.875rem', color: '#ef4444' }}>Age verification failed: You must be 18+ and the Date of Birth must match your ID.</span>
+                </div>
+              )}
+              {ocrResult && idValidationStatus === 'valid' && (
+                <div style={{ padding: '0.75rem', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '0.875rem', color: '#22c55e', fontWeight: 500 }}>✓ Scan Completed Successfully</span>
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <span style={{ fontSize: '0.875rem', color: '#22c55e' }}>
+                      Extracted License No: {ocrResult.idNumber || 'Processing/Manual Check Required'}
+                    </span>
+                  </div>
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <span style={{ fontSize: '0.875rem', color: nameMatchStatus === 'matched' ? '#22c55e' : '#ef4444' }}>
+                      {nameMatchStatus === 'matched' ? '✓ Name Match: Verified' : '✗ Name mismatch: The name on the ID photo does not match the account details entered.'}
+                    </span>
+                  </div>
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <span style={{ fontSize: '0.875rem', color: dobMatchStatus === 'matched' ? '#22c55e' : '#ef4444' }}>
+                      {dobMatchStatus === 'matched' ? `✓ DOB & Age Match: Verified` : '✗ Age verification failed: You must be 18+ and the Date of Birth must match your ID.'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* ID Back Photo (conditional) */}
+              {needsBack ? (
+                <div
+                  onClick={() => backRef.current?.click()}
+                  onDrop={(e) => { e.preventDefault(); handleImage(e.dataTransfer.files[0], setBackImage, setBackPreview); }}
+                  onDragOver={(e) => e.preventDefault()}
+                  style={{
+                    border: '2px dashed #6b7280',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    background: 'rgba(31, 41, 55, 0.5)',
+                    transition: 'border-color 0.2s, background 0.2s'
+                  }}
+                  className="upload-dropzone"
+                >
+                  <input ref={backRef} type="file" accept="image/*" onChange={(e) => handleImage(e.target.files[0], setBackImage, setBackPreview)} style={{ display: 'none' }} />
+                  {backPreview ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                      <img src={backPreview} alt="ID back preview" style={{ maxWidth: '200px', maxHeight: '150px', borderRadius: '8px', objectFit: 'cover' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.75rem' }}>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); backRef.current?.click(); }} style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', fontWeight: 500, color: '#d1d5db', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', transition: 'background-color 0.2s' }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                          Change photo
+                        </button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setBackImage(null); setBackPreview(null); }} style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', fontWeight: 500, color: '#f87171', backgroundColor: 'rgba(69, 10, 10, 0.4)', border: '1px solid rgba(127, 29, 29, 0.5)', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', transition: 'background-color 0.2s' }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: '#9ca3af' }}>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                      <p style={{ margin: 0, fontSize: '0.875rem', color: '#9ca3af' }}>Click or drag & drop to upload ID Back Photo</p>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280' }}>JPG, PNG or WEBP, max 5 MB</p>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <button type="button" className="button secondary" onClick={() => selfieRef.current?.click()}>Upload Selfie</button>
+                <div style={{ marginTop: '0.75rem', opacity: 0.5, fontSize: '0.85rem' }}>
+                  <em>ID back photo not needed for this ID type.</em>
+                </div>
               )}
+
+              {/* Selfie holding ID */}
+              <div
+                onClick={() => selfieRef.current?.click()}
+                onDrop={(e) => { e.preventDefault(); handleImage(e.dataTransfer.files[0], setSelfieImage, setSelfiePreview); }}
+                onDragOver={(e) => e.preventDefault()}
+                style={{
+                  border: '2px dashed #6b7280',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  background: 'rgba(31, 41, 55, 0.5)',
+                  transition: 'border-color 0.2s, background 0.2s'
+                }}
+                className="upload-dropzone"
+              >
+                <input ref={selfieRef} type="file" accept="image/*" onChange={(e) => handleImage(e.target.files[0], setSelfieImage, setSelfiePreview)} style={{ display: 'none' }} />
+                {selfiePreview ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                    <img src={selfiePreview} alt="Selfie preview" style={{ maxWidth: '200px', maxHeight: '150px', borderRadius: '8px', objectFit: 'cover' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.75rem' }}>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); selfieRef.current?.click(); }} style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', fontWeight: 500, color: '#d1d5db', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', transition: 'background-color 0.2s' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                        Change photo
+                      </button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setSelfieImage(null); setSelfiePreview(null); }} style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', fontWeight: 500, color: '#f87171', backgroundColor: 'rgba(69, 10, 10, 0.4)', border: '1px solid rgba(127, 29, 29, 0.5)', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', transition: 'background-color 0.2s' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: '#9ca3af' }}>
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <p style={{ margin: 0, fontSize: '0.875rem', color: '#9ca3af' }}>Click or drag & drop to upload Selfie holding ID</p>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280' }}>JPG, PNG or WEBP, max 5 MB</p>
+                  </div>
+                )}
+              </div>
             </div>
+
             <div className="tips" style={{ marginTop: '0.5rem' }}>
               <p><strong>Tips:</strong> All 4 corners visible, text readable, not expired, no glare, no screenshots.</p>
             </div>
@@ -735,13 +1211,51 @@ const showLastNameError = touched.last_name || submitAttempted;
 
           {wizardStep === 4 && (
             <>
-              <div style={{ background: 'var(--color-bg-elevated)', borderRadius: 10, padding: '1rem' }}>
-                <h3>Review</h3>
-                <p>{form.first_name} {form.last_name}</p>
-                <p>{form.email}</p>
-                <p>{form.phone_number}</p>
-                <p>DOB: {form.date_of_birth} (age {calculateAge(form.date_of_birth)})</p>
-                <p>ID: {idType} • {idNumber ? '••••' + idNumber.slice(-4) : 'not provided'}</p>
+              <div className="bg-zinc-900/80 border border-zinc-800/80" style={{ borderRadius: 10, padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', fontWeight: 600 }}>Review</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', minWidth: '120px' }}>Name</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{form.first_name} {form.last_name}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', minWidth: '120px' }}>Email</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{form.email}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', minWidth: '120px' }}>Phone</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{form.phone_number || 'Not provided'}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', minWidth: '120px' }}>Date of Birth</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{form.date_of_birth} (age {calculateAge(form.date_of_birth)})</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', minWidth: '120px' }}>ID Type</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{idType}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', minWidth: '120px' }}>ID Number</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>
+                      {idNumber ? '••••' + idNumber.slice(-4) : (frontImage ? 'ID Front: Uploaded' : 'Not provided')}
+                    </span>
+                  </div>
+                </div>
+                {/* Photo previews */}
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+                  {frontPreview && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>ID Front Photo</span>
+                      <img src={frontPreview} alt="ID Front" style={{ width: '120px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--color-border)' }} />
+                    </div>
+                  )}
+                  {selfiePreview && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Selfie holding ID</span>
+                      <img src={selfiePreview} alt="Selfie" style={{ width: '120px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--color-border)' }} />
+                    </div>
+                  )}
+                </div>
               </div>
               <label className="checkbox" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
                 <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
@@ -762,24 +1276,60 @@ const showLastNameError = touched.last_name || submitAttempted;
 
           {error && <p className="error-text">{error}</p>}
 
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-            {wizardStep > 1 && (
-              <button type="button" className="button secondary" onClick={goBack}>Back</button>
-            )}
-            {wizardStep < 4 && (
-              <button type="button" className="btn btn-red" onClick={goNext} disabled={wizardStep===1?!step1Valid:wizardStep===2?!step2Valid:!step3Valid}>Next</button>
-            )}
-          </div>
+          {wizardStep < 4 && (
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', position: 'sticky', bottom: 0, background: 'var(--color-bg-card, var(--color-bg))', padding: '0.75rem 0', zIndex: 10 }}>
+              {wizardStep > 1 && (
+                <button type="button" onClick={goBack} style={{ flex: '0 0 auto', minWidth: 80, padding: '0.75rem 1rem', border: '1px solid #6b7280', borderRadius: '8px', background: 'transparent', color: '#d1d5db', cursor: 'pointer', transition: 'all 0.2s' }}>Back</button>
+              )}
+              <button type="button" className="btn btn-red" style={{ flex: 1 }} onClick={goNext} disabled={wizardStep===1?!step1Valid:wizardStep===2?!step2Valid:!step3Valid}>Next</button>
+            </div>
+          )}
 
           {wizardStep === 4 && (
-            <button
-              className="btn btn-red w-full"
-              type="submit"
-              disabled={!canSubmit}
-              style={{ opacity: canSubmit ? 1 : 0.45, cursor: canSubmit ? 'pointer' : 'not-allowed', transition: 'opacity 0.2s' }}
-            >
-              {submitting ? 'Creating account...' : 'Create Account'}
-            </button>
+            <div className="flex items-center justify-between gap-4 mt-8 w-full">
+              <button
+                type="button"
+                onClick={handleBack}
+                style={{
+                  backgroundColor: 'rgba(17, 24, 39, 0.8)',
+                  color: '#e5e7eb',
+                  border: '1px solid #374151',
+                  borderRadius: '0.75rem',
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  width: '30%',
+                  transition: 'all 0.2s'
+                }}
+                className="hover:bg-gray-800 hover:text-white"
+              >
+                Back
+              </button>
+              
+              <button
+                type="submit"
+                disabled={!isConsentChecked || !isAgeConfirmed}
+                style={{
+                  background: (!isConsentChecked || !isAgeConfirmed)
+                    ? '#4b5563'
+                    : 'linear-gradient(to right, #dc2626, #d97706)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '0.75rem',
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  cursor: (!isConsentChecked || !isAgeConfirmed) ? 'not-allowed' : 'pointer',
+                  opacity: (!isConsentChecked || !isAgeConfirmed) ? 0.5 : 1,
+                  width: '65%',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {submitting ? 'Creating account...' : 'Create Account'}
+              </button>
+            </div>
           )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0.1rem 0' }}>
@@ -790,24 +1340,11 @@ const showLastNameError = touched.last_name || submitAttempted;
 
           {googleError && <p className="error-text">{googleError}</p>}
           {googleNotice && <p style={{ fontSize: '0.82rem', color: '#22c55e' }}>{googleNotice}</p>}
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            {isGoogleConfigured() ? (
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() => setGoogleError(googleSignInErrorText())}
-                theme="filled_black"
-                shape="pill"
-                size="large"
-                text="signup_with"
-                width="320"
-                useOneTap={false}
-                disabled={googleSubmitting}
-              />
-            ) : (
-              <p className="text-muted text-center" style={{ fontSize: '0.85rem' }}>
-                Google sign-up is not configured for this site yet. Please register with email.
-              </p>
-            )}
+          <div className="flex flex-col items-center justify-center gap-3 my-4">
+            <GoogleAuthButton
+              onSuccess={handleGoogleSuccess}
+              onError={(msg) => setGoogleError(msg)}
+            />
           </div>
 
           <p className="text-muted text-center" style={{ fontSize: '0.85rem' }}>

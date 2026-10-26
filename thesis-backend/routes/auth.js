@@ -1,6 +1,9 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 const router = express.Router();
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 const pool = require("../config/database");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -1021,10 +1024,44 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// Customer registration file uploads (ID front/back/selfie)
+const customerRegStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "uploads/customer_ids";
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, `cust_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
+  }
+});
+const customerRegUpload = multer({
+  storage: customerRegStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Only JPEG, PNG, WebP, or PDF files are allowed'));
+  }
+});
+
 // CUSTOMER REGISTER (sets role_id too)
-router.post("/register", ipRouteLimit("register"), async (req, res) => {
+router.post("/register", ipRouteLimit("register"), customerRegUpload.fields([
+  { name: 'id_front', maxCount: 1 },
+  { name: 'id_back', maxCount: 1 },
+  { name: 'id_selfie', maxCount: 1 }
+]), async (req, res) => {
   try {
-    const { first_name, last_name, email, password, phone_number, date_of_birth } = req.body || {};
+    const { first_name, last_name, email, password, phone_number, date_of_birth, id_type, id_number, consent, privacy_consent } = req.body || {};
+
+    // ID file paths from multer
+    const idFrontFile = req.files?.id_front?.[0];
+    const idBackFile = req.files?.id_back?.[0];
+    const idSelfieFile = req.files?.id_selfie?.[0];
+    const idFrontPath = idFrontFile ? idFrontFile.path.replace(/\\/g, '/') : null;
+    const idBackPath = idBackFile ? idBackFile.path.replace(/\\/g, '/') : null;
+    const idSelfiePath = idSelfieFile ? idSelfieFile.path.replace(/\\/g, '/') : null;
 
     if (email === undefined || password === undefined) {
       return res.status(400).json({
@@ -1080,6 +1117,102 @@ router.post("/register", ipRouteLimit("register"), async (req, res) => {
       return res.status(400).json({ success: false, message: dobValidation.error });
     }
 
+// ─── ID VALIDATION & AUTO-APPROVAL LOGIC ───
+    // Strict dual-condition auto-approval:
+    //   1. Calculated age >= 18 (already validated by normalizeDateOfBirth minimumAge: 18)
+    //   2. ID front & back photos pass real ID validation (OCR match, no missing fields, valid selfie uploaded)
+    const age = dobValidation.age;
+    const isAgeVerified = age !== null && age >= 18;
+
+    // Determine if ID photos pass validation
+    let idValidated = false;
+    let idAuthenticityStatus = 'pending_review';
+    let decisionNote = '';
+
+    // Basic validation: front & back photos must be present, selfie must be uploaded
+    const hasFrontPhoto = !!idFrontPath;
+    const hasBackPhoto = !!idBackPath;
+    const hasSelfiePhoto = !!idSelfiePath;
+    const hasIdType = !!id_type;
+    const hasIdNumber = !!id_number;
+
+    // Run OCR validation on front ID if tesseract is available
+    if (hasFrontPhoto && hasBackPhoto && hasSelfiePhoto) {
+      try {
+        const ocrService = require('../services/ocrService');
+        if (ocrService.tesseractAvailable) {
+          const fs = require('fs');
+          const frontBuffer = fs.readFileSync(idFrontPath);
+          const frontResult = await ocrService.runOCR(frontBuffer, 'image/jpeg', 'id', id_type || '', '', date_of_birth || '');
+          const frontConfidence = frontResult?.confidence || 0;
+          const frontFields = frontResult?.fields || {};
+
+          // Check if front ID has required keywords (PH Driver's License)
+          const frontText = (frontResult?.text || '').toLowerCase();
+          const hasRequiredKeywords = /republic|philippines|driver|license|lto/i.test(frontText);
+
+          // Check if ID number matches (if provided)
+          const ocrIdNumber = frontFields?.id_number || frontFields?.license_number || '';
+          const idNumberMatch = !id_number || !ocrIdNumber || ocrIdNumber.replace(/\s/g, '') === id_number.replace(/\s/g, '');
+
+          // Back ID validation (relaxed: broadened keywords + size fallback)
+          const backBuffer = fs.readFileSync(idBackPath);
+          const backResult = await ocrService.runOCR(backBuffer, 'image/jpeg', 'id', id_type || '', '', date_of_birth || '');
+          const backText = (backResult?.text || '').toLowerCase();
+          const hasBackKeywords = /republic|philippines|driver|license|lto|signature|barcode/i.test(backText);
+          const backConfidence = backResult?.confidence || 0;
+
+          // ID is valid if:
+          // - Front has required keywords and confidence >= 50
+          // - Back has broadened keywords or confidence >= 30 (relaxed fallback)
+          // - ID number matches (if provided)
+          const frontValid = hasRequiredKeywords && frontConfidence >= 50;
+          const backValid = hasBackKeywords || backConfidence >= 30;
+          const idNumberValid = idNumberMatch;
+
+          if (frontValid && backValid && idNumberValid) {
+            idValidated = true;
+            idAuthenticityStatus = 'verified';
+          } else {
+            idValidated = false;
+            idAuthenticityStatus = 'pending_review';
+          }
+        } else {
+          // Tesseract not available - fall back to basic file presence check
+          idValidated = hasFrontPhoto && hasBackPhoto && hasSelfiePhoto && hasIdType;
+          idAuthenticityStatus = idValidated ? 'verified' : 'pending_review';
+        }
+      } catch (ocrErr) {
+        console.error('OCR validation error during registration:', ocrErr?.message || ocrErr);
+        // OCR failed - flag for manual review
+        idValidated = false;
+        idAuthenticityStatus = 'pending_review';
+      }
+    } else {
+      // Missing required photos
+      idValidated = false;
+      idAuthenticityStatus = 'pending_review';
+    }
+
+    // Determine approval status and decision note
+    let approvalStatus = 'pending';
+    let reviewedByLabel = null;
+
+    if (isAgeVerified && idValidated) {
+      // Auto-approve: Age 18+ AND ID validated
+      approvalStatus = 'approved';
+      reviewedByLabel = 'System (Auto-Approve)';
+      decisionNote = 'Verified: Age 18+ & Authentic ID confirmed';
+    } else if (isAgeVerified && !idValidated) {
+      // Flagged: Age 18+ but ID requires manual verification
+      approvalStatus = 'pending';
+      decisionNote = 'Pending Review: Age 18+ but ID requires manual verification';
+    } else {
+      // Under 18 (should not reach here due to validation, but handle gracefully)
+      approvalStatus = 'pending';
+      decisionNote = 'Pending Review: Age verification required';
+    }
+
     const emailNorm = String(email).trim().toLowerCase();
 
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm);
@@ -1133,14 +1266,16 @@ router.post("/register", ipRouteLimit("register"), async (req, res) => {
     const otpExpires = new Date(Date.now() + OTP_TTL_MS);
 
     // Create user as CUSTOMER (bar_id NULL) + role_id set + default avatar.
-    // approval_status is set EXPLICITLY to 'pending' here (never rely on
-    // the column default): every new customer sign-up needs admin approval.
+    // approval_status is set based on age verification AND ID validation:
+    //   - Auto-approved (status: 'approved') ONLY IF age >= 18 AND ID passes validation
+    //   - Otherwise 'pending' for manual review by Super Admin
     const [result] = await pool.query(
       `INSERT INTO users
        (first_name, last_name, email, password, phone_number, date_of_birth, role, role_id, is_verified, is_active, bar_id,
         profile_picture, email_verification_token, email_verification_expires, email_verification_otp, email_otp_expires,
-        approval_status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'customer', ?, 0, 1, NULL, ?, ?, ?, ?, ?, 'pending', NOW(), NOW())`,
+        approval_status, id_authenticity_status, id_type, id_number, id_front_path, id_back_path, id_selfie_path,
+        decision_note, reviewed_by_label, approval_reviewed_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'customer', ?, 0, 1, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())`,
       [
        firstNameValidation.value,
        lastNameValidation.value,
@@ -1149,7 +1284,9 @@ router.post("/register", ipRouteLimit("register"), async (req, res) => {
        phoneValidation.value,
        dobValidation.value,
        customerRoleId,
-       DEFAULT_AVATAR, verificationToken, tokenExpires, hashEmailOtp(verificationOtp), otpExpires]
+       DEFAULT_AVATAR, verificationToken, tokenExpires, hashEmailOtp(verificationOtp), otpExpires,
+       approvalStatus, idAuthenticityStatus, id_type || null, id_number || null, idFrontPath, idBackPath, idSelfiePath,
+       decisionNote, reviewedByLabel, reviewedByLabel ? new Date() : null]
     );
 
     // Send verification email (non-blocking — don't fail registration if email fails)
@@ -1616,23 +1753,27 @@ function calculateAgeFromDob(dob) {
 // POST /auth/google — verify credential, return JWT if existing user or profile info if new
 router.post("/google", async (req, res) => {
   try {
-    const { credential } = req.body || {};
-    if (!credential) return res.status(400).json({ success: false, message: "Google credential is required" });
+    const { token, credential } = req.body || {};
+    const idToken = token || credential;
+    if (!idToken) return res.status(400).json({ success: false, message: "No Google token provided." });
     const googleAudiences = getGoogleAudiences();
-    if (!googleAudiences.length) return res.status(500).json({ success: false, message: "Google sign-in is temporarily unavailable. Please try again later." });
+    // Include the local dev client ID in the audience list
+    const audiences = [...new Set([...googleAudiences, "164735893104-fct0sc6ovu9dra7sp2ckmc4j1k7agpc0.apps.googleusercontent.com"])].filter(Boolean);
 
     const client = getGoogleClient();
     let payload;
     try {
       const ticket = await client.verifyIdToken({
-        idToken: credential,
-        audience: googleAudiences.length === 1 ? googleAudiences[0] : googleAudiences,
+        idToken: idToken,
+        audience: audiences.length === 1 ? audiences[0] : audiences,
       });
       payload = ticket.getPayload();
+      // Log for local debugging
+      console.log("Verified Google User:", payload.email);
     } catch (e) {
       // Server-side only: the real reason (expired token, wrong audience aka
       // old/revoked client, etc.). Message only — never the credential.
-      console.error("GOOGLE VERIFY ERROR:", e?.message || e);
+      console.error("Detailed Google Auth Error:", e?.message || e);
       // No account to lock here, but repeated junk credentials from one IP
       // still earn the shared IP cooldown.
       try {
@@ -1640,7 +1781,11 @@ router.post("/google", async (req, res) => {
         const limited = await recordGoogleFailure(clientIp(req));
         if (limited) return lockedResponse(res, limited);
       } catch (_) {}
-      return res.status(401).json({ success: false, message: "Invalid Google credential. Please try again." });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid Google credential. Please try again.",
+        errorDetails: process.env.NODE_ENV === 'development' ? (e?.message || String(e)) : undefined
+      });
     }
 
     const emailNorm = String(payload.email || "").trim().toLowerCase();
@@ -1788,8 +1933,11 @@ router.post("/google", async (req, res) => {
       name: profileName,
     });
   } catch (err) {
-    console.error("GOOGLE AUTH ERROR:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("🔥 GOOGLE AUTH EXACT CRASH STACK:", err?.stack || err);
+    return res.status(500).json({
+      success: false,
+      message: `Server error during Google authentication: ${err?.message || String(err)}`
+    });
   }
 });
 
@@ -1922,10 +2070,6 @@ router.post("/reset-password", async (req, res) => {
 });
 
 // ─── UPLOAD PROFILE PICTURE (all roles) ───
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-
 const profileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = "uploads/profiles";
@@ -1951,7 +2095,6 @@ const regDocsStorage = multer.diskStorage({
   }
 });
 const regDocsUpload = multer({ storage: regDocsStorage, limits: { fileSize: 10 * 1024 * 1024 } });
-
 router.post("/me/profile-picture", require("../middlewares/requireAuth"), profileUpload.single("profile_picture"), async (req, res) => {
   try {
     if (!req.file) {

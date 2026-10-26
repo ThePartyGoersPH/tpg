@@ -524,17 +524,25 @@ export default function CustomerApprovals() {
               <span className={`ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${statusChip(detail.approval_status)}`}>
                 {detail.approval_status || 'approved'}
               </span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                detail.id_authenticity_status === 'verified' ? 'bg-green-500/20 text-green-400' :
+                detail.id_authenticity_status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                'bg-yellow-500/20 text-yellow-400'
+              }`}>
+                ID: {detail.id_authenticity_status === 'verified' ? 'Verified' : detail.id_authenticity_status === 'failed' ? 'Failed' : 'Pending Review'}
+              </span>
             </div>
             <div className="space-y-2 text-xs">
               {[
                 ['Phone', detail.phone_number || '—'],
                 ['Date of birth', detail.date_of_birth ? formatDateTime(detail.date_of_birth) : '—'],
                 ['Age', detail.age ?? '—'],
+                ['ID authenticity', detail.id_authenticity_status === 'verified' ? 'Verified' : detail.id_authenticity_status === 'failed' ? 'Failed' : 'Pending Review'],
                 ['Email verified', Number(detail.is_verified) ? 'Yes' : 'No'],
                 ['Registered', formatDateTime(detail.created_at)],
-                ['Reviewed by', detail.reviewed_by_name || '—'],
+                ['Reviewed by', detail.reviewed_by_label || detail.reviewed_by_name || '—'],
                 ['Reviewed at', detail.reviewed_at ? formatDateTime(detail.reviewed_at) : '—'],
-                ['Decision note', detail.rejection_reason || '—'],
+                ['Decision note', detail.decision_note || detail.rejection_reason || '—'],
               ].map(([k, v]) => (
                 <div key={k} className="flex gap-3">
                   <span className="w-32 flex-shrink-0 text-white/35">{k}</span>
