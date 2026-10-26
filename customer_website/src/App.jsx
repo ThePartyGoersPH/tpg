@@ -443,10 +443,8 @@ function GlassNav({ onOpenNotif, unread, onToggleSidebar, sidebarOpen }) {
           </button>
         ))}
         <a
-          className="nav-link"
+          className="nav-link bar-owner-link"
           href={managerPortalUrl()}
-          target="_blank"
-          rel="noopener noreferrer"
           style={{ textAlign: 'center' }}
         >
           For Bar Owners
