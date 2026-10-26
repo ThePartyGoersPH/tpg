@@ -466,8 +466,8 @@ function LandingView() {
               <p>Cavite, Philippines</p>
             </div>
           </div>
-          <div className="footer-bottom">
-            <p>&copy; 2026 The Party Goers PH. All rights reserved.</p>
+<div className="footer-bottom">
+            <p>&copy; 2026 The Party Goers PH. All rights reserved. · Build {import.meta.env.VITE_BUILD_VERSION}</p>
           </div>
         </div>
       </footer>
