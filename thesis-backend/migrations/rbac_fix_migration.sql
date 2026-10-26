@@ -23,84 +23,37 @@ CREATE TABLE IF NOT EXISTS user_permissions (
   INDEX idx_user_permissions_user (user_id),
   INDEX idx_user_permissions_permission (permission_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- ─── 2. Verify all route-used permissions exist ──────────────────────────────
--- These permissions are already in the DB but confirming for safety.
--- Using INSERT IGNORE to skip if they already exist.
-
--- POS permissions (should already exist as id 65-68)
-INSERT IGNORE INTO permissions (id, code, description) VALUES
-(65, 'POS_ACCESS', 'Access the POS system'),
-(66, 'POS_CREATE_ORDER', 'Create POS orders'),
-(67, 'POS_VIEW_ORDERS', 'View POS order history'),
-(68, 'POS_VOID_ORDER', 'Void/cancel POS orders');
-
--- Bar Events permissions (should already exist as id 56-57)
-INSERT IGNORE INTO permissions (id, code, description) VALUES
-(56, 'BAR_EVENTS_MANAGE', 'Create/update/delete bar events'),
-(57, 'BAR_EVENTS_READ', 'View bar events');
-
--- Menu permissions (should already exist as id 58-59)
-INSERT IGNORE INTO permissions (id, code, description) VALUES
-(58, 'MENU_READ', 'View menu items'),
-(59, 'MENU_MANAGE', 'Create/update/remove menu items');
-
--- ─── 3. Grant newly-wired permissions to roles ──────────────────────────────
--- Bar events routes changed from BAR_SETTINGS to BAR_EVENTS_READ/MANAGE
--- Menu routes changed from INVENTORY_READ/MANAGE to MENU_READ/MENU_MANAGE
--- BAR_OWNER (role_id=7) already has all these, but ensuring with INSERT IGNORE
-
--- BAR_OWNER (7) — ensure has BAR_EVENTS_READ, BAR_EVENTS_MANAGE, MENU_READ, MENU_MANAGE
-INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
-(7, 56),  -- BAR_EVENTS_MANAGE
-(7, 57),  -- BAR_EVENTS_READ
-(7, 58),  -- MENU_READ
-(7, 59);  -- MENU_MANAGE
-
--- HR (2) — grant BAR_EVENTS_READ (57) and MENU_READ (58) if not already present
-INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
-(2, 57),  -- BAR_EVENTS_READ
-(2, 58);  -- MENU_READ
-
--- STAFF (5) — already has BAR_EVENTS_READ (57), MENU_READ (58), POS permissions
--- Ensure POS permissions are granted
-INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
-(5, 57),  -- BAR_EVENTS_READ
-(5, 58),  -- MENU_READ
-(5, 65),  -- POS_ACCESS
-(5, 66),  -- POS_CREATE_ORDER
-(5, 67);  -- POS_VIEW_ORDERS
-
--- CASHIER (8) — ensure POS permissions
-INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
-(8, 65),  -- POS_ACCESS
-(8, 66),  -- POS_CREATE_ORDER
-(8, 67),  -- POS_VIEW_ORDERS
-(8, 58);  -- MENU_READ
-
--- SUPER_ADMIN (6) — should have all permissions, add any missing
-INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
-(6, 34),  -- RESERVATION_READ
-(6, 35),  -- RESERVATION_MANAGE
-(6, 40),  -- DSS_READ
-(6, 41),  -- INVENTORY_READ
-(6, 42),  -- INVENTORY_MANAGE
-(6, 43),  -- AUDIT_READ
-(6, 56),  -- BAR_EVENTS_MANAGE
-(6, 57),  -- BAR_EVENTS_READ
-(6, 58),  -- MENU_READ
-(6, 59),  -- MENU_MANAGE
-(6, 65),  -- POS_ACCESS
-(6, 66),  -- POS_CREATE_ORDER
-(6, 67),  -- POS_VIEW_ORDERS
-(6, 68);  -- POS_VOID_ORDER
-
+-- ─── 2. Ensure route-used permissions exist (current name/module/action schema) ──
+INSERT IGNORE INTO permissions (name, module, action, description) VALUES
+('POS_ACCESS', 'pos', 'access', 'Access the POS system'),
+('POS_CREATE_ORDER', 'pos', 'create_order', 'Create POS orders'),
+('POS_VIEW_ORDERS', 'pos', 'view_orders', 'View POS order history'),
+('POS_VOID_ORDER', 'pos', 'void_order', 'Void/cancel POS orders'),
+('bar_events_manage', 'event', 'manage', 'Create/update/delete bar events'),
+('bar_events_read', 'event', 'read', 'View bar events'),
+('menu_read', 'menu', 'read', 'View menu items'),
+('menu_manage', 'menu', 'manage', 'Create/update/remove menu items');
+-- ─── 3. Grant permissions to roles (name-based, idempotent) ─────────────────
+-- BAR_OWNER (7): events + menu (legacy and canonical names) + POS
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT 7, p.id FROM permissions p WHERE p.name IN ('bar_events_read','bar_events_manage','menu_read','menu_manage','events_view','events_create','events_update','events_comment_reply','events_comment_manage','menu_view','menu_create','menu_update','POS_ACCESS','POS_CREATE_ORDER','POS_VIEW_ORDERS','POS_VOID_ORDER');
+-- HR (2): read-only events/menu
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT 2, p.id FROM permissions p WHERE p.name IN ('bar_events_read','menu_read','events_view','menu_view');
+-- STAFF (5): events/menu read + basic POS
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT 5, p.id FROM permissions p WHERE p.name IN ('bar_events_read','menu_read','events_view','menu_view','POS_ACCESS','POS_CREATE_ORDER','POS_VIEW_ORDERS');
+-- CASHIER (8): same as staff
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT 8, p.id FROM permissions p WHERE p.name IN ('bar_events_read','menu_read','events_view','menu_view','POS_ACCESS','POS_CREATE_ORDER','POS_VIEW_ORDERS');
+-- SUPER_ADMIN (6): every permission
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT 6, p.id FROM permissions p;
 -- ─── 4. Verification queries ─────────────────────────────────────────────────
 -- Run these to verify the migration worked:
 
 -- Check all permissions exist:
 -- SELECT id, code, description FROM permissions ORDER BY id;
-
 -- Check BAR_OWNER role_permissions:
 -- SELECT rp.role_id, r.name AS role_name, p.code AS permission
 -- FROM role_permissions rp
@@ -108,14 +61,12 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
 -- JOIN permissions p ON p.id = rp.permission_id
 -- WHERE rp.role_id = 7
 -- ORDER BY p.code;
-
 -- Check user_permissions table:
 -- SELECT up.user_id, u.first_name, u.last_name, p.code
 -- FROM user_permissions up
 -- JOIN users u ON u.id = up.user_id
 -- JOIN permissions p ON p.id = up.permission_id
 -- ORDER BY up.user_id, p.code;
-
 -- ============================================================================
 -- SUMMARY OF CHANGES:
 -- ============================================================================
@@ -126,4 +77,4 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
 --    - BAR_OWNER already had these permissions, so no access change
 -- 4. SUPER_ADMIN: Granted all missing permissions for full system access
 -- 5. All existing endpoints remain intact and functional
--- ============================================================================
+-- ============================================================================;

@@ -328,7 +328,11 @@ async function ensureSuperAdmin(req, res, next) {
 
     const roleName = rows[0]?.role_name;
     if (String(roleName || '').trim().toUpperCase() !== "SUPER_ADMIN") {
-      return res.status(403).json({ success: false, message: "Forbidden" });
+      return res.status(403).json({
+        success: false,
+        code: "FORBIDDEN_PORTAL",
+        message: "Your account cannot access this portal.",
+      });
     }
 
     req.user.role_name = roleName;
@@ -340,6 +344,28 @@ async function ensureSuperAdmin(req, res, next) {
 }
 
 router.use(requireAuth, ensureSuperAdmin);
+
+// Session validation for app boot (token check + fresh role). Lightweight:
+// requireAuth above already verified the token, resolved the user row, and
+// enforced active/ban/maintenance gates, so just echo the identity back.
+router.get("/me", async (req, res) => {
+  try {
+    const u = req.user || {};
+    return res.json({
+      success: true,
+      data: {
+        id: u.id ?? null,
+        email: u.email ?? null,
+        role: u.role_name || u.role || null,
+        first_name: u.first_name ?? null,
+        last_name: u.last_name ?? null,
+      },
+    });
+  } catch (err) {
+    console.error("SA ME ERROR:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
 
 // ─── SUPER ADMIN ACCOUNT MANAGEMENT ──────────────────────────────────
 router.get("/accounts", async (req, res) => {
@@ -1232,6 +1258,23 @@ router.get("/notifications", async (req, res) => {
       }
     } catch (_) {}
 
+    let pendingCustomers = [];
+    try {
+      const [customerRows] = await pool.query(
+        `SELECT COUNT(*) AS cnt,
+                MAX(created_at) AS latest_at
+         FROM users
+         WHERE LOWER(COALESCE(role, '')) = 'customer'
+           AND COALESCE(approval_status, 'approved') = 'pending'`
+      );
+      if (Number(customerRows[0]?.cnt || 0) > 0) {
+        pendingCustomers = [{
+          count: Number(customerRows[0].cnt),
+          latest_at: customerRows[0].latest_at,
+        }];
+      }
+    } catch (_) {}
+
     // Per-admin read state (best-effort: table created by
     // 20261007 migration; absence just means everything is unread).
     let readKeys = new Set();
@@ -1245,7 +1288,7 @@ router.get("/notifications", async (req, res) => {
       readKeys = new Set();
     }
 
-    const ACTIONABLE = new Set(["business_registration", "pending_payouts", "flagged_content"]);
+    const ACTIONABLE = new Set(["business_registration", "pending_payouts", "flagged_content", "customer_approval"]);
 
     const notifications = [
       ...registrationRows.map((r) => ({
@@ -1290,6 +1333,14 @@ router.get("/notifications", async (req, res) => {
         action_url: "/social",
         created_at: new Date().toISOString(),
       })),
+      ...pendingCustomers.map(() => ({
+        id: "customer-approvals",
+        type: "customer_approval",
+        title: "New Customer Registrations",
+        message: `${pendingCustomers[0].count} customer(s) awaiting approval`,
+        action_url: "/customer-approvals",
+        created_at: pendingCustomers[0].latest_at || new Date().toISOString(),
+      })),
     ]
       .map((n) => ({ ...n, is_read: readKeys.has(n.id) }))
       // Urgency-then-recency: actionable items (registrations, payouts,
@@ -1314,6 +1365,7 @@ router.get("/notifications", async (req, res) => {
           pending_payouts: pendingPayouts[0]?.count || 0,
           flagged_posts: flaggedPosts[0]?.count || 0,
           flagged_comments: flaggedComments[0]?.count || 0,
+          pending_customers: pendingCustomers[0]?.count || 0,
         },
       },
     });
@@ -1337,7 +1389,7 @@ router.post("/notifications/read", async (req, res) => {
          UNION
          SELECT CONCAT('feedback-', id) FROM platform_feedback WHERE status = 'pending'`
       );
-      const staticKeys = ["pending-payouts", "flagged-posts", "flagged-comments"];
+      const staticKeys = ["pending-payouts", "flagged-posts", "flagged-comments", "customer-approvals"];
       const allKeys = [...pending.map((r) => r.k), ...staticKeys];
       if (allKeys.length) {
         await pool.query(
@@ -1364,6 +1416,403 @@ router.post("/notifications/read", async (req, res) => {
     return res.json({ success: true, message: "Notification marked as read" });
   } catch (err) {
     console.error("SUPER ADMIN NOTIFICATION READ ERROR:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ─── CUSTOMER APPROVALS (new sign-ups reviewed by super admins) ───
+// All routes here inherit requireAuth + ensureSuperAdmin from router.use().
+
+const CUSTOMER_APPROVAL_SELECT = `
+  SELECT u.id,
+         CONCAT(u.first_name, ' ', u.last_name) AS name,
+         u.first_name, u.last_name, u.email, u.phone_number,
+         u.date_of_birth,
+         TIMESTAMPDIFF(YEAR, u.date_of_birth, CURDATE()) AS age,
+         u.profile_picture, u.is_verified, u.created_at,
+         u.approval_status,
+         CONCAT(rev.first_name, ' ', rev.last_name) AS reviewed_by_name,
+         u.approval_reviewed_at AS reviewed_at,
+         u.approval_rejection_reason AS rejection_reason
+   FROM users u
+   LEFT JOIN users rev ON rev.id = u.approval_reviewed_by
+   WHERE LOWER(COALESCE(u.role, '')) = 'customer'`;
+
+async function applyCustomerDecision(conn, { customerId, action, reason, adminId }) {
+  const normalizedAction = String(action || "").trim().toLowerCase();
+  if (!["approve", "reject"].includes(normalizedAction)) {
+    const err = new Error("Action must be 'approve' or 'reject'.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  let cleanReason = "";
+  if (normalizedAction === "reject") {
+    cleanReason = String(reason || "").trim();
+    if (cleanReason.length < 5 || cleanReason.length > 300) {
+      const err = new Error("A reason between 5 and 300 characters is required.");
+      err.statusCode = 400;
+      throw err;
+    }
+  } else {
+    // Approve carries an optional note (shown in the email + audit only —
+    // the stored reason column stays reserved for reject/revoke reasons).
+    cleanReason = String(reason || "").trim().slice(0, 300);
+  }
+
+  const [rows] = await conn.query(
+    `SELECT id, first_name, email, role, approval_status, is_verified
+     FROM users WHERE id = ? LIMIT 1 FOR UPDATE`,
+    [customerId]
+  );
+  const target = rows[0];
+  if (!target || String(target.role || "").trim().toLowerCase() !== "customer") {
+    const err = new Error("Customer not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const current = String(target.approval_status || "approved").trim().toLowerCase();
+  const isVerified = Number(target.is_verified || 0) === 1;
+  // Approving also sets verification, so an already-approved account that is
+  // still unverified (pre-verification-flag backlog) stays actionable instead
+  // of being stuck: the admin can run Approve to fix the missing flag.
+  if (normalizedAction === "approve" && current === "approved" && isVerified) {
+    const err = new Error("This customer is already approved and verified — no action needed. Reject first to revoke, then approve again if needed.");
+    err.statusCode = 400;
+    throw err;
+  }
+  if (normalizedAction === "reject" && current === "rejected") {
+    const err = new Error("This customer is already rejected. Approve them first to change the decision.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const nextStatus = normalizedAction === "approve" ? "approved" : "rejected";
+  // Rejecting an already-approved account is a Revoke (access taken away);
+  // rejecting a pending one is a plain Reject. The email kind follows.
+  const kind =
+    nextStatus === "approved" ? "approved" : current === "approved" ? "revoked" : "rejected";
+
+  // Approving is the final gate, so it also marks the account verified:
+  // a reviewed sign-up logs in immediately without a separate email click.
+  // COALESCE preserves an earlier self-service verification timestamp, and
+  // the stale token is cleared so the pending link can never be replayed.
+  // Rejection never touches is_verified — an admin decision to revoke
+  // approval must not silently un-verify an already confirmed email address.
+  const verifyColumns = normalizedAction === "approve"
+    ? `,
+         is_verified = 1,
+         email_verified_at = COALESCE(email_verified_at, ?),
+         email_verification_token = NULL,
+         email_verification_expires = NULL`
+    : "";
+
+  await conn.query(
+    `UPDATE users
+     SET approval_status = ?,
+         approval_reviewed_by = ?,
+         approval_reviewed_at = NOW(),
+         approval_rejection_reason = ?${verifyColumns}
+     WHERE id = ?`,
+    [
+      nextStatus,
+      adminId,
+      normalizedAction === "reject" ? cleanReason : null,
+      // Node sends UTC (pool runs with timezone: 'Z'); MySQL NOW() is
+      // server-local, so a JS Date keeps the stamped time consistent.
+      ...(normalizedAction === "approve" ? [new Date()] : []),
+      customerId,
+    ]
+  );
+
+  return { target, nextStatus, reason: cleanReason, prevStatus: current, kind };
+}
+
+// One email per decision, sent AFTER the status commit — never inside it.
+// Returns { sent } so callers report honestly; a failure here must never
+// roll back or block the admin action.
+async function sendCustomerDecisionEmail({ id, email, firstName, kind, reason, note }) {
+  try {
+    const { notifyCustomer } = require("../utils/notifyCustomer");
+    const event =
+      kind === "approved" ? "customer_approved" : kind === "revoked" ? "customer_revoked" : "customer_rejected";
+    // The id keeps the EMAIL_SENT audit row attached to the customer.
+    const result = await notifyCustomer(
+      { id, email, first_name: firstName },
+      event,
+      kind === "approved" ? { note: note || null } : { reason: reason || null }
+    );
+    return { sent: Boolean(result && result.ok) };
+  } catch (err) {
+    console.error("CUSTOMER DECISION EMAIL ERROR:", err?.code || "", err?.message || err);
+    return { sent: false };
+  }
+}
+
+async function recordCustomerDecision({ conn, usePool, customer, nextStatus, kind, reason, adminId, req }) {
+  const db = conn || pool;
+  const auditAction = nextStatus === "approved" ? "APPROVE_CUSTOMER" : "REJECT_CUSTOMER";
+  await db.query(
+    `INSERT INTO platform_audit_logs
+     (actor_user_id, action, entity, entity_id, target_bar_id, details, ip_address, user_agent)
+     VALUES (?, ?, 'customer', ?, NULL, ?, ?, ?)`,
+    [
+      adminId,
+      auditAction,
+      customer.id,
+      JSON.stringify({
+        email: customer.email,
+        kind: kind || nextStatus,
+        reason: reason || null,
+        marked_verified: nextStatus === "approved",
+      }),
+      req?.ip || null,
+      req?.get ? req.get("user-agent") || null : null,
+    ]
+  );
+  await db.query(
+    `INSERT INTO notifications (user_id, type, title, message, reference_id, reference_type, is_read, created_at)
+     VALUES (?, ?, ?, ?, ?, 'customer_approval', 0, NOW())`,
+    [
+      customer.id,
+      nextStatus === "approved" ? "account_approved" : "account_rejected",
+      nextStatus === "approved" ? "Account approved" : "Registration update",
+      nextStatus === "approved"
+        ? "Your account has been approved. You can now log in."
+        : "Your registration was not approved. Tap to see details.",
+      customer.id,
+    ]
+  );
+}
+
+router.get("/customer-approvals", async (req, res) => {
+  try {
+    const status = String(req.query.status || "pending").trim().toLowerCase();
+    const search = String(req.query.search || "").trim();
+    const verified = String(req.query.verified || "all").trim().toLowerCase();
+    const page = Math.max(1, Number(req.query.page || 1));
+    const limit = Math.min(Math.max(Number(req.query.limit || 10), 1), 100);
+    const offset = (page - 1) * limit;
+
+    const where = [];
+    const params = [];
+    if (["pending", "approved", "rejected"].includes(status)) {
+      where.push("u.approval_status = ?");
+      params.push(status);
+    }
+    if (verified === "verified") {
+      where.push("u.is_verified = 1");
+    } else if (verified === "unverified") {
+      where.push("COALESCE(u.is_verified, 0) <> 1");
+    }
+    if (search) {
+      where.push("(CONCAT(u.first_name, ' ', u.last_name) LIKE ? OR u.email LIKE ? OR u.phone_number LIKE ?)");
+      const term = `%${search}%`;
+      params.push(term, term, term);
+    }
+
+    const [[countRow]] = await pool.query(
+      `SELECT COUNT(*) AS total FROM users u WHERE LOWER(COALESCE(u.role, '')) = 'customer'${where.length ? ` AND ${where.join(" AND ")}` : ""}`,
+      params
+    );
+    const [rows] = await pool.query(
+      `${CUSTOMER_APPROVAL_SELECT}${where.length ? ` AND ${where.join(" AND ")}` : ""}
+       ORDER BY u.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        customers: rows,
+        pagination: {
+          page,
+          limit,
+          total: Number(countRow?.total || 0),
+          total_pages: Math.ceil(Number(countRow?.total || 0) / limit),
+        },
+      },
+    });
+  } catch (err) {
+    console.error("SA CUSTOMER APPROVALS LIST ERROR:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+router.get("/customer-approvals/stats", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT COALESCE(u.approval_status, 'approved') AS status, COUNT(*) AS cnt
+       FROM users u
+       WHERE LOWER(COALESCE(u.role, '')) = 'customer'
+       GROUP BY COALESCE(u.approval_status, 'approved')`
+    );
+    const counts = { pending: 0, approved: 0, rejected: 0 };
+    for (const r of rows) {
+      const key = String(r.status || "").trim().toLowerCase();
+      if (key in counts) counts[key] = Number(r.cnt || 0);
+    }
+    const [[unvRow]] = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM users
+       WHERE LOWER(COALESCE(role, '')) = 'customer'
+         AND COALESCE(is_verified, 0) <> 1`
+    );
+    counts.unverified = Number(unvRow?.cnt || 0);
+    return res.json({ success: true, data: counts });
+  } catch (err) {
+    console.error("SA CUSTOMER APPROVALS STATS ERROR:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+router.post("/customer-approvals/:id/approve", async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const customerId = Number(req.params.id);
+    if (!customerId) return res.status(400).json({ success: false, message: "Invalid customer id" });
+
+    await conn.beginTransaction();
+    const { target, nextStatus, reason, kind } = await applyCustomerDecision(conn, {
+      customerId, action: "approve", reason: req.body?.note ?? req.body?.reason, adminId: req.user.id,
+    });
+    await recordCustomerDecision({ conn, customer: target, nextStatus, kind, reason, adminId: req.user.id, req });
+    await conn.commit();
+
+    // Status is committed; the email must never undo it.
+    const email = await sendCustomerDecisionEmail({
+      id: target.id, email: target.email, firstName: target.first_name, kind, reason,
+    });
+    return res.json({
+      success: true,
+      emailSent: email.sent,
+      message: email.sent
+        ? "Customer approved and email sent."
+        : "Customer approved, but the email could not be sent.",
+    });
+  } catch (err) {
+    try { await conn.rollback(); } catch (_) {}
+    if (err.statusCode) return res.status(err.statusCode).json({ success: false, message: err.message });
+    console.error("SA APPROVE CUSTOMER ERROR:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  } finally {
+    conn.release();
+  }
+});
+
+router.post("/customer-approvals/:id/reject", async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const customerId = Number(req.params.id);
+    if (!customerId) return res.status(400).json({ success: false, message: "Invalid customer id" });
+
+    await conn.beginTransaction();
+    const { target, nextStatus, reason, kind } = await applyCustomerDecision(conn, {
+      customerId, action: "reject", reason: req.body?.reason, adminId: req.user.id,
+    });
+    await recordCustomerDecision({ conn, customer: target, nextStatus, kind, reason, adminId: req.user.id, req });
+    await conn.commit();
+
+    const email = await sendCustomerDecisionEmail({
+      id: target.id, email: target.email, firstName: target.first_name, kind, reason,
+    });
+    const verb = kind === "revoked" ? "revoked" : "rejected";
+    return res.json({
+      success: true,
+      emailSent: email.sent,
+      message: email.sent
+        ? `Customer ${verb} and email sent.`
+        : `Customer ${verb}, but the email could not be sent.`,
+    });
+  } catch (err) {
+    try { await conn.rollback(); } catch (_) {}
+    if (err.statusCode) return res.status(err.statusCode).json({ success: false, message: err.message });
+    console.error("SA REJECT CUSTOMER ERROR:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  } finally {
+    conn.release();
+  }
+});
+
+router.post("/customer-approvals/bulk", async (req, res) => {
+  const { action, ids, reason } = req.body || {};
+  const list = [...new Set((Array.isArray(ids) ? ids : []).map(Number).filter((n) => n > 0))].slice(0, 100);
+  if (!["approve", "reject"].includes(String(action || "").trim().toLowerCase())) {
+    return res.status(400).json({ success: false, message: "Action must be 'approve' or 'reject'." });
+  }
+  if (!list.length) {
+    return res.status(400).json({ success: false, message: "Provide at least one customer id." });
+  }
+
+  const results = [];
+  // Each customer gets its own transaction: one bad id or validation error
+  // records a per-item error instead of rolling back everyone else, and each
+  // email goes out on its own so one mail failure never blocks the others.
+  for (const customerId of list) {
+    const itemConn = await pool.getConnection();
+    try {
+      await itemConn.beginTransaction();
+      const decided = await applyCustomerDecision(itemConn, {
+        customerId, action, reason, adminId: req.user.id,
+      });
+      await recordCustomerDecision({
+        conn: itemConn, customer: decided.target, nextStatus: decided.nextStatus,
+        kind: decided.kind, reason: decided.reason, adminId: req.user.id, req,
+      });
+      await itemConn.commit();
+      const email = await sendCustomerDecisionEmail({
+        id: decided.target.id, email: decided.target.email, firstName: decided.target.first_name,
+        kind: decided.kind, reason: decided.reason,
+      });
+      results.push({ id: customerId, status: decided.nextStatus, kind: decided.kind, emailSent: email.sent });
+    } catch (err) {
+      try { await itemConn.rollback(); } catch (_) {}
+      results.push({ id: customerId, error: err.statusCode ? err.message : "Server error" });
+    } finally {
+      itemConn.release();
+    }
+  }
+
+  const done = results.filter((r) => !r.error);
+  const verb = String(action).trim().toLowerCase() === "approve" ? "approved" : "rejected";
+  const emailed = done.filter((r) => r.emailSent).length;
+  return res.json({
+    success: true,
+    message: `${done.length} of ${list.length} customer(s) ${verb} (${emailed} email(s) sent).`,
+    data: results,
+  });
+});
+
+// Resend the last status email for one customer (uses the stored decision).
+router.post("/customer-approvals/:id/resend-email", async (req, res) => {
+  try {
+    const customerId = Number(req.params.id);
+    if (!customerId) return res.status(400).json({ success: false, message: "Invalid customer id" });
+
+    const [[u]] = await pool.query(
+      `SELECT id, email, first_name, role, approval_status, approval_rejection_reason
+       FROM users WHERE id = ? LIMIT 1`,
+      [customerId]
+    );
+    if (!u || String(u.role || "").trim().toLowerCase() !== "customer") {
+      return res.status(404).json({ success: false, message: "Customer not found." });
+    }
+    const status = String(u.approval_status || "approved").trim().toLowerCase();
+    if (status === "pending") {
+      return res.status(400).json({ success: false, message: "No decision email to resend yet — this customer is still pending." });
+    }
+    const kind = status === "approved" ? "approved" : "rejected";
+    const email = await sendCustomerDecisionEmail({
+      id: u.id, email: u.email, firstName: u.first_name, kind, reason: u.approval_rejection_reason,
+    });
+    return res.json({
+      success: true,
+      emailSent: email.sent,
+      message: email.sent ? "Status email resent." : "The email could not be sent.",
+    });
+  } catch (err) {
+    console.error("SA RESEND CUSTOMER EMAIL ERROR:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -2241,7 +2690,7 @@ router.delete("/users/:id", async (req, res) => {
 // UI the same origin the production API serves files from.
 function transformRegistrationRow(row) {
   const transformed = { ...row };
-  const backendUrl = process.env.BACKEND_URL || 'https://thepartygoers.partygoers.online';
+  const backendUrl = process.env.BACKEND_URL || 'https://thepartygoers.partygoers.online/api';
   // One list: config/requiredPermits.js (the registration column names).
   REGISTRATION_DOC_KEYS.forEach((field) => {
     if (row[field] && row[field].includes('localhost')) {
@@ -3615,6 +4064,12 @@ router.post("/customer-bans/global/:customerId", async (req, res) => {
       ...auditContext(req),
     });
 
+    // Suspension mail, best-effort: never blocks the action.
+    try {
+      const { notifyCustomer } = require("../utils/notifyCustomer");
+      await notifyCustomer(customerId, "banned", { reason: banReason || null });
+    } catch (_) {}
+
     return res.json({
       success: true,
       message: "Customer has been banned from the platform",
@@ -3683,6 +4138,11 @@ router.delete("/customer-bans/global/:customerId", async (req, res) => {
       details: { scope: "global" },
       ...auditContext(req),
     });
+
+    try {
+      const { notifyCustomer } = require("../utils/notifyCustomer");
+      await notifyCustomer(customerId, "unbanned");
+    } catch (_) {}
 
     return res.json({
       success: true,
@@ -3811,6 +4271,14 @@ router.post("/customer-bans/:barId/:customerId", async (req, res) => {
       ...auditContext(req),
     });
 
+    try {
+      const { notifyCustomer } = require("../utils/notifyCustomer");
+      const [[barRow]] = await pool.query("SELECT name FROM bars WHERE id = ? LIMIT 1", [barId]);
+      await notifyCustomer(customerId, "banned", {
+        reason: reason ? `Banned from ${barRow?.name || "the bar"}: ${reason}` : `Banned from ${barRow?.name || "the bar"}`,
+      });
+    } catch (_) {}
+
     return res.json({ success: true, message: "Customer banned" });
   } catch (err) {
     console.error("SA BAN CUSTOMER ERROR:", err);
@@ -3836,6 +4304,11 @@ router.delete("/customer-bans/:barId/:customerId", async (req, res) => {
       target_bar_id: barId,
       ...auditContext(req),
     });
+
+    try {
+      const { notifyCustomer } = require("../utils/notifyCustomer");
+      await notifyCustomer(customerId, "unbanned");
+    } catch (_) {}
 
     return res.json({ success: true, message: "Customer unbanned" });
   } catch (err) {

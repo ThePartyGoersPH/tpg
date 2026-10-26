@@ -22,7 +22,6 @@ SET @exists := (
     AND TABLE_NAME = 'bars'
     AND COLUMN_NAME = 'paymongo_webhook_secret'
 );
-
 -- The secret is read on every webhook delivery, so the lookup stays on the
 -- bars primary key — no extra index needed.
 SET @sql := IF(
@@ -30,7 +29,6 @@ SET @sql := IF(
   'ALTER TABLE `bars` ADD COLUMN `paymongo_webhook_secret` varchar(255) DEFAULT NULL',
   'SELECT 1'
 );
-
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;

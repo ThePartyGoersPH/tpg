@@ -1,10 +1,13 @@
+import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
+import { customerApprovalsAPI } from '../../api/services';
 import {
   LayoutDashboard,
   Building2,
   Package,
   Users,
+  UserPlus,
   FileText,
   Settings,
   LogOut,
@@ -26,6 +29,7 @@ const navigation = [
   { name: 'Payouts', href: '/payouts', icon: Banknote },
   { name: 'Subscriptions', href: '/subscriptions', icon: Package },
   { name: 'Users', href: '/users', icon: Users },
+  { name: 'Customer Approvals', href: '/customer-approvals', icon: UserPlus, badgeKey: 'pendingCustomers' },
   { name: 'Banning', href: '/banning', icon: UserX },
   { name: 'Platform Feedback', href: '/feedback', icon: MessageSquare },
   { name: 'Social Moderation', href: '/social', icon: Shield },
@@ -33,9 +37,30 @@ const navigation = [
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-export default function Sidebar({ mobileNavOpen = false, onMobileClose }) {
+export default function Sidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const [pendingCustomers, setPendingCustomers] = useState(0);
+
+  // Sidebar badge: refresh pending-customer count every 60s, plus
+  // immediately after any approval decision anywhere in the app.
+  useEffect(() => {
+    let alive = true;
+    const loadBadge = async () => {
+      try {
+        const res = await customerApprovalsAPI.stats();
+        if (!alive) return;
+        if (res.data?.success) setPendingCustomers(Number(res.data.data?.pending || 0));
+      } catch {
+        // badge keeps its last known value on transient errors
+      }
+    };
+    loadBadge();
+    const timer = setInterval(loadBadge, 60000);
+    const onChanged = () => loadBadge();
+    window.addEventListener('customer-approvals-changed', onChanged);
+    return () => { alive = false; clearInterval(timer); window.removeEventListener('customer-approvals-changed', onChanged); };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -43,7 +68,7 @@ export default function Sidebar({ mobileNavOpen = false, onMobileClose }) {
   };
 
   return (
-    <div className={`sa-sidebar flex flex-col w-64 glass-sidebar h-screen fixed left-0 top-0 z-30${mobileNavOpen ? ' is-open' : ''}`}>
+    <div className="flex flex-col w-64 glass-sidebar h-screen fixed left-0 top-0 z-30">
       <div className="flex items-center gap-3 h-16 px-5">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-red-800 flex items-center justify-center shadow-lg">
           <span className="text-white font-black text-sm">SA</span>
@@ -68,10 +93,14 @@ export default function Sidebar({ mobileNavOpen = false, onMobileClose }) {
                     : 'text-white/50 hover:text-white/90 hover:bg-white/[0.04]'
                 }`
               }
-              onClick={onMobileClose}
             >
               <item.icon className="mr-3 h-4 w-4" />
-              {item.name}
+              <span className="flex-1">{item.name}</span>
+              {item.badgeKey === 'pendingCustomers' && pendingCustomers > 0 && (
+                <span className="ml-2 min-w-[1.25rem] h-5 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">
+                  {pendingCustomers > 99 ? '99+' : pendingCustomers}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

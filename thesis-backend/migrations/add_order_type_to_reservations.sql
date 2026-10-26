@@ -1,15 +1,8 @@
--- Migration: Add order_type to reservations
--- Date: 2026-10-06
--- Purpose: Distinguish table bookings from table-less food orders so the
--- customer drawer (Table Booking / Dine-In / Takeout) and the admin
--- reservations table can render each kind correctly.
--- Values: 'table_booking' | 'dine_in' | 'takeout'
-
-ALTER TABLE `reservations`
-  ADD COLUMN IF NOT EXISTS `order_type` varchar(20) NOT NULL DEFAULT 'table_booking';
-
--- Backfill: rows with an assigned table (legacy column or junction table)
--- are table bookings; table-less rows become dine-in food orders.
+SET @cx172 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'order_type');
+SET @sx172 := IF(@cx172 = 0, 'ALTER TABLE reservations ADD COLUMN `order_type` varchar(20) NOT NULL DEFAULT ''table_booking''', 'SELECT 1');
+PREPARE stx172 FROM @sx172;
+EXECUTE stx172;
+DEALLOCATE PREPARE stx172;
 UPDATE `reservations` r
   SET r.order_type = CASE
     WHEN r.table_id IS NOT NULL THEN 'table_booking'

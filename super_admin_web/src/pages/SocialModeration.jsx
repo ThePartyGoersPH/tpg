@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { socialAPI } from '../api/services';
+import { API_BASE_URL } from '../api/axios';
 import { formatDateTime, formatCurrency } from '../utils/formatters';
 import { MessageSquare, ThumbsUp, Trash2, Eye, AlertTriangle, Calendar, Users, DollarSign, XCircle, User } from 'lucide-react';
 import { confirmDestructive, swalSuccess, swalError } from '../utils/swal';
-import { API_BASE_URL as API_URL } from '../api/axios';
+
+const API_URL = API_BASE_URL;
 
 export default function SocialModeration() {
   const [activeTab, setActiveTab] = useState('posts');

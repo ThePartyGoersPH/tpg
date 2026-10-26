@@ -5,7 +5,6 @@
 UPDATE bars 
 SET minimum_reservation_deposit = 10.00 
 WHERE id = 11 AND name = 'Juan Bar';
-
 -- Verify the update
 SELECT id, name, minimum_reservation_deposit 
 FROM bars 

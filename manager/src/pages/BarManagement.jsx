@@ -1330,7 +1330,7 @@ const BarManagement = () => {
             {photos.map((p, idx) => (
               <div key={p.id} className="relative group rounded-xl overflow-hidden" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <img
-                  src={p.video_url.startsWith('http') ? p.video_url : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/${p.video_url}`}
+                  src={getUploadUrl(p.video_url)}
                   alt={p.caption || ''}
                   className="w-full aspect-square object-cover"
                 />

@@ -690,6 +690,21 @@ router.post("/employee/attendance", requireAuth, async (req, res) => {
       );
 
       if (!rows.length || !rows[0].time_in) {
+        // The lookup above only matches rows with time_out IS NULL, so an
+        // already-clocked-out record falls through here too. Tell the two
+        // apart: "no time-in" (never clocked in) vs "already timed out".
+        const [closed] = await pool.query(
+          `SELECT id FROM attendance_logs
+           WHERE bar_id=? AND employee_user_id=? AND work_date=?
+             AND time_in IS NOT NULL
+           LIMIT 1`,
+          [barId, userId, workDate]
+        );
+
+        if (closed.length) {
+          return res.status(400).json({ success: false, message: "Already timed out" });
+        }
+
         logAudit(null, {
           bar_id: barId, user_id: userId, action: "CLOCK_OUT_NO_CLOCK_IN",
           entity: "attendance",

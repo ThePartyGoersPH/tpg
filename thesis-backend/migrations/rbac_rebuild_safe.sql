@@ -8,16 +8,13 @@
 -- Disable autocommit and foreign key checks
 SET autocommit = 0;
 SET FOREIGN_KEY_CHECKS = 0;
-
 -- ────────────────────────────────────────────────────────────
 -- STEP 1: Drop dependent tables first to avoid FK constraint errors
 -- ────────────────────────────────────────────────────────────
 DROP TABLE IF EXISTS user_permissions;
 DROP TABLE IF EXISTS role_permissions;
 DROP TABLE IF EXISTS permissions;
-
 COMMIT;
-
 -- ────────────────────────────────────────────────────────────
 -- STEP 2: Rebuild permissions table with new codes
 -- ────────────────────────────────────────────────────────────
@@ -31,9 +28,7 @@ CREATE TABLE `permissions` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_permission_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 COMMIT;
-
 INSERT INTO `permissions` (`name`, `module`, `action`, `description`) VALUES
 -- ── MENU (module: menu) ──
 ('menu_view',           'menu',         'view',     'View all menu items'),
@@ -110,9 +105,7 @@ INSERT INTO `permissions` (`name`, `module`, `action`, `description`) VALUES
 
 -- ── LOGS (module: logs) ──
 ('logs_view',  'logs', 'view',  'View audit logs and activity history');
-
 COMMIT;
-
 -- ────────────────────────────────────────────────────────────
 -- STEP 3: Rebuild role_permissions table
 -- ────────────────────────────────────────────────────────────
@@ -123,9 +116,7 @@ CREATE TABLE `role_permissions` (
   CONSTRAINT `fk_rp_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_rp_perm` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 COMMIT;
-
 -- ────────────────────────────────────────────────────────────
 -- STEP 4: Seed role_permissions (default permissions per role)
 -- ────────────────────────────────────────────────────────────
@@ -140,7 +131,6 @@ SELECT 3, id FROM permissions WHERE name IN (
   'reservation_view', 'reservation_create',
   'menu_view', 'table_view', 'events_view'
 );
-
 -- MANAGER (role_id = 9): Full operational permissions
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT 9, id FROM permissions WHERE name IN (
@@ -159,13 +149,10 @@ SELECT 9, id FROM permissions WHERE name IN (
   'ban_view', 'ban_branch', 'ban_lift',
   'logs_view', 'bar_details_view'
 );
-
 -- BAR_OWNER (role_id = 7): All permissions
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT 7, id FROM permissions;
-
 COMMIT;
-
 -- ────────────────────────────────────────────────────────────
 -- STEP 5: Rebuild user_permissions table with granted column
 -- ────────────────────────────────────────────────────────────
@@ -179,9 +166,7 @@ CREATE TABLE `user_permissions` (
   CONSTRAINT `fk_up_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_up_perm` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 COMMIT;
-
 -- ────────────────────────────────────────────────────────────
 -- STEP 6: Create user_roles table (if not exists)
 -- ────────────────────────────────────────────────────────────
@@ -192,14 +177,11 @@ CREATE TABLE IF NOT EXISTS `user_roles` (
   CONSTRAINT `fk_ur_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_ur_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 COMMIT;
-
 -- Re-enable foreign key checks and autocommit
 SET FOREIGN_KEY_CHECKS = 1;
 SET autocommit = 1;
-
 -- ============================================================
 -- MIGRATION COMPLETE - PART 1
 -- Now run the second part to update user roles
--- ============================================================
+-- ============================================================;

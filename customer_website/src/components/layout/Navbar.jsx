@@ -158,7 +158,7 @@ function Navbar() {
             </NavLink>
           ))}
 
-          <a className="mobile-nav-link mobile-manager-link" href={managerPortalUrl()} target="_blank" rel="noopener noreferrer">
+          <a className="mobile-nav-link mobile-manager-link bar-owner-link" href={managerPortalUrl()}>
             <span className="mobile-nav-icon">↗</span>
             For Bar Owners
           </a>

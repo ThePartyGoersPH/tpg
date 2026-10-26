@@ -1188,6 +1188,45 @@ router.patch(
         return res.status(400).json({ success: false, message: "No fields to update" });
       }
 
+      // Map-pin guard: new/changed coordinates must stay inside the
+      // bar's registered city (frontend pre-checks; this is the enforcement).
+      if (req.body.latitude !== undefined || req.body.longitude !== undefined) {
+        const latRaw = req.body.latitude;
+        const lngRaw = req.body.longitude;
+        const clearing = latRaw === null || lngRaw === null || latRaw === '' || lngRaw === '';
+        if (!clearing) {
+          const lat = Number(latRaw);
+          const lng = Number(lngRaw);
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            const [[cur]] = await pool.query(
+              "SELECT latitude, longitude, city FROM bars WHERE id = ? LIMIT 1",
+              [barId]
+            );
+            const storedLat = cur ? Number(cur.latitude) : NaN;
+            const storedLng = cur ? Number(cur.longitude) : NaN;
+            const unchanged = Number.isFinite(storedLat) && Number.isFinite(storedLng) &&
+              Math.abs(storedLat - lat) < 1e-9 && Math.abs(storedLng - lng) < 1e-9;
+            if (!unchanged) {
+              const city = req.body.city !== undefined && req.body.city !== null && String(req.body.city).trim() !== ''
+                ? String(req.body.city).trim()
+                : String((cur && cur.city) || '').trim();
+              if (!city) {
+                return res.status(400).json({ success: false, message: "Please complete the bar address (city/municipality) before setting the map location." });
+              }
+              const { validatePinInCity } = require("../utils/cityBoundary");
+              const verdict = await validatePinInCity(lat, lng, city);
+              if (!verdict.ok) {
+                return res.status(400).json({
+                  success: false,
+                  message: verdict.message,
+                  code: verdict.reason === 'lookup-failed' ? 'GEO_LOOKUP_FAILED' : 'PIN_OUTSIDE_CITY',
+                });
+              }
+            }
+          }
+        }
+      }
+
       updates.push("updated_at = NOW()");
       params.push(barId);
 

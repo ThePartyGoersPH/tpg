@@ -133,7 +133,7 @@ const NavGroupItem = ({ group, collapsed, isExpanded, onToggle, currentPath }) =
   );
 };
 
-const Sidebar = ({ collapsed, onToggle, mobileOpen = false }) => {
+const Sidebar = ({ collapsed, onToggle }) => {
   const { user, logout, hasPermission } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -189,7 +189,7 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen = false }) => {
 
   return (
     <aside
-      className={`tpg-manager-sidebar fixed top-0 left-0 h-screen text-white flex flex-col transition-all duration-300 z-50${mobileOpen ? ' is-mobile-open' : ''} ${
+      className={`fixed top-0 left-0 h-screen text-white flex flex-col transition-all duration-300 z-50 ${
         collapsed ? 'w-[68px]' : 'w-[260px]'
       }`}
       style={{ background: '#111111' }}

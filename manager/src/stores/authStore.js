@@ -4,8 +4,8 @@ import { authApi } from '../api/authApi';
 const useAuthStore = create((set, get) => ({
   user: null,
   permissions: [],
-  token: localStorage.getItem('token') || null,
-  isAuthenticated: !!localStorage.getItem('token'),
+  token: localStorage.getItem('tpg_manager_token') || null,
+  isAuthenticated: !!localStorage.getItem('tpg_manager_token'),
   isLoading: false,
   hasInitialized: false,
   error: null,
@@ -25,17 +25,39 @@ const useAuthStore = create((set, get) => ({
         return { success: false, message: 'No token received from server' };
       }
 
-      localStorage.setItem('token', token);
+      localStorage.setItem('tpg_manager_token', token);
       set({ token, user, isAuthenticated: true });
 
       await get().fetchPermissions();
       set({ hasInitialized: true });
       return { success: true };
     } catch (err) {
-      const errorCode = err.response?.data?.code;
-      const message = err.response?.data?.message || 'Login failed';
-      set({ error: message, isLoading: false });
-      return { success: false, message, code: errorCode };
+      // Distinguish the ways login can fail so the screen never guesses:
+      // request timeout, unreachable server, or a real server-side answer.
+      if (err?.isTimeout) {
+        const message = 'Server took too long to respond. Please try again.';
+        set({ error: message });
+        return { success: false, code: 'TIMEOUT', message };
+      }
+      if (!err?.response) {
+        const message = 'Cannot reach the server. Check your connection and try again.';
+        set({ error: message });
+        return { success: false, code: 'NETWORK', message };
+      }
+      const errorData = err.response?.data || {};
+      const errorCode = errorData.code;
+      const message = errorData.message || 'Login failed';
+      set({ error: message });
+      return {
+        success: false,
+        message,
+        code: errorCode,
+        attemptsRemaining: typeof errorData.attemptsRemaining === 'number' ? errorData.attemptsRemaining : null,
+        retryAfterSeconds: typeof errorData.retryAfterSeconds === 'number' ? errorData.retryAfterSeconds : null,
+        lockedUntil: errorData.lockedUntil || null,
+      };
+    } finally {
+      set({ isLoading: false });
     }
   },
 
@@ -91,7 +113,7 @@ const useAuthStore = create((set, get) => ({
       return;
     }
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('tpg_manager_token');
 
     if (!token) {
       set({ isLoading: false, isAuthenticated: false, hasInitialized: true });
@@ -123,7 +145,7 @@ const useAuthStore = create((set, get) => ({
         hasInitialized: true,
       });
     } catch {
-      localStorage.removeItem('token');
+      localStorage.removeItem('tpg_manager_token');
       set({
         user: null,
         permissions: [],
@@ -136,7 +158,7 @@ const useAuthStore = create((set, get) => ({
   },
 
   logout: () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('tpg_manager_token');
     localStorage.removeItem('selectedBarId');
     set({ user: null, permissions: [], token: null, isAuthenticated: false, isLoading: false, error: null });
   },

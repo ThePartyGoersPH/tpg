@@ -1,6 +1,20 @@
--- Add required bar permit document paths for the owner registration flow.
-ALTER TABLE business_registrations
-  ADD COLUMN IF NOT EXISTS mayors_permit VARCHAR(500) DEFAULT NULL AFTER business_permit,
-  ADD COLUMN IF NOT EXISTS sanitary_permit VARCHAR(500) DEFAULT NULL AFTER mayors_permit,
-  ADD COLUMN IF NOT EXISTS fire_safety_certificate VARCHAR(500) DEFAULT NULL AFTER sanitary_permit,
-  ADD COLUMN IF NOT EXISTS liquor_license VARCHAR(500) DEFAULT NULL AFTER fire_safety_certificate;
+SET @cx117 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'mayors_permit');
+SET @sx117 := IF(@cx117 = 0, 'ALTER TABLE business_registrations ADD COLUMN mayors_permit VARCHAR(500) DEFAULT NULL AFTER business_permit', 'SELECT 1');
+PREPARE stx117 FROM @sx117;
+EXECUTE stx117;
+DEALLOCATE PREPARE stx117;
+SET @cx118 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'sanitary_permit');
+SET @sx118 := IF(@cx118 = 0, 'ALTER TABLE business_registrations ADD COLUMN sanitary_permit VARCHAR(500) DEFAULT NULL AFTER mayors_permit', 'SELECT 1');
+PREPARE stx118 FROM @sx118;
+EXECUTE stx118;
+DEALLOCATE PREPARE stx118;
+SET @cx119 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'fire_safety_certificate');
+SET @sx119 := IF(@cx119 = 0, 'ALTER TABLE business_registrations ADD COLUMN fire_safety_certificate VARCHAR(500) DEFAULT NULL AFTER sanitary_permit', 'SELECT 1');
+PREPARE stx119 FROM @sx119;
+EXECUTE stx119;
+DEALLOCATE PREPARE stx119;
+SET @cx120 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'liquor_license');
+SET @sx120 := IF(@cx120 = 0, 'ALTER TABLE business_registrations ADD COLUMN liquor_license VARCHAR(500) DEFAULT NULL AFTER fire_safety_certificate', 'SELECT 1');
+PREPARE stx120 FROM @sx120;
+EXECUTE stx120;
+DEALLOCATE PREPARE stx120;

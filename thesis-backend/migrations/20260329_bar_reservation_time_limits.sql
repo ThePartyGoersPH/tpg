@@ -1,12 +1,25 @@
--- Migration: Bar reservation time limit configuration + reservation reserved_until
-
-ALTER TABLE `bars`
-  ADD COLUMN IF NOT EXISTS `bar_types` TEXT DEFAULT NULL AFTER `category`,
-  ADD COLUMN IF NOT EXISTS `reservation_time_limit_mode` ENUM('restobar','club','event','custom') DEFAULT NULL AFTER `bar_types`,
-  ADD COLUMN IF NOT EXISTS `reservation_time_limit_minutes` INT DEFAULT NULL AFTER `reservation_time_limit_mode`;
-
-ALTER TABLE `reservations`
-  ADD COLUMN IF NOT EXISTS `reserved_until` DATETIME DEFAULT NULL AFTER `reservation_time`;
-
-ALTER TABLE `reservations`
-  ADD INDEX IF NOT EXISTS `idx_reservations_reserved_until` (`reserved_until`);
+SET @cx109 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND COLUMN_NAME = 'bar_types');
+SET @sx109 := IF(@cx109 = 0, 'ALTER TABLE bars ADD COLUMN `bar_types` TEXT DEFAULT NULL AFTER `category`', 'SELECT 1');
+PREPARE stx109 FROM @sx109;
+EXECUTE stx109;
+DEALLOCATE PREPARE stx109;
+SET @cx110 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND COLUMN_NAME = 'reservation_time_limit_mode');
+SET @sx110 := IF(@cx110 = 0, 'ALTER TABLE bars ADD COLUMN `reservation_time_limit_mode` ENUM(''restobar'',''club'',''event'',''custom'') DEFAULT NULL AFTER `bar_types`', 'SELECT 1');
+PREPARE stx110 FROM @sx110;
+EXECUTE stx110;
+DEALLOCATE PREPARE stx110;
+SET @cx111 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND COLUMN_NAME = 'reservation_time_limit_minutes');
+SET @sx111 := IF(@cx111 = 0, 'ALTER TABLE bars ADD COLUMN `reservation_time_limit_minutes` INT DEFAULT NULL AFTER `reservation_time_limit_mode`', 'SELECT 1');
+PREPARE stx111 FROM @sx111;
+EXECUTE stx111;
+DEALLOCATE PREPARE stx111;
+SET @cx2 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'reserved_until');
+SET @sx2 := IF(@cx2 = 0, 'ALTER TABLE reservations ADD COLUMN `reserved_until` DATETIME DEFAULT NULL AFTER `reservation_time`', 'SELECT 1');
+PREPARE stx2 FROM @sx2;
+EXECUTE stx2;
+DEALLOCATE PREPARE stx2;
+SET @cx3 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND INDEX_NAME = 'idx_reservations_reserved_until');
+SET @sx3 := IF(@cx3 = 0, 'ALTER TABLE reservations ADD INDEX `idx_reservations_reserved_until` (`reserved_until`)', 'SELECT 1');
+PREPARE stx3 FROM @sx3;
+EXECUTE stx3;
+DEALLOCATE PREPARE stx3;

@@ -1,30 +1,65 @@
--- ============================================================================
--- DOWNPAYMENT FEATURE MIGRATION
--- Date: March 30, 2026
--- Purpose: Add downpayment support for reservations
--- ============================================================================
-
--- 1. Add downpayment settings to bars table
-ALTER TABLE `bars`
-  ADD COLUMN `downpayment_enabled` TINYINT(1) DEFAULT 0 COMMENT 'Whether downpayment is enabled for this bar',
-  ADD COLUMN `downpayment_type` ENUM('percentage', 'fixed') DEFAULT 'percentage' COMMENT 'Type of downpayment: percentage or fixed amount',
-  ADD COLUMN `downpayment_value` DECIMAL(10,2) DEFAULT 50.00 COMMENT 'Downpayment value (percentage 0-100 or fixed amount)',
-  ADD COLUMN `downpayment_description` TEXT DEFAULT NULL COMMENT 'Optional description/terms for downpayment';
-
--- 2. Add downpayment tracking to reservations table
-ALTER TABLE `reservations`
-  ADD COLUMN `payment_option` ENUM('full', 'downpayment') DEFAULT 'full' COMMENT 'Payment option chosen by customer',
-  ADD COLUMN `total_price` DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Total reservation price',
-  ADD COLUMN `downpayment_amount` DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Downpayment amount if applicable',
-  ADD COLUMN `remaining_balance` DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Remaining balance after downpayment',
-  ADD COLUMN `balance_paid` TINYINT(1) DEFAULT 0 COMMENT 'Whether remaining balance has been paid',
-  ADD COLUMN `balance_paid_at` DATETIME DEFAULT NULL COMMENT 'When remaining balance was paid';
-
--- 3. Add indexes for performance
-CREATE INDEX `idx_bars_downpayment` ON `bars` (`downpayment_enabled`);
-CREATE INDEX `idx_reservations_payment_option` ON `reservations` (`payment_option`);
-CREATE INDEX `idx_reservations_balance_paid` ON `reservations` (`balance_paid`);
-
--- ============================================================================
--- MIGRATION COMPLETE
--- ============================================================================
+SET @cx504 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND COLUMN_NAME = 'downpayment_enabled');
+SET @sx504 := IF(@cx504 = 0, 'ALTER TABLE bars ADD COLUMN downpayment_enabled TINYINT(1) DEFAULT 0 COMMENT ''Whether downpayment is enabled for this bar''', 'SELECT 1');
+PREPARE stx504 FROM @sx504;
+EXECUTE stx504;
+DEALLOCATE PREPARE stx504;
+SET @cx505 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND COLUMN_NAME = 'downpayment_type');
+SET @sx505 := IF(@cx505 = 0, 'ALTER TABLE bars ADD COLUMN downpayment_type ENUM(''percentage'', ''fixed'') DEFAULT ''percentage'' COMMENT ''Type of downpayment: percentage or fixed amount''', 'SELECT 1');
+PREPARE stx505 FROM @sx505;
+EXECUTE stx505;
+DEALLOCATE PREPARE stx505;
+SET @cx506 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND COLUMN_NAME = 'downpayment_value');
+SET @sx506 := IF(@cx506 = 0, 'ALTER TABLE bars ADD COLUMN downpayment_value DECIMAL(10,2) DEFAULT 50.00 COMMENT ''Downpayment value (percentage 0-100 or fixed amount)''', 'SELECT 1');
+PREPARE stx506 FROM @sx506;
+EXECUTE stx506;
+DEALLOCATE PREPARE stx506;
+SET @cx507 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND COLUMN_NAME = 'downpayment_description');
+SET @sx507 := IF(@cx507 = 0, 'ALTER TABLE bars ADD COLUMN downpayment_description TEXT DEFAULT NULL COMMENT ''Optional description/terms for downpayment''', 'SELECT 1');
+PREPARE stx507 FROM @sx507;
+EXECUTE stx507;
+DEALLOCATE PREPARE stx507;
+SET @cx508 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'payment_option');
+SET @sx508 := IF(@cx508 = 0, 'ALTER TABLE reservations ADD COLUMN payment_option ENUM(''full'', ''downpayment'') DEFAULT ''full'' COMMENT ''Payment option chosen by customer''', 'SELECT 1');
+PREPARE stx508 FROM @sx508;
+EXECUTE stx508;
+DEALLOCATE PREPARE stx508;
+SET @cx509 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'total_price');
+SET @sx509 := IF(@cx509 = 0, 'ALTER TABLE reservations ADD COLUMN total_price DECIMAL(10,2) DEFAULT 0.00 COMMENT ''Total reservation price''', 'SELECT 1');
+PREPARE stx509 FROM @sx509;
+EXECUTE stx509;
+DEALLOCATE PREPARE stx509;
+SET @cx510 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'downpayment_amount');
+SET @sx510 := IF(@cx510 = 0, 'ALTER TABLE reservations ADD COLUMN downpayment_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT ''Downpayment amount if applicable''', 'SELECT 1');
+PREPARE stx510 FROM @sx510;
+EXECUTE stx510;
+DEALLOCATE PREPARE stx510;
+SET @cx511 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'remaining_balance');
+SET @sx511 := IF(@cx511 = 0, 'ALTER TABLE reservations ADD COLUMN remaining_balance DECIMAL(10,2) DEFAULT 0.00 COMMENT ''Remaining balance after downpayment''', 'SELECT 1');
+PREPARE stx511 FROM @sx511;
+EXECUTE stx511;
+DEALLOCATE PREPARE stx511;
+SET @cx512 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'balance_paid');
+SET @sx512 := IF(@cx512 = 0, 'ALTER TABLE reservations ADD COLUMN balance_paid TINYINT(1) DEFAULT 0 COMMENT ''Whether remaining balance has been paid''', 'SELECT 1');
+PREPARE stx512 FROM @sx512;
+EXECUTE stx512;
+DEALLOCATE PREPARE stx512;
+SET @cx513 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'balance_paid_at');
+SET @sx513 := IF(@cx513 = 0, 'ALTER TABLE reservations ADD COLUMN balance_paid_at DATETIME DEFAULT NULL COMMENT ''When remaining balance was paid''', 'SELECT 1');
+PREPARE stx513 FROM @sx513;
+EXECUTE stx513;
+DEALLOCATE PREPARE stx513;
+SET @cx972 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND INDEX_NAME = 'idx_bars_downpayment');
+SET @sx972 := IF(@cx972 = 0, 'CREATE INDEX `idx_bars_downpayment` ON `bars` (`downpayment_enabled`)', 'SELECT 1');
+PREPARE stx972 FROM @sx972;
+EXECUTE stx972;
+DEALLOCATE PREPARE stx972;
+SET @cx973 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND INDEX_NAME = 'idx_reservations_payment_option');
+SET @sx973 := IF(@cx973 = 0, 'CREATE INDEX `idx_reservations_payment_option` ON `reservations` (`payment_option`)', 'SELECT 1');
+PREPARE stx973 FROM @sx973;
+EXECUTE stx973;
+DEALLOCATE PREPARE stx973;
+SET @cx974 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND INDEX_NAME = 'idx_reservations_balance_paid');
+SET @sx974 := IF(@cx974 = 0, 'CREATE INDEX `idx_reservations_balance_paid` ON `reservations` (`balance_paid`)', 'SELECT 1');
+PREPARE stx974 FROM @sx974;
+EXECUTE stx974;
+DEALLOCATE PREPARE stx974;

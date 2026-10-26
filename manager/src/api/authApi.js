@@ -1,10 +1,29 @@
 import apiClient from './apiClient';
 
 export const authApi = {
-  login: (email, password) =>
-    apiClient.post('/auth/login', { email, password }, {
-      headers: { 'x-login-portal': 'bar_management' },
-    }),
+  // Login gets its own hard 15s cap (AbortController) so the "Signing in…"
+  // spinner can never outlive it — axios' 30s default is too generous here.
+  login: (email, password) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    return apiClient
+      .post('/auth/login', { email, password }, {
+        headers: { 'x-login-portal': 'bar_management', 'X-App': 'manager' },
+        // The Login screen renders its own inline error + lock panel; letting
+        // the interceptor toast too would show every failure twice.
+        silentError: true,
+        signal: controller.signal,
+      })
+      .finally(() => clearTimeout(timer))
+      .catch((err) => {
+        if (err.code === 'ERR_CANCELED' || err.name === 'CanceledError' || err.name === 'AbortError') {
+          const timeoutErr = new Error('timeout');
+          timeoutErr.isTimeout = true;
+          throw timeoutErr;
+        }
+        throw err;
+      });
+  },
 
   getMe: () =>
     apiClient.get('/auth/me'),

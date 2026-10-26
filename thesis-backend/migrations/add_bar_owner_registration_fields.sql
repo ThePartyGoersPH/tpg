@@ -1,11 +1,35 @@
--- Migration: Extend business_registrations for bar owner registration flow
--- Run this once against the database
-
-ALTER TABLE `business_registrations`
-  ADD COLUMN IF NOT EXISTS `business_description` TEXT DEFAULT NULL COMMENT 'Bar description from registration form' AFTER `business_category`,
-  ADD COLUMN IF NOT EXISTS `opening_time` VARCHAR(30) DEFAULT NULL COMMENT 'Bar opening time e.g. 6:00 PM' AFTER `business_description`,
-  ADD COLUMN IF NOT EXISTS `closing_time` VARCHAR(30) DEFAULT NULL COMMENT 'Bar closing time e.g. 2:00 AM' AFTER `opening_time`,
-  ADD COLUMN IF NOT EXISTS `gcash_number` VARCHAR(30) DEFAULT NULL COMMENT 'GCash mobile number' AFTER `closing_time`,
-  ADD COLUMN IF NOT EXISTS `gcash_name` VARCHAR(255) DEFAULT NULL COMMENT 'Registered GCash account name' AFTER `gcash_number`,
-  ADD COLUMN IF NOT EXISTS `bir_certificate` VARCHAR(500) DEFAULT NULL COMMENT 'File path: BIR certificate upload' AFTER `supporting_docs`,
-  ADD COLUMN IF NOT EXISTS `business_permit` VARCHAR(500) DEFAULT NULL COMMENT 'File path: business permit upload' AFTER `bir_certificate`;
+SET @cx151 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'business_description');
+SET @sx151 := IF(@cx151 = 0, 'ALTER TABLE business_registrations ADD COLUMN `business_description` TEXT DEFAULT NULL COMMENT ''Bar description from registration form'' AFTER `business_category`', 'SELECT 1');
+PREPARE stx151 FROM @sx151;
+EXECUTE stx151;
+DEALLOCATE PREPARE stx151;
+SET @cx152 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'opening_time');
+SET @sx152 := IF(@cx152 = 0, 'ALTER TABLE business_registrations ADD COLUMN `opening_time` VARCHAR(30) DEFAULT NULL COMMENT ''Bar opening time e.g. 6:00 PM'' AFTER `business_description`', 'SELECT 1');
+PREPARE stx152 FROM @sx152;
+EXECUTE stx152;
+DEALLOCATE PREPARE stx152;
+SET @cx153 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'closing_time');
+SET @sx153 := IF(@cx153 = 0, 'ALTER TABLE business_registrations ADD COLUMN `closing_time` VARCHAR(30) DEFAULT NULL COMMENT ''Bar closing time e.g. 2:00 AM'' AFTER `opening_time`', 'SELECT 1');
+PREPARE stx153 FROM @sx153;
+EXECUTE stx153;
+DEALLOCATE PREPARE stx153;
+SET @cx154 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'gcash_number');
+SET @sx154 := IF(@cx154 = 0, 'ALTER TABLE business_registrations ADD COLUMN `gcash_number` VARCHAR(30) DEFAULT NULL COMMENT ''GCash mobile number'' AFTER `closing_time`', 'SELECT 1');
+PREPARE stx154 FROM @sx154;
+EXECUTE stx154;
+DEALLOCATE PREPARE stx154;
+SET @cx155 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'gcash_name');
+SET @sx155 := IF(@cx155 = 0, 'ALTER TABLE business_registrations ADD COLUMN `gcash_name` VARCHAR(255) DEFAULT NULL COMMENT ''Registered GCash account name'' AFTER `gcash_number`', 'SELECT 1');
+PREPARE stx155 FROM @sx155;
+EXECUTE stx155;
+DEALLOCATE PREPARE stx155;
+SET @cx156 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'bir_certificate');
+SET @sx156 := IF(@cx156 = 0, 'ALTER TABLE business_registrations ADD COLUMN `bir_certificate` VARCHAR(500) DEFAULT NULL COMMENT ''File path: BIR certificate upload'' AFTER `supporting_docs`', 'SELECT 1');
+PREPARE stx156 FROM @sx156;
+EXECUTE stx156;
+DEALLOCATE PREPARE stx156;
+SET @cx157 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'business_permit');
+SET @sx157 := IF(@cx157 = 0, 'ALTER TABLE business_registrations ADD COLUMN `business_permit` VARCHAR(500) DEFAULT NULL COMMENT ''File path: business permit upload'' AFTER `bir_certificate`', 'SELECT 1');
+PREPARE stx157 FROM @sx157;
+EXECUTE stx157;
+DEALLOCATE PREPARE stx157;

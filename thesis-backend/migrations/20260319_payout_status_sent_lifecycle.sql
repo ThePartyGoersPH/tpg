@@ -1,20 +1,15 @@
--- ==========================================================================
--- Payout status lifecycle alignment: pending -> sent -> completed
--- Date: 2026-03-19
--- Non-destructive migration
--- ==========================================================================
-
--- Add 'sent' status while keeping existing statuses for backward compatibility
-ALTER TABLE payouts
-  MODIFY COLUMN status ENUM('pending','processing','sent','completed','failed','cancelled')
+ALTER TABLE payouts MODIFY COLUMN status ENUM('pending','processing','sent','completed','failed','cancelled')
   NOT NULL DEFAULT 'pending';
-
--- Add bar_owner_id column to link payouts to bar owners
-ALTER TABLE payouts
-  ADD COLUMN IF NOT EXISTS bar_owner_id INT NULL AFTER bar_id,
-  ADD INDEX IF NOT EXISTS idx_payouts_bar_owner (bar_owner_id);
-
--- Add FK only if missing
+SET @cx101 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payouts' AND COLUMN_NAME = 'bar_owner_id');
+SET @sx101 := IF(@cx101 = 0, 'ALTER TABLE payouts ADD COLUMN bar_owner_id INT NULL AFTER bar_id', 'SELECT 1');
+PREPARE stx101 FROM @sx101;
+EXECUTE stx101;
+DEALLOCATE PREPARE stx101;
+SET @cx102 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payouts' AND INDEX_NAME = 'idx_payouts_bar_owner');
+SET @sx102 := IF(@cx102 = 0, 'ALTER TABLE payouts ADD INDEX idx_payouts_bar_owner (bar_owner_id)', 'SELECT 1');
+PREPARE stx102 FROM @sx102;
+EXECUTE stx102;
+DEALLOCATE PREPARE stx102;
 SET @fk_exists_payout_owner := (
   SELECT COUNT(*)
   FROM information_schema.TABLE_CONSTRAINTS
@@ -31,8 +26,6 @@ SET @sql_fk_payout_owner := IF(
 PREPARE stmt_fk_payout_owner FROM @sql_fk_payout_owner;
 EXECUTE stmt_fk_payout_owner;
 DEALLOCATE PREPARE stmt_fk_payout_owner;
-
--- Optional normalization: convert legacy 'processing' into 'sent' for clearer lifecycle
 UPDATE payouts
 SET status = 'sent'
 WHERE status = 'processing';

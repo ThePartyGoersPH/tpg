@@ -1312,56 +1312,13 @@ router.get("/search", async (req, res) => {
 // ═══════════════════════════════════════════
 // EMAIL VERIFICATION
 // ═══════════════════════════════════════════
-router.post("/verify-email", async (req, res) => {
-  try {
-    const { email, code } = req.body || {};
-    if (!email || !code) return res.status(400).json({ success: false, message: "Email and code required" });
-
-    const [rows] = await pool.query(
-      "SELECT id FROM users WHERE email = ? AND verification_code = ? LIMIT 1",
-      [email.trim().toLowerCase(), code.trim()]
-    );
-
-    if (!rows.length) {
-      return res.status(400).json({ success: false, message: "Invalid or expired code" });
-    }
-
-    await pool.query(
-      "UPDATE users SET is_verified = 1, verification_code = NULL, updated_at = NOW() WHERE id = ?",
-      [rows[0].id]
-    );
-
-    return res.json({ success: true, message: "Email verified successfully" });
-  } catch (err) {
-    console.error("VERIFY EMAIL ERROR:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-router.post("/resend-verification", async (req, res) => {
-  try {
-    const { email } = req.body || {};
-    if (!email) return res.status(400).json({ success: false, message: "Email required" });
-
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    const [result] = await pool.query(
-      "UPDATE users SET verification_code = ?, updated_at = NOW() WHERE email = ? AND is_verified = 0",
-      [code, email.trim().toLowerCase()]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: "Email not found or already verified" });
-    }
-
-    // In production, send the code via email here
-    console.log(`VERIFICATION CODE for ${email}: ${code}`);
-
-    return res.json({ success: true, message: "Verification code sent" });
-  } catch (err) {
-    console.error("RESEND VERIFICATION ERROR:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-});
+// Superseded by the real flow in routes/auth.js:
+//   GET  /auth/verify-email?token=  — emailed link
+//   POST /auth/verify-otp           — 6-digit code
+//   POST /auth/resend-verification  — re-issue link + code
+// The old handlers here targeted a `verification_code` column that never
+// existed on `users`, so they 500'd whenever they were called. Keeping a
+// second, broken verification path invites drift — use /auth/* instead.
 
 // ═══════════════════════════════════════════
 // SMS VERIFICATION (stub - needs Twilio config)

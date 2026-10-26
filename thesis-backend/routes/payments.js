@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../config/database");
 const requireAuth = require("../middlewares/requireAuth");
+const { requireBarOrderAccess } = require("../middlewares/requireBarOrder");
 const paymongoService = require("../services/paymongoService");
 const stripeService = require("../services/stripeService");
 const platformSettings = require("../services/platformSettingsService");
@@ -1022,6 +1023,16 @@ async function markPaymentSuccess(conn, payment, paymongoPaymentId = null) {
           [reservationNotifRow.customer_user_id, notifMessage, payment.related_id]
         );
       }
+
+      // Mirror email, best-effort: never blocks the payment.
+      try {
+        const { notifyCustomer } = require("../utils/notifyCustomer");
+        await notifyCustomer(reservationNotifRow.customer_user_id, "payment_status", {
+          barName: reservationNotifRow.bar_name,
+          when: `${formattedDate} at ${formattedTime}`,
+          status: newPaymentStatus === 'partial' ? 'Partially Paid' : 'Paid',
+        });
+      } catch (_) {}
     }
 
     if (shouldDeductInventory) {
@@ -1067,7 +1078,32 @@ async function markPaymentFailed(conn, payment, reason) {
  * POST /payments/create — Create payment for order or reservation
  * Body: { payment_type, related_id, amount, payment_method, bar_id }
  */
-router.post("/create", requireAuth, async (req, res) => {
+router.post(
+  "/create",
+  requireAuth,
+  requireBarOrderAccess({
+    getBarId: async (req) => {
+      const type = String(req.body?.payment_type || "").toLowerCase();
+      const relatedId = Number(req.body?.related_id);
+      if (!relatedId) return NaN;
+      if (type === "reservation") {
+        const [[row]] = await pool.query(
+          "SELECT bar_id FROM reservations WHERE id = ? LIMIT 1",
+          [relatedId]
+        );
+        return row?.bar_id;
+      }
+      if (type === "order") {
+        const [[row]] = await pool.query(
+          "SELECT bar_id FROM pos_orders WHERE id = ? LIMIT 1",
+          [relatedId]
+        );
+        return row?.bar_id;
+      }
+      return NaN;
+    },
+  }),
+  async (req, res) => {
   const conn = await pool.getConnection();
   try {
     // Optional VAT snapshot from checkout (validated, stored on the
@@ -1287,9 +1323,12 @@ router.post("/create", requireAuth, async (req, res) => {
     let paymongoCheckoutSessionId = null;
     let stripeCheckoutSessionId = null;
 
-    // Shared redirect URLs (PayMongo sources/sessions + Stripe sessions)
-    let successUrl = req.body.success_url || `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/success?ref=${referenceId}`;
-    let failedUrl = req.body.failed_url || `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/failed?ref=${referenceId}`;
+    // Shared redirect URLs (PayMongo sources/sessions + Stripe sessions).
+    // Frontend origin comes from APP_URL (never hardcoded): the request body
+    // may override per checkout, otherwise the configured public URL wins.
+    const { appUrl } = require("../utils/emailService");
+    let successUrl = req.body.success_url || `${appUrl()}/payment/success?ref=${referenceId}`;
+    let failedUrl = req.body.failed_url || `${appUrl()}/payment/failed?ref=${referenceId}`;
     successUrl = successUrl.replace('{REFERENCE_ID}', referenceId);
     failedUrl = failedUrl.replace('{REFERENCE_ID}', referenceId);
 

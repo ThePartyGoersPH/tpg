@@ -213,7 +213,7 @@ export default function RegisterPage() {
 
           <label className="checkbox">
             <input type="checkbox" checked={privacyConsent} onChange={(e) => setPrivacyConsent(e.target.checked)} required />
-            I consent to the collection and processing of my ID for age and identity verification under the Data Privacy Act (RA 10173). My ID will be reviewed by authorized admins, processed by Google Cloud Vision for text reading, and deleted after the retention period.
+            I consent to the collection and processing of my ID for age and identity verification under the Data Privacy Act (RA 10173). My ID will be reviewed by authorized admins, read automatically on our own server to help fill in my details, and deleted after the retention period.
           </label>
         </div>
 

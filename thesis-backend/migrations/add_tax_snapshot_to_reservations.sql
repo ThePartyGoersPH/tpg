@@ -1,10 +1,20 @@
--- Migration: Tax snapshot on reservations
--- Date: 2026-10-06
--- Purpose: Store the VAT calculation applied at checkout (rate, mode,
--- amount, net subtotal) so digital receipts and admin logs show the exact
--- tax breakdown even if the bar later changes its tax configuration.
-ALTER TABLE `reservations`
-  ADD COLUMN IF NOT EXISTS `tax_rate` decimal(5,2) NULL DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `tax_mode` varchar(20) NULL DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `tax_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
-  ADD COLUMN IF NOT EXISTS `net_subtotal` decimal(10,2) NULL DEFAULT NULL;
+SET @cx175 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'tax_rate');
+SET @sx175 := IF(@cx175 = 0, 'ALTER TABLE reservations ADD COLUMN `tax_rate` decimal(5,2) NULL DEFAULT NULL', 'SELECT 1');
+PREPARE stx175 FROM @sx175;
+EXECUTE stx175;
+DEALLOCATE PREPARE stx175;
+SET @cx176 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'tax_mode');
+SET @sx176 := IF(@cx176 = 0, 'ALTER TABLE reservations ADD COLUMN `tax_mode` varchar(20) NULL DEFAULT NULL', 'SELECT 1');
+PREPARE stx176 FROM @sx176;
+EXECUTE stx176;
+DEALLOCATE PREPARE stx176;
+SET @cx177 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'tax_amount');
+SET @sx177 := IF(@cx177 = 0, 'ALTER TABLE reservations ADD COLUMN `tax_amount` decimal(10,2) NOT NULL DEFAULT 0.00', 'SELECT 1');
+PREPARE stx177 FROM @sx177;
+EXECUTE stx177;
+DEALLOCATE PREPARE stx177;
+SET @cx178 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'net_subtotal');
+SET @sx178 := IF(@cx178 = 0, 'ALTER TABLE reservations ADD COLUMN `net_subtotal` decimal(10,2) NULL DEFAULT NULL', 'SELECT 1');
+PREPARE stx178 FROM @sx178;
+EXECUTE stx178;
+DEALLOCATE PREPARE stx178;

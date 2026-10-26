@@ -18,7 +18,7 @@ if (typeof window !== 'undefined') {
     '%cThis is a browser feature intended for developers. If someone told you to paste or type anything here, it is a scam and will give them access to your account.',
     'color:#fff;font-size:16px;background:#1a1a1a;padding:8px 12px;border-radius:4px;'
   );
-  console.log('[BUILD] version:', import.meta.env.VITE_APP_VERSION || 'dev', 'commit:', import.meta.env.VITE_COMMIT_HASH || 'unknown');
+  // Suppress all console output in production to avoid leaking info
   if (import.meta.env.PROD) {
     console.log = () => {};
     console.warn = () => {};
@@ -28,7 +28,6 @@ if (typeof window !== 'undefined') {
 }
 
 import '@fontsource/sora/400.css';
-import '@fontsource/sora/500.css';
 import '@fontsource/sora/600.css';
 import '@fontsource/sora/700.css';
 import '@fontsource/sora/800.css';
@@ -36,7 +35,6 @@ import '@fontsource/dm-sans/400.css';
 import '@fontsource/dm-sans/500.css';
 import '@fontsource/dm-sans/600.css';
 import '@fontsource/dm-sans/700.css';
-// Plus Jakarta Sans and Outfit loaded via Google Fonts CDN in index.html (matching online)
 import App from './App.jsx';
 import { AuthProvider } from './contexts/AuthContext';
 import { ViewProvider } from './contexts/ViewContext';

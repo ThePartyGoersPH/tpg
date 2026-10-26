@@ -6,7 +6,7 @@
 
 -- 1. Add ID verification columns to users (customer accounts only)
 ALTER TABLE users
-  ADD COLUMN IF NOT EXISTS id_verification_status VARCHAR(30) DEFAULT 'not_submitted',
+  ADD COLUMN IF NOT EXISTS id_verification_status VARCHAR(30) DEFAULT 'approved',
   ADD COLUMN IF NOT EXISTS id_submitted_at DATETIME NULL,
   ADD COLUMN IF NOT EXISTS id_reviewed_at DATETIME NULL,
   ADD COLUMN IF NOT EXISTS id_reviewed_by INT NULL,
@@ -15,10 +15,10 @@ ALTER TABLE users
   ADD COLUMN IF NOT EXISTS id_last4 VARCHAR(4) NULL,
   ADD COLUMN IF NOT EXISTS id_hash VARCHAR(64) NULL,
   ADD COLUMN IF NOT EXISTS id_type VARCHAR(50) NULL,
-  ADD COLUMN IF NOT EXISTS id_ocr_result TEXT NULL,  -- encrypted JSON
+  ADD COLUMN IF NOT EXISTS id_ocr_result TEXT NULL,
   ADD COLUMN IF NOT EXISTS id_ocr_status VARCHAR(20) DEFAULT 'pending';
 
--- 2. ID submissions table (one row per submission attempt)
+-- 2. ID submissions table
 CREATE TABLE IF NOT EXISTS id_submissions (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS id_submissions (
   front_image_path VARCHAR(500) NOT NULL,
   back_image_path VARCHAR(500),
   selfie_image_path VARCHAR(500) NOT NULL,
-  ocr_result TEXT,  -- encrypted JSON
+  ocr_result TEXT,
   ocr_status VARCHAR(20) DEFAULT 'pending',
   status VARCHAR(30) DEFAULT 'pending_review',
   reviewed_by INT NULL,
@@ -46,8 +46,8 @@ CREATE TABLE IF NOT EXISTS id_submissions (
 -- 3. OCR monthly counter
 CREATE TABLE IF NOT EXISTS ocr_monthly_counter (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  year_month VARCHAR(7) NOT NULL UNIQUE,  -- YYYY-MM
-  count INT DEFAULT 0,
+  `year_month` VARCHAR(7) NOT NULL UNIQUE,
+  `count` INT DEFAULT 0,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
@@ -65,19 +65,8 @@ CREATE TABLE IF NOT EXISTS id_audit_log (
   INDEX idx_created_at (created_at)
 );
 
--- 5. Backfill: existing approved customers stay approved
--- Only touch users with role 'customer' who have no id_verification_status set yet
+-- 5. Backfill: existing customers stay approved
 UPDATE users
 SET id_verification_status = 'approved'
 WHERE role = 'customer'
   AND (id_verification_status IS NULL OR id_verification_status = 'not_submitted' OR id_verification_status = '');
-
--- 6. Super admins, bar owners, staff are never affected
--- (No changes to their rows — they don't have id_verification_status relevant)
-
--- ROLLBACK NOTE:
--- To rollback: DROP TABLE id_submissions, id_audit_log, ocr_monthly_counter;
--- ALTER TABLE users DROP COLUMN id_verification_status, id_submitted_at, id_reviewed_at,
---   id_reviewed_by, id_rejection_reason, id_attempts, id_last4, id_hash, id_type,
---   id_ocr_result, id_ocr_status;
--- WARNING: This will lose all ID submission data.

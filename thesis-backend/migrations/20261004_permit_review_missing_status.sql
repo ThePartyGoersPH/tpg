@@ -10,7 +10,6 @@ SET @status_type := (
      AND TABLE_NAME = 'business_registration_document_reviews'
      AND COLUMN_NAME = 'status'
 );
-
 SET @sql := IF(
   @status_type IS NOT NULL AND @status_type NOT LIKE '%missing%',
   "ALTER TABLE business_registration_document_reviews

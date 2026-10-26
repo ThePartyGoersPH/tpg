@@ -1,19 +1,45 @@
--- Migration: Pickup / Delivery fulfillment + takeout delivery details
--- Date: 2026-10-06
--- Purpose: Let bars offer Store Pickup and/or Delivery for takeout orders,
--- and store delivery contact info on reservations for riders/staff.
-
--- Bar-level fulfillment settings
-ALTER TABLE `bars`
-  ADD COLUMN IF NOT EXISTS `allow_pickup` tinyint(1) NOT NULL DEFAULT 1,
-  ADD COLUMN IF NOT EXISTS `allow_delivery` tinyint(1) NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS `delivery_fee` decimal(10,2) NOT NULL DEFAULT 0.00;
-
--- Reservation-level fulfillment (takeout orders only; NULL for table bookings)
-ALTER TABLE `reservations`
-  ADD COLUMN IF NOT EXISTS `fulfillment` varchar(20) NULL DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `delivery_name` varchar(150) NULL DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `delivery_phone` varchar(50) NULL DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `delivery_address` text NULL DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `delivery_notes` varchar(255) NULL DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `delivery_fee` decimal(10,2) NOT NULL DEFAULT 0.00;
+SET @cx163 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND COLUMN_NAME = 'allow_pickup');
+SET @sx163 := IF(@cx163 = 0, 'ALTER TABLE bars ADD COLUMN `allow_pickup` tinyint(1) NOT NULL DEFAULT 1', 'SELECT 1');
+PREPARE stx163 FROM @sx163;
+EXECUTE stx163;
+DEALLOCATE PREPARE stx163;
+SET @cx164 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND COLUMN_NAME = 'allow_delivery');
+SET @sx164 := IF(@cx164 = 0, 'ALTER TABLE bars ADD COLUMN `allow_delivery` tinyint(1) NOT NULL DEFAULT 0', 'SELECT 1');
+PREPARE stx164 FROM @sx164;
+EXECUTE stx164;
+DEALLOCATE PREPARE stx164;
+SET @cx165 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bars' AND COLUMN_NAME = 'delivery_fee');
+SET @sx165 := IF(@cx165 = 0, 'ALTER TABLE bars ADD COLUMN `delivery_fee` decimal(10,2) NOT NULL DEFAULT 0.00', 'SELECT 1');
+PREPARE stx165 FROM @sx165;
+EXECUTE stx165;
+DEALLOCATE PREPARE stx165;
+SET @cx166 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'fulfillment');
+SET @sx166 := IF(@cx166 = 0, 'ALTER TABLE reservations ADD COLUMN `fulfillment` varchar(20) NULL DEFAULT NULL', 'SELECT 1');
+PREPARE stx166 FROM @sx166;
+EXECUTE stx166;
+DEALLOCATE PREPARE stx166;
+SET @cx167 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'delivery_name');
+SET @sx167 := IF(@cx167 = 0, 'ALTER TABLE reservations ADD COLUMN `delivery_name` varchar(150) NULL DEFAULT NULL', 'SELECT 1');
+PREPARE stx167 FROM @sx167;
+EXECUTE stx167;
+DEALLOCATE PREPARE stx167;
+SET @cx168 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'delivery_phone');
+SET @sx168 := IF(@cx168 = 0, 'ALTER TABLE reservations ADD COLUMN `delivery_phone` varchar(50) NULL DEFAULT NULL', 'SELECT 1');
+PREPARE stx168 FROM @sx168;
+EXECUTE stx168;
+DEALLOCATE PREPARE stx168;
+SET @cx169 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'delivery_address');
+SET @sx169 := IF(@cx169 = 0, 'ALTER TABLE reservations ADD COLUMN `delivery_address` text NULL DEFAULT NULL', 'SELECT 1');
+PREPARE stx169 FROM @sx169;
+EXECUTE stx169;
+DEALLOCATE PREPARE stx169;
+SET @cx170 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'delivery_notes');
+SET @sx170 := IF(@cx170 = 0, 'ALTER TABLE reservations ADD COLUMN `delivery_notes` varchar(255) NULL DEFAULT NULL', 'SELECT 1');
+PREPARE stx170 FROM @sx170;
+EXECUTE stx170;
+DEALLOCATE PREPARE stx170;
+SET @cx171 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'delivery_fee');
+SET @sx171 := IF(@cx171 = 0, 'ALTER TABLE reservations ADD COLUMN `delivery_fee` decimal(10,2) NOT NULL DEFAULT 0.00', 'SELECT 1');
+PREPARE stx171 FROM @sx171;
+EXECUTE stx171;
+DEALLOCATE PREPARE stx171;

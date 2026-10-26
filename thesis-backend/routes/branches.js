@@ -89,6 +89,23 @@ router.post("/create", requireAuth, async (req, res) => {
     if (!name || !address || !city) {
       return res.status(400).json({ success: false, message: "Branch name, address, and city are required." });
     }
+    // Map-pin guard (create): coordinates must stay inside the registered city.
+    if (latitude !== undefined && longitude !== undefined && latitude !== null && longitude !== null && latitude !== '' && longitude !== '') {
+      const bLat = Number(latitude);
+      const bLng = Number(longitude);
+      if (Number.isFinite(bLat) && Number.isFinite(bLng)) {
+        const { validatePinInCity } = require("../utils/cityBoundary");
+        const bVerdict = await validatePinInCity(bLat, bLng, city);
+        if (!bVerdict.ok) {
+          return res.status(400).json({
+            success: false,
+            message: bVerdict.message,
+            code: bVerdict.reason === 'lookup-failed' ? 'GEO_LOOKUP_FAILED' : 'PIN_OUTSIDE_CITY',
+          });
+        }
+      }
+    }
+
 
     // Get bar_owners record
     const [owners] = await pool.query(
@@ -258,6 +275,45 @@ router.patch("/:id", requireAuth, async (req, res) => {
     );
     if (!bars.length) {
       return res.status(403).json({ success: false, message: "You do not own this branch." });
+    }
+
+    // Map-pin guard (update): validate only when coordinates change.
+    // Unchanged pins (legacy data) always pass so nothing breaks.
+    if (req.body.latitude !== undefined || req.body.longitude !== undefined) {
+      const uLatRaw = req.body.latitude;
+      const uLngRaw = req.body.longitude;
+      const uClearing = uLatRaw === null || uLngRaw === null || uLatRaw === '' || uLngRaw === '';
+      if (!uClearing) {
+        const uLat = Number(uLatRaw);
+        const uLng = Number(uLngRaw);
+        if (Number.isFinite(uLat) && Number.isFinite(uLng)) {
+          const [[uCur]] = await pool.query(
+            "SELECT latitude, longitude, city FROM bars WHERE id = ? LIMIT 1",
+            [barId]
+          );
+          const uStoredLat = uCur ? Number(uCur.latitude) : NaN;
+          const uStoredLng = uCur ? Number(uCur.longitude) : NaN;
+          const uUnchanged = Number.isFinite(uStoredLat) && Number.isFinite(uStoredLng) &&
+            Math.abs(uStoredLat - uLat) < 1e-9 && Math.abs(uStoredLng - uLng) < 1e-9;
+          if (!uUnchanged) {
+            const uCity = req.body.city !== undefined && req.body.city !== null && String(req.body.city).trim() !== ''
+              ? String(req.body.city).trim()
+              : String((uCur && uCur.city) || '').trim();
+            if (!uCity) {
+              return res.status(400).json({ success: false, message: "Please complete the branch address (city/municipality) before setting the map location." });
+            }
+            const { validatePinInCity: uValidate } = require("../utils/cityBoundary");
+            const uVerdict = await uValidate(uLat, uLng, uCity);
+            if (!uVerdict.ok) {
+              return res.status(400).json({
+                success: false,
+                message: uVerdict.message,
+                code: uVerdict.reason === 'lookup-failed' ? 'GEO_LOOKUP_FAILED' : 'PIN_OUTSIDE_CITY',
+              });
+            }
+          }
+        }
+      }
     }
 
     const allowed = [

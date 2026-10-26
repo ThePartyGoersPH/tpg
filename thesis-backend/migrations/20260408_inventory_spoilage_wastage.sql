@@ -147,9 +147,15 @@ SET @has_idx_inventory_perishable = (
 
 SET @sql_idx_inventory_perishable = IF(
   @has_idx_inventory_perishable = 0,
-  'CREATE INDEX idx_inventory_items_perishable_status ON inventory_items (bar_id, is_perishable, status, expiry_date)',
-  'SELECT "idx_inventory_items_perishable_status already exists" AS info'
-);
+  'SET @cx975 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory_items' AND INDEX_NAME = 'idx_inventory_items_perishable_status');
+SET @sx975 := IF(@cx975 = 0, 'SET @cx3001 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory_items' AND INDEX_NAME = 'idx_inventory_items_perishable_status');
+SET @sx3001 := IF(@cx3001 = 0, 'CREATE INDEX idx_inventory_items_perishable_status ON inventory_items (bar_id, is_perishable, status, expiry_date)'''', ''''SELECT "idx_inventory_items_perishable_status already exists" AS info'''' )'', ''SELECT 1'')', 'SELECT 1');
+PREPARE stx3001 FROM @sx3001;
+EXECUTE stx3001;
+DEALLOCATE PREPARE stx3001;
+PREPARE stx975 FROM @sx975;
+EXECUTE stx975;
+DEALLOCATE PREPARE stx975;
 
 PREPARE stmt_idx_inventory_perishable FROM @sql_idx_inventory_perishable;
 EXECUTE stmt_idx_inventory_perishable;
@@ -165,9 +171,11 @@ SET @has_idx_wastage_item_date = (
 
 SET @sql_idx_wastage_item_date = IF(
   @has_idx_wastage_item_date = 0,
-  'CREATE INDEX idx_wastage_logs_item_date ON wastage_logs (item_id, date_logged)',
-  'SELECT "idx_wastage_logs_item_date already exists" AS info'
-);
+  'SET @cx976 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'wastage_logs' AND INDEX_NAME = 'idx_wastage_logs_item_date');
+SET @sx976 := IF(@cx976 = 0, 'CREATE INDEX idx_wastage_logs_item_date ON wastage_logs (item_id, date_logged)'', ''SELECT "idx_wastage_logs_item_date already exists" AS info'' )', 'SELECT 1');
+PREPARE stx976 FROM @sx976;
+EXECUTE stx976;
+DEALLOCATE PREPARE stx976;
 
 PREPARE stmt_idx_wastage_item_date FROM @sql_idx_wastage_item_date;
 EXECUTE stmt_idx_wastage_item_date;
@@ -183,9 +191,15 @@ SET @has_idx_wastage_logged_by = (
 
 SET @sql_idx_wastage_logged_by = IF(
   @has_idx_wastage_logged_by = 0,
-  'CREATE INDEX idx_wastage_logs_logged_by ON wastage_logs (logged_by)',
-  'SELECT "idx_wastage_logs_logged_by already exists" AS info'
-);
+  'SET @cx977 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'wastage_logs' AND INDEX_NAME = 'idx_wastage_logs_logged_by');
+SET @sx977 := IF(@cx977 = 0, 'SET @cx3002 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'wastage_logs' AND INDEX_NAME = 'idx_wastage_logs_logged_by');
+SET @sx3002 := IF(@cx3002 = 0, 'CREATE INDEX idx_wastage_logs_logged_by ON wastage_logs (logged_by)'''', ''''SELECT "idx_wastage_logs_logged_by already exists" AS info'''' )'', ''SELECT 1'')', 'SELECT 1');
+PREPARE stx3002 FROM @sx3002;
+EXECUTE stx3002;
+DEALLOCATE PREPARE stx3002;
+PREPARE stx977 FROM @sx977;
+EXECUTE stx977;
+DEALLOCATE PREPARE stx977;
 
 PREPARE stmt_idx_wastage_logged_by FROM @sql_idx_wastage_logged_by;
 EXECUTE stmt_idx_wastage_logged_by;

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../config/database");
 const requireAuth = require("../middlewares/requireAuth");
+const { requireBarOrderAccess } = require("../middlewares/requireBarOrder");
 const { logAudit, auditContext } = require("../utils/audit");
 const { createNotification } = require("../utils/notificationService");
 const { SELECT_PAYMENT_READY_SQL, paymentsNotReadyResponse } = require("../services/paymentReadiness");
@@ -156,7 +157,11 @@ router.get("/bars/:barId/tax-preview", async (req, res) => {
 // POST /customer-orders
 // Body: { bar_id, items: [{ menu_item_id, quantity }], notes? }
 // ═══════════════════════════════════════════════════════════
-router.post("/", requireAuth, async (req, res) => {
+router.post(
+  "/",
+  requireAuth,
+  requireBarOrderAccess({ getBarId: (req) => req.body?.bar_id }),
+  async (req, res) => {
   const conn = await pool.getConnection();
   try {
     const customerId = req.user.id;

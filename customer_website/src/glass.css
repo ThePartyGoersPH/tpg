@@ -1238,7 +1238,7 @@ h6 {
 .glass-input {
   width: 100%;
   padding: 0.7rem 1rem;
-  background: var(--color-bg-elevated);
+  background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
@@ -2444,7 +2444,7 @@ select.glass-input option {
 }
 
 .auth-card {
-  max-width: 440px;
+  max-width: 600px;
   width: 100%;
   padding: 2.5rem;
 }
@@ -7965,3 +7965,5 @@ div:hover > .story-tap-zone {
 .menu-locked .pkg-card.pkg-bundled {
   opacity: 1;
 }
+.google-signin-container { width: 100%; overflow: visible; }
+.google-signin-container iframe, .g_id_signin { width: 100% !important; min-width: 240px; }

@@ -1,10 +1,21 @@
-ALTER TABLE `business_registrations`
-  ADD COLUMN IF NOT EXISTS `email_verification_token` VARCHAR(255) DEFAULT NULL AFTER `owner_password`,
-  ADD COLUMN IF NOT EXISTS `email_verification_expires` DATETIME DEFAULT NULL AFTER `email_verification_token`,
-  ADD COLUMN IF NOT EXISTS `email_verified_at` DATETIME DEFAULT NULL AFTER `email_verification_expires`;
-
-ALTER TABLE `business_registrations`
-  ADD INDEX IF NOT EXISTS `idx_br_email_verification_token` (`email_verification_token`);
-
-ALTER TABLE `business_registrations`
-  MODIFY COLUMN `status` ENUM('pending','pending_email_verification','pending_admin_approval','approved','rejected') NOT NULL DEFAULT 'pending_email_verification';
+SET @cx4 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'email_verification_token');
+SET @sx4 := IF(@cx4 = 0, 'ALTER TABLE business_registrations ADD COLUMN `email_verification_token` VARCHAR(255) DEFAULT NULL AFTER `owner_password`', 'SELECT 1');
+PREPARE stx4 FROM @sx4;
+EXECUTE stx4;
+DEALLOCATE PREPARE stx4;
+SET @cx5 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'email_verification_expires');
+SET @sx5 := IF(@cx5 = 0, 'ALTER TABLE business_registrations ADD COLUMN `email_verification_expires` DATETIME DEFAULT NULL AFTER `email_verification_token`', 'SELECT 1');
+PREPARE stx5 FROM @sx5;
+EXECUTE stx5;
+DEALLOCATE PREPARE stx5;
+SET @cx6 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'email_verified_at');
+SET @sx6 := IF(@cx6 = 0, 'ALTER TABLE business_registrations ADD COLUMN `email_verified_at` DATETIME DEFAULT NULL AFTER `email_verification_expires`', 'SELECT 1');
+PREPARE stx6 FROM @sx6;
+EXECUTE stx6;
+DEALLOCATE PREPARE stx6;
+SET @cx7 := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND INDEX_NAME = 'idx_br_email_verification_token');
+SET @sx7 := IF(@cx7 = 0, 'ALTER TABLE business_registrations ADD INDEX `idx_br_email_verification_token` (`email_verification_token`)', 'SELECT 1');
+PREPARE stx7 FROM @sx7;
+EXECUTE stx7;
+DEALLOCATE PREPARE stx7;
+ALTER TABLE business_registrations MODIFY COLUMN `status` ENUM('pending','pending_email_verification','pending_admin_approval','approved','rejected') NOT NULL DEFAULT 'pending_email_verification';

@@ -25,9 +25,29 @@ CREATE TABLE IF NOT EXISTS payment_line_items (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- 2) Ensure reservations can link to payment transaction
-ALTER TABLE reservations
-  ADD COLUMN IF NOT EXISTS payment_transaction_id INT NULL AFTER payment_reference,
-  ADD INDEX IF NOT EXISTS idx_reservations_payment_tx (payment_transaction_id);
+SET @col_exists := (
+  SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND COLUMN_NAME = 'payment_transaction_id'
+);
+SET @sql_add_col := IF(@col_exists = 0,
+  'ALTER TABLE reservations ADD COLUMN payment_transaction_id INT NULL AFTER payment_reference',
+  'SELECT 1'
+);
+PREPARE stmt_add_col FROM @sql_add_col;
+EXECUTE stmt_add_col;
+DEALLOCATE PREPARE stmt_add_col;
+
+SET @idx_exists := (
+  SELECT COUNT(*) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'reservations' AND INDEX_NAME = 'idx_reservations_payment_tx'
+);
+SET @sql_add_idx := IF(@idx_exists = 0,
+  'ALTER TABLE reservations ADD INDEX idx_reservations_payment_tx (payment_transaction_id)',
+  'SELECT 1'
+);
+PREPARE stmt_add_idx FROM @sql_add_idx;
+EXECUTE stmt_add_idx;
+DEALLOCATE PREPARE stmt_add_idx;
 
 -- Add FK only if missing
 SET @fk_exists := (
@@ -48,11 +68,53 @@ EXECUTE stmt_fk_res;
 DEALLOCATE PREPARE stmt_fk_res;
 
 -- 3) Ensure pos_orders has payment linkage columns used by backend
-ALTER TABLE pos_orders
-  ADD COLUMN IF NOT EXISTS payment_transaction_id INT NULL AFTER total_amount,
-  ADD COLUMN IF NOT EXISTS payment_status ENUM('pending','paid','failed','refunded') NULL DEFAULT 'pending' AFTER payment_transaction_id,
-  ADD INDEX IF NOT EXISTS idx_pos_orders_payment_tx (payment_transaction_id),
-  ADD INDEX IF NOT EXISTS idx_pos_orders_payment_status (payment_status);
+SET @pocol_exists := (
+  SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pos_orders' AND COLUMN_NAME = 'payment_transaction_id'
+);
+SET @sql_add_pocol := IF(@pocol_exists = 0,
+  'ALTER TABLE pos_orders ADD COLUMN payment_transaction_id INT NULL AFTER total_amount',
+  'SELECT 1'
+);
+PREPARE stmt_add_pocol FROM @sql_add_pocol;
+EXECUTE stmt_add_pocol;
+DEALLOCATE PREPARE stmt_add_pocol;
+
+SET @pops_exists := (
+  SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pos_orders' AND COLUMN_NAME = 'payment_status'
+);
+SET @sql_add_pops := IF(@pops_exists = 0,
+  'ALTER TABLE pos_orders ADD COLUMN payment_status ENUM(''pending'',''paid'',''failed'',''refunded'') NULL DEFAULT ''pending'' AFTER payment_transaction_id',
+  'SELECT 1'
+);
+PREPARE stmt_add_pops FROM @sql_add_pops;
+EXECUTE stmt_add_pops;
+DEALLOCATE PREPARE stmt_add_pops;
+
+SET @poidx_exists := (
+  SELECT COUNT(*) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pos_orders' AND INDEX_NAME = 'idx_pos_orders_payment_tx'
+);
+SET @sql_add_poidx := IF(@poidx_exists = 0,
+  'ALTER TABLE pos_orders ADD INDEX idx_pos_orders_payment_tx (payment_transaction_id)',
+  'SELECT 1'
+);
+PREPARE stmt_add_poidx FROM @sql_add_poidx;
+EXECUTE stmt_add_poidx;
+DEALLOCATE PREPARE stmt_add_poidx;
+
+SET @popsidx_exists := (
+  SELECT COUNT(*) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pos_orders' AND INDEX_NAME = 'idx_pos_orders_payment_status'
+);
+SET @sql_add_popsidx := IF(@popsidx_exists = 0,
+  'ALTER TABLE pos_orders ADD INDEX idx_pos_orders_payment_status (payment_status)',
+  'SELECT 1'
+);
+PREPARE stmt_add_popsidx FROM @sql_add_popsidx;
+EXECUTE stmt_add_popsidx;
+DEALLOCATE PREPARE stmt_add_popsidx;
 
 -- Add FK only if missing
 SET @fk_exists2 := (

@@ -1,7 +1,10 @@
--- Migration: Add middle name support for bar owner registration and approved users
-
-ALTER TABLE `business_registrations`
-  ADD COLUMN IF NOT EXISTS `owner_middle_name` VARCHAR(80) DEFAULT NULL AFTER `owner_first_name`;
-
-ALTER TABLE `users`
-  ADD COLUMN IF NOT EXISTS `middle_name` VARCHAR(50) DEFAULT NULL AFTER `first_name`;
+SET @cx105 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'business_registrations' AND COLUMN_NAME = 'owner_middle_name');
+SET @sx105 := IF(@cx105 = 0, 'ALTER TABLE business_registrations ADD COLUMN `owner_middle_name` VARCHAR(80) DEFAULT NULL AFTER `owner_first_name`', 'SELECT 1');
+PREPARE stx105 FROM @sx105;
+EXECUTE stx105;
+DEALLOCATE PREPARE stx105;
+SET @cx1 := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'middle_name');
+SET @sx1 := IF(@cx1 = 0, 'ALTER TABLE users ADD COLUMN `middle_name` VARCHAR(50) DEFAULT NULL AFTER `first_name`', 'SELECT 1');
+PREPARE stx1 FROM @sx1;
+EXECUTE stx1;
+DEALLOCATE PREPARE stx1;

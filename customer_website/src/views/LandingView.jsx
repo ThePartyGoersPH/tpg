@@ -146,7 +146,7 @@ function LandingView() {
 
         {/* Top Right CTA */}
         <div className="land-top-cta">
-          <a className="land-manager-link" href={managerPortalUrl()} target="_blank" rel="noopener noreferrer">
+          <a className="land-manager-link bar-owner-link" href={managerPortalUrl()}>
             For Bar Owners
           </a>
         </div>

@@ -7,17 +7,15 @@
 -- =====================================================
 
 -- Set global timezone to +08:00 (Asia/Manila)
-SET GLOBAL time_zone = '+08:00';
-
+-- Neutralized for least-privilege deploy (app handles TZ in code; session SET below still applies)
+-- SET GLOBAL time_zone = '+08:00';
 -- Set session timezone to +08:00
 SET time_zone = '+08:00';
-
 -- Verify timezone settings
 SELECT @@global.time_zone AS global_timezone;
 SELECT @@session.time_zone AS session_timezone;
 SELECT NOW() AS current_time_manila;
 SELECT UTC_TIMESTAMP();
-
 -- =====================================================
 -- PART 2: ANALYZE EXISTING TIMESTAMP DATA
 -- =====================================================
@@ -34,7 +32,6 @@ SELECT
 FROM pos_orders
 ORDER BY created_at DESC
 LIMIT 5;
-
 -- Check attendance logs
 SELECT 
     'Attendance Logs Sample' AS table_name,
@@ -47,7 +44,6 @@ SELECT
 FROM attendance_logs
 ORDER BY time_in DESC
 LIMIT 5;
-
 -- =====================================================
 -- PART 3: FIX EXISTING TIMESTAMPS (OPTIONAL)
 -- =====================================================
@@ -65,7 +61,6 @@ LIMIT 5;
 --     completed_at = IF(completed_at IS NOT NULL, CONVERT_TZ(completed_at, '+00:00', '+08:00'), NULL),
 --     cancelled_at = IF(cancelled_at IS NOT NULL, CONVERT_TZ(cancelled_at, '+00:00', '+08:00'), NULL)
 -- WHERE created_at < NOW();
-
 -- Fix attendance logs timestamps
 -- UPDATE attendance_logs
 -- SET
@@ -73,7 +68,6 @@ LIMIT 5;
 --     time_out = IF(time_out IS NOT NULL, CONVERT_TZ(time_out, '+00:00', '+08:00'), NULL),
 --     created_at = CONVERT_TZ(created_at, '+00:00', '+08:00')
 -- WHERE created_at < NOW();
-
 -- Fix reservations timestamps
 -- UPDATE reservations
 -- SET
@@ -81,19 +75,16 @@ LIMIT 5;
 --     created_at = CONVERT_TZ(created_at, '+00:00', '+08:00'),
 --     updated_at = CONVERT_TZ(updated_at, '+00:00', '+08:00')
 -- WHERE created_at < NOW();
-
 -- Fix audit logs timestamps
 -- UPDATE audit_logs
 -- SET created_at = CONVERT_TZ(created_at, '+00:00', '+08:00')
 -- WHERE created_at < NOW();
-
 -- Fix sales timestamps
 -- UPDATE sales
 -- SET 
 --     sale_date = IF(sale_date IS NOT NULL, CONVERT_TZ(sale_date, '+00:00', '+08:00'), NULL),
 --     created_at = CONVERT_TZ(created_at, '+00:00', '+08:00')
 -- WHERE created_at < NOW();
-
 -- =====================================================
 -- PART 4: VERIFICATION
 -- =====================================================
@@ -106,7 +97,6 @@ SELECT
     MAX(created_at) AS latest_order,
     DATE(MAX(created_at)) AS latest_order_date
 FROM pos_orders;
-
 -- Verify attendance logs
 SELECT 
     'Verification: Attendance' AS check_name,
@@ -114,7 +104,6 @@ SELECT
     MIN(time_in) AS earliest_punch,
     MAX(time_in) AS latest_punch
 FROM attendance_logs;
-
 -- =====================================================
 -- NOTES FOR DEPLOYMENT
 -- =====================================================
@@ -134,4 +123,4 @@ FROM attendance_logs;
 -- Then check:
 -- SELECT order_number, created_at, DATE(created_at) AS order_date FROM pos_orders WHERE order_number = 'TEST-TIMEZONE-001';
 -- 
--- The created_at should match your current Philippine time.
+-- The created_at should match your current Philippine time.;

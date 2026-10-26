@@ -140,13 +140,13 @@ const Hero = () => {
           <div className="customer-redirect-hero hero-fade-in" style={{ animationDelay: '350ms', color: '#666666', fontSize: '0.82rem', marginTop: '12px' }}>
             Looking to discover bars tonight?{' '}
             <a
-              href="https://thepartygoers.partygoers.online"
+              href="https://thepartygoers.fun"
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold transition-colors duration-150 hover:underline"
               style={{ color: '#E8001E' }}
             >
-              Visit Party Goers →
+              Visit thepartygoers.fun →
             </a>
           </div>
 

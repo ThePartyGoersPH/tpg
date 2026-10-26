@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Search, ChevronDown, GitBranch, X, CheckCheck, Megaphone, Menu } from 'lucide-react';
+import { Bell, Search, ChevronDown, GitBranch, X, CheckCheck, Megaphone } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { parseUTC } from '../../utils/dateUtils';
 import useAuthStore from '../../stores/authStore';
@@ -76,7 +76,7 @@ const resolveNotificationRoute = (notif) => {
   return route;
 };
 
-const Header = ({ onMobileNavToggle, mobileNavOpen = false }) => {
+const Header = () => {
   const { user } = useAuthStore();
   const { branches, selectedBranch, selectedBarId, fetchBranches, switchBranch } = useBranchStore();
   const location = useLocation();
@@ -190,19 +190,10 @@ const Header = ({ onMobileNavToggle, mobileNavOpen = false }) => {
 
   return (
     <header
-      className="tpg-manager-header h-16 flex items-center justify-between px-6 sticky top-0 z-30"
+      className="h-16 flex items-center justify-between px-6 sticky top-0 z-30"
       style={{ background: '#111111', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
     >
       <div className="flex items-center gap-4">
-        <button
-          className="tpg-manager-menu-toggle"
-          type="button"
-          aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
-          aria-expanded={mobileNavOpen}
-          onClick={onMobileNavToggle}
-        >
-          <Menu size={21} />
-        </button>
         <h2 className="text-base font-bold text-white tracking-wide">
           {typeof pageTitle === 'function' ? pageTitle() : pageTitle}
         </h2>

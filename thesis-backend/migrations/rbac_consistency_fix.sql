@@ -18,7 +18,8 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
 (7, 73),  -- RESERVATION_CREATE
 (7, 74),  -- TABLE_MANAGE
 (7, 76),  -- ANALYTICS_VIEW
-(7, 77);  -- STAFF_MANAGE
+(7, 77);
+-- STAFF_MANAGE
 
 -- ──────────────────────────────────────────────────────────────
 -- 2. Add missing permissions to SUPER_ADMIN (role_id = 6)
@@ -33,13 +34,15 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
 (6, 74),  -- TABLE_MANAGE
 (6, 75),  -- EVENT_MANAGE
 (6, 76),  -- ANALYTICS_VIEW
-(6, 77);  -- STAFF_MANAGE
+(6, 77);
+-- STAFF_MANAGE
 
 -- ──────────────────────────────────────────────────────────────
 -- 3. Add PAYROLL_READ to STAFF (role_id = 5) so they can view their payslips
 -- ──────────────────────────────────────────────────────────────
 INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
-(5, 14);  -- PAYROLL_READ
+(5, 14);
+-- PAYROLL_READ
 
 -- ──────────────────────────────────────────────────────────────
 -- 4. Add PAYROLL_READ to CASHIER (role_id = 8) - already present, but ensure
@@ -57,7 +60,6 @@ JOIN role_permissions rp ON rp.role_id = u.role_id
 WHERE u.role = 'bar_owner'
   AND u.role_id = 7
   AND rp.permission_id IN (69, 70, 71, 72, 73, 74, 76, 77);
-
 -- ──────────────────────────────────────────────────────────────
 -- 6. Sync user_permissions for existing SUPER_ADMIN users
 -- ──────────────────────────────────────────────────────────────
@@ -68,7 +70,6 @@ JOIN role_permissions rp ON rp.role_id = u.role_id
 WHERE u.role = 'super_admin'
   AND u.role_id = 6
   AND rp.permission_id IN (69, 70, 71, 72, 73, 74, 75, 76, 77);
-
 -- ──────────────────────────────────────────────────────────────
 -- 7. Sync user_permissions for existing MANAGER users
 -- ──────────────────────────────────────────────────────────────
@@ -78,7 +79,6 @@ FROM users u
 JOIN role_permissions rp ON rp.role_id = u.role_id
 WHERE u.role = 'manager'
   AND u.role_id = 9;
-
 -- ──────────────────────────────────────────────────────────────
 -- 8. Sync user_permissions for existing STAFF users (add PAYROLL_READ)
 -- ──────────────────────────────────────────────────────────────

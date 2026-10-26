@@ -99,8 +99,6 @@ function writeLocalApprovalDismiss(barId, stamp) {
 }
 
 const DashboardLayout = () => {
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [isMobileLayout, setIsMobileLayout] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem('sidebar.collapsed') === 'true';
@@ -131,18 +129,6 @@ const DashboardLayout = () => {
   useEffect(() => {
     refreshSession();
   }, [location.pathname, refreshSession]);
-
-  useEffect(() => {
-    setMobileNavOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 1023px)');
-    const updateLayout = (event) => setIsMobileLayout(event.matches);
-    setIsMobileLayout(mediaQuery.matches);
-    mediaQuery.addEventListener('change', updateLayout);
-    return () => mediaQuery.removeEventListener('change', updateLayout);
-  }, []);
 
   useEffect(() => {
     const checkBarConfig = async () => {
@@ -259,19 +245,18 @@ const DashboardLayout = () => {
   }, [isOwner, complianceStatus, approvalAcknowledged, barId, complianceReviewedAt]);
 
   return (
-    <div className={`min-h-screen tpg-manager-shell${mobileNavOpen ? ' mobile-nav-open' : ''}`} style={{ background: '#0A0A0A' }}>
-      <Sidebar mobileOpen={mobileNavOpen} collapsed={isMobileLayout ? false : collapsed} onToggle={() => setCollapsed(prev => {
+    <div className="min-h-screen" style={{ background: '#0A0A0A' }}>
+      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(prev => {
         const next = !prev;
         try { localStorage.setItem('sidebar.collapsed', String(next)); } catch (e) { /* storage unavailable */ }
         return next;
       })} />
-      {mobileNavOpen && <button className="tpg-manager-backdrop" type="button" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)} />}
       <div
-        className={`tpg-manager-content transition-all duration-300 ${
+        className={`transition-all duration-300 ${
           collapsed ? 'ml-[68px]' : 'ml-[260px]'
         }`}
       >
-        <Header mobileNavOpen={mobileNavOpen} onMobileNavToggle={() => setMobileNavOpen((open) => !open)} />
+        <Header />
 
         {/* Portal-wide registration completeness alert — lives in the app shell
             so it shows on every page (Dashboard, Bar Management, Menu, Packages,

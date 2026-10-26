@@ -26,7 +26,6 @@ CREATE TABLE IF NOT EXISTS `payroll_deduction_items` (
   KEY `idx_deduction_type` (`deduction_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
 COMMENT='Itemized deductions for each payroll item';
-
 -- ============================================================================
 -- 2. CREATE EMPLOYEE DEDUCTION SETTINGS TABLE
 -- ============================================================================
@@ -49,7 +48,6 @@ CREATE TABLE IF NOT EXISTS `employee_deduction_settings` (
   KEY `idx_bar_user` (`bar_id`, `user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
 COMMENT='Per-employee deduction settings and tax information';
-
 -- ============================================================================
 -- 3. ADD COLUMNS TO PAYROLL_ITEMS (IF NOT EXISTS)
 -- ============================================================================
@@ -70,7 +68,6 @@ SET @preparedStatement = (SELECT IF(
 PREPARE alterIfNotExists FROM @preparedStatement;
 EXECUTE alterIfNotExists;
 DEALLOCATE PREPARE alterIfNotExists;
-
 -- Check and add sss_deduction column
 SET @columnname = 'sss_deduction';
 SET @preparedStatement = (SELECT IF(
@@ -84,7 +81,6 @@ SET @preparedStatement = (SELECT IF(
 PREPARE alterIfNotExists FROM @preparedStatement;
 EXECUTE alterIfNotExists;
 DEALLOCATE PREPARE alterIfNotExists;
-
 -- Check and add philhealth_deduction column
 SET @columnname = 'philhealth_deduction';
 SET @preparedStatement = (SELECT IF(
@@ -98,7 +94,6 @@ SET @preparedStatement = (SELECT IF(
 PREPARE alterIfNotExists FROM @preparedStatement;
 EXECUTE alterIfNotExists;
 DEALLOCATE PREPARE alterIfNotExists;
-
 -- Check and add late_deduction column
 SET @columnname = 'late_deduction';
 SET @preparedStatement = (SELECT IF(
@@ -112,7 +107,6 @@ SET @preparedStatement = (SELECT IF(
 PREPARE alterIfNotExists FROM @preparedStatement;
 EXECUTE alterIfNotExists;
 DEALLOCATE PREPARE alterIfNotExists;
-
 -- Check and add other_deductions column
 SET @columnname = 'other_deductions';
 SET @preparedStatement = (SELECT IF(
@@ -126,7 +120,6 @@ SET @preparedStatement = (SELECT IF(
 PREPARE alterIfNotExists FROM @preparedStatement;
 EXECUTE alterIfNotExists;
 DEALLOCATE PREPARE alterIfNotExists;
-
 -- Check and add total_deductions column (computed field for clarity)
 SET @columnname = 'total_deductions';
 SET @preparedStatement = (SELECT IF(
@@ -140,14 +133,12 @@ SET @preparedStatement = (SELECT IF(
 PREPARE alterIfNotExists FROM @preparedStatement;
 EXECUTE alterIfNotExists;
 DEALLOCATE PREPARE alterIfNotExists;
-
 -- ============================================================================
 -- 4. ADD LATE TRACKING COLUMNS TO ATTENDANCE_LOGS (IF NOT EXISTS)
 -- ============================================================================
 -- Add columns to track late minutes for late deduction calculation
 
 SET @tablename = 'attendance_logs';
-
 -- Check and add late_minutes column
 SET @columnname = 'late_minutes';
 SET @preparedStatement = (SELECT IF(
@@ -161,7 +152,6 @@ SET @preparedStatement = (SELECT IF(
 PREPARE alterIfNotExists FROM @preparedStatement;
 EXECUTE alterIfNotExists;
 DEALLOCATE PREPARE alterIfNotExists;
-
 -- Check and add expected_time_in column
 SET @columnname = 'expected_time_in';
 SET @preparedStatement = (SELECT IF(
@@ -175,7 +165,6 @@ SET @preparedStatement = (SELECT IF(
 PREPARE alterIfNotExists FROM @preparedStatement;
 EXECUTE alterIfNotExists;
 DEALLOCATE PREPARE alterIfNotExists;
-
 -- ============================================================================
 -- 5. CREATE BIR TAX TABLE (2024 Philippine Tax Brackets)
 -- ============================================================================
@@ -191,7 +180,6 @@ CREATE TABLE IF NOT EXISTS `bir_tax_brackets` (
   KEY `idx_year_active` (`year`, `is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
 COMMENT='BIR tax brackets for withholding tax calculation';
-
 -- Insert 2024 Philippine tax brackets (if not exists)
 INSERT IGNORE INTO `bir_tax_brackets` (`min_income`, `max_income`, `base_tax`, `excess_rate`, `year`, `is_active`) VALUES
 (0.00, 250000.00, 0.00, 0.0000, 2024, 1),           -- 0% for up to 250k
@@ -199,7 +187,8 @@ INSERT IGNORE INTO `bir_tax_brackets` (`min_income`, `max_income`, `base_tax`, `
 (400000.01, 800000.00, 22500.00, 0.2000, 2024, 1),  -- 20% on excess over 400k
 (800000.01, 2000000.00, 102500.00, 0.2500, 2024, 1),-- 25% on excess over 800k
 (2000000.01, 8000000.00, 402500.00, 0.3000, 2024, 1),-- 30% on excess over 2M
-(8000000.01, NULL, 2202500.00, 0.3500, 2024, 1);    -- 35% on excess over 8M
+(8000000.01, NULL, 2202500.00, 0.3500, 2024, 1);
+-- 35% on excess over 8M
 
 -- ============================================================================
 -- 6. CREATE SSS CONTRIBUTION TABLE (2024 rates)
@@ -217,7 +206,6 @@ CREATE TABLE IF NOT EXISTS `sss_contribution_table` (
   KEY `idx_year_active` (`year`, `is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
 COMMENT='SSS contribution table based on monthly salary';
-
 -- Insert sample SSS brackets (2024 - simplified version, adjust as needed)
 INSERT IGNORE INTO `sss_contribution_table` (`min_salary`, `max_salary`, `employee_share`, `employer_share`, `total_contribution`, `year`, `is_active`) VALUES
 (0.00, 4249.99, 180.00, 380.00, 560.00, 2024, 1),
@@ -254,7 +242,6 @@ INSERT IGNORE INTO `sss_contribution_table` (`min_salary`, `max_salary`, `employ
 (19250.00, 19749.99, 877.50, 1852.50, 2730.00, 2024, 1),
 (19750.00, 29999.99, 900.00, 1900.00, 2800.00, 2024, 1),
 (30000.00, NULL, 1125.00, 2375.00, 3500.00, 2024, 1);
-
 -- ============================================================================
 -- 7. CREATE PHILHEALTH CONTRIBUTION TABLE (2024 rates)
 -- ============================================================================
@@ -272,12 +259,12 @@ CREATE TABLE IF NOT EXISTS `philhealth_contribution_table` (
   KEY `idx_year_active` (`year`, `is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
 COMMENT='PhilHealth contribution rates based on monthly basic salary';
-
 -- Insert 2024 PhilHealth rates (5% premium, employee pays 2.5%)
 INSERT IGNORE INTO `philhealth_contribution_table` (`min_salary`, `max_salary`, `premium_rate`, `employee_share_rate`, `min_contribution`, `max_contribution`, `year`, `is_active`) VALUES
 (0.00, 10000.00, 0.0500, 0.5000, 500.00, 500.00, 2024, 1),      -- Minimum: 500 (employee: 250)
 (10000.01, 100000.00, 0.0500, 0.5000, 0.00, 5000.00, 2024, 1),  -- 5% of basic salary (employee: 2.5%)
-(100000.01, NULL, 0.0500, 0.5000, 5000.00, 5000.00, 2024, 1);   -- Maximum: 5000 (employee: 2500)
+(100000.01, NULL, 0.0500, 0.5000, 5000.00, 5000.00, 2024, 1);
+-- Maximum: 5000 (employee: 2500)
 
 -- ============================================================================
 -- 8. CREATE AUDIT LOG FOR DEDUCTION CHANGES
@@ -297,7 +284,6 @@ CREATE TABLE IF NOT EXISTS `payroll_deduction_audit` (
   KEY `idx_changed_by` (`changed_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
 COMMENT='Audit trail for deduction setting changes';
-
 -- ============================================================================
 -- MIGRATION COMPLETE
 -- ============================================================================
@@ -310,4 +296,4 @@ COMMENT='Audit trail for deduction setting changes';
 -- ✓ Created SSS contribution table with 2024 rates
 -- ✓ Created PhilHealth contribution table with 2024 rates
 -- ✓ Created audit log for deduction changes
--- ============================================================================
+-- ============================================================================;

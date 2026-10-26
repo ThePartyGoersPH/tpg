@@ -443,10 +443,8 @@ function GlassNav({ onOpenNotif, unread, onToggleSidebar, sidebarOpen }) {
           </button>
         ))}
         <a
-          className="nav-link"
+          className="nav-link bar-owner-link"
           href={managerPortalUrl()}
-          target="_blank"
-          rel="noopener noreferrer"
           style={{ textAlign: 'center' }}
         >
           For Bar Owners
@@ -723,9 +721,6 @@ function App() {
           <ViewRenderer />
         </ErrorBoundary>
       </main>
-      <div style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--color-text-muted)', padding: '0.5rem', opacity: 0.6 }}>
-        Build: {__COMMIT_HASH__}
-      </div>
       <NotificationsPanel open={notifOpen} onClose={() => { setNotifOpen(false); fetchUnread(); }} onNavigate={navigate} />
       <LiveNotificationToast
         notification={liveNotification}

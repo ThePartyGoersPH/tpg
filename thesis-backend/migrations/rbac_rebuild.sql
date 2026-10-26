@@ -8,18 +8,15 @@
 -- ============================================================
 
 SET FOREIGN_KEY_CHECKS = 0;
-
 -- ────────────────────────────────────────────────────────────
 -- STEP 1: Drop dependent tables first to avoid FK constraint errors
 -- ────────────────────────────────────────────────────────────
 DROP TABLE IF EXISTS user_permissions;
 DROP TABLE IF EXISTS role_permissions;
-
 -- ────────────────────────────────────────────────────────────
 -- STEP 2: Rebuild permissions table with new codes
 -- ────────────────────────────────────────────────────────────
 DROP TABLE IF EXISTS permissions;
-
 CREATE TABLE `permissions` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(100) NOT NULL,
@@ -30,7 +27,6 @@ CREATE TABLE `permissions` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_permission_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 INSERT INTO `permissions` (`name`, `module`, `action`, `description`) VALUES
 -- ── MENU (module: menu) ──
 ('menu_view',           'menu',         'view',     'View all menu items'),
@@ -122,8 +118,6 @@ INSERT INTO `permissions` (`name`, `module`, `action`, `description`) VALUES
 -- ── SUBSCRIPTION (module: subscription) ──
 ('subscription_view',    'subscription', 'view',   'View current plan, billing cycle, and feature limits'),
 ('subscription_manage',  'subscription', 'manage', 'Upgrade, downgrade, or cancel subscription plans');
-
-
 -- ────────────────────────────────────────────────────────────
 -- STEP 3: Rebuild roles table
 -- ────────────────────────────────────────────────────────────
@@ -342,4 +336,4 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- MIGRATION COMPLETE
 -- Old permission codes are replaced. Backend routes and
 -- frontend must be updated to use new permission names.
--- ============================================================
+-- ============================================================;

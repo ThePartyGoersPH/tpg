@@ -153,7 +153,7 @@ ALLOWED_IMAGE_TYPES=image/jpeg,image/png,image/gif,image/webp
 
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=thepartygoersph@gmail.com
+SMTP_USER=thepartygoers3@gmail.com
 SMTP_PASSWORD=vgsrzftqisivgdib
 
 GOOGLE_CLIENT_ID=1009351315796-o4ifpjodup8svb72g98gjl6bsi8o9hn1.apps.googleusercontent.com
